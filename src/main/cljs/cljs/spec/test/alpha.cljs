@@ -130,7 +130,7 @@
           (fn [& args]
             (if *instrument-enabled*
               (with-instrument-disabled
-                (conform!* args)
+                (conform!* (apply list* args))
                 (binding [*instrument-enabled* true]
                   (apply' variadic args)))
               (apply' variadic args))))))
