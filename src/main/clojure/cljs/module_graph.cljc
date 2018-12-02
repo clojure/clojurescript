@@ -10,7 +10,8 @@
   (:require [clojure.string :as string]
             [clojure.set :as set]
             [clojure.java.io :as io]
-            [cljs.compiler :as comp]))
+            [cljs.compiler :as comp]
+            [cljs.util :as util]))
 
 (defn find-sources-for-module-entry
   "Given an entry as a symbol, find all matching inputs in sources. If the
@@ -124,7 +125,8 @@
           (ex-info
             (str "Circular dependency detected "
               (apply str (interpose " -> " (conj path ns'))))
-            {:cljs.closure/error :invalid-inputs}))
+            {:cljs.closure/error :invalid-inputs
+             :clojure.error/phase :compilation}))
         (when-not (contains? @validated ns)
           (validate-inputs* indexed (conj path ns') (conj seen ns') validated))))
     (swap! validated conj ns)))
@@ -176,7 +178,7 @@
   [entry indexed-inputs]
   (if-let [entry (get indexed-inputs (-> entry comp/munge str))]
     (-> (:provides entry) first comp/munge str)
-    (throw (Exception. (str "No input matching \"" entry "\"")))))
+    (throw (util/compilation-error (Exception. (str "No input matching \"" entry "\""))))))
 
 (defn validate-modules
   "Check that a compiler :modules map does not contain user supplied duplicates.
@@ -189,10 +191,11 @@
           (let [seen' @seen]
             (if-some [module-name' (get seen' entry)]
               (throw
-                (Exception.
-                  (str "duplicate entry \"" entry "\", occurs in " module-name
-                       " and " module-name' ". entry :provides is "
-                       (get-in indexed-inputs [entry :provides]))))
+                (util/compilation-error
+                  (Exception.
+                    (str "duplicate entry \"" entry "\", occurs in " module-name
+                      " and " module-name' ". entry :provides is "
+                      (get-in indexed-inputs [entry :provides])))))
               (swap! seen assoc entry module-name))))))))
 
 (defn inputs->assigned-modules
@@ -353,7 +356,7 @@
                      (comp get-uri get-rel-path
                        (fn [{:keys [out-file] :as ijs}]
                          (if-not out-file
-                           (throw (Exception. (str "No :out-file for IJavaScript " (pr-str ijs))))
+                           (throw (util/compilation-error (Exception. (str "No :out-file for IJavaScript " (pr-str ijs)))))
                            out-file))
                        #(maybe-add-out-file % opts)))
                    (distinct))

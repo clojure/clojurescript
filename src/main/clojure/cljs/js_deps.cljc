@@ -179,8 +179,8 @@ case."
           (if-let [file (get-file dep index')]
             (update-in index' [file] lib-spec-merge dep)
             (throw
-              (Exception.
-                (str "No :file provided for :foreign-libs spec " (pr-str dep)))))
+              (util/compilation-error (Exception.
+                                        (str "No :file provided for :foreign-libs spec " (pr-str dep))))))
           (assoc index' (:file dep) dep))))
     {} deps))
 

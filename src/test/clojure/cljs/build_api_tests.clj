@@ -181,7 +181,7 @@
          :output-to out})
       (is false)
       (catch Throwable e
-        (let [cause-message (.getMessage (.getCause e))]
+        (let [cause-message (.getMessage (.getCause (.getCause e)))]
           (is (or (re-find #"Circular dependency detected, circular-deps.a -> circular-deps.b -> circular-deps.a" cause-message)
                   (re-find #"Circular dependency detected, circular-deps.b -> circular-deps.a -> circular-deps.b" cause-message))))))))
 

@@ -692,6 +692,12 @@
                        screen location navigator history location
                        global process require module exports)))}))
 
+(defn- source-info->error-data
+  [{:keys [file line column]}]
+  {:clojure.error/source file
+   :clojure.error/line   line
+   :clojure.error/column column})
+
 (defn source-info
   ([env]
    (when (:line env)
@@ -716,6 +722,20 @@
   (doseq [handler *cljs-warning-handlers*]
     (handler warning-type env extra)))
 
+(defn- error-data
+  ([env phase]
+   (error-data env phase nil))
+  ([env phase symbol]
+   (merge (-> (source-info env) source-info->error-data)
+     {:clojure.error/phase phase}
+     (when symbol
+       {:clojure.error/symbol symbol}))))
+
+(defn- compile-syntax-error
+  [env msg symbol]
+  (ex-info nil (error-data env :compile-syntax-check symbol)
+    #?(:clj (RuntimeException. ^String msg) :cljs (js/Error. msg))))
+
 (defn error
   ([env msg]
    (error env msg nil))
@@ -729,14 +749,20 @@
   [ex]
   (= :cljs/analysis-error (:tag (ex-data ex))))
 
+(defn has-error-data?
+  #?(:cljs {:tag boolean})
+  [ex]
+  (contains? (ex-data ex) :clojure.error/phase))
+
 #?(:clj
    (defmacro wrapping-errors [env & body]
      `(try
         ~@body
         (catch Throwable err#
-          (if (analysis-error? err#)
-            (throw err#)
-            (throw (error ~env (.getMessage err#) err#)))))))
+          (cond
+            (has-error-data? err#) (throw err#)
+            (analysis-error? err#) (throw (ex-info nil (error-data ~env :compilation) err#))
+            :else (throw (ex-info nil (error-data ~env :compilation) (error ~env (.getMessage err#) err#))))))))
 
 ;; namespaces implicit to the inclusion of cljs.core
 (def implicit-nses '#{goog goog.object goog.string goog.array Math String})
@@ -1584,9 +1610,9 @@
 (defmethod parse 'if
   [op env [_ test then else :as form] name _]
   (when (< (count form) 3)
-    (throw (error env "Too few arguments to if")))
+    (throw (compile-syntax-error env "Too few arguments to if" 'if)))
   (when (> (count form) 4)
-   (throw (error env "Too many arguments to if")))
+    (throw (compile-syntax-error env "Too many arguments to if" 'if)))
   (let [test-expr (disallowing-recur (analyze (assoc env :context :expr) test))
         then-expr (allowing-redef (analyze (add-predicate-induced-tags env test) then))
         else-expr (allowing-redef (analyze env else))]
@@ -3698,14 +3724,21 @@
        (when (some? (find-ns-obj 'cljs.spec.alpha))
          @cached-var))))
 
+(defn- var->sym [var]
+  #?(:clj  (symbol (str (.-ns ^clojure.lang.Var var)) (str (.-sym ^clojure.lang.Var var)))
+     :cljs (.-sym var)))
+
 (defn- do-macroexpand-check
-  [form mac-var]
+  [env form mac-var]
   (when (not (-> @env/*compiler* :options :spec-skip-macros))
     (let [mchk #?(:clj (some-> (find-ns 'clojure.spec.alpha)
                        (ns-resolve 'macroexpand-check))
                 :cljs (get-macroexpand-check-var))]
     (when (some? mchk)
-      (mchk mac-var (next form))))))
+      (try
+        (mchk mac-var (next form))
+        (catch #?(:clj Throwable :cljs :default) e
+          (throw (ex-info nil (error-data env :macro-syntax-check (var->sym mac-var)) e))))))))
 
 (defn macroexpand-1*
   [env form]
@@ -3713,17 +3746,19 @@
     (if (contains? specials op)
       (do
         (when (= 'ns op)
-          (do-macroexpand-check form (get-expander 'cljs.core/ns-special-form env)))
+          (do-macroexpand-check env form (get-expander 'cljs.core/ns-special-form env)))
         form)
       ;else
         (if-some [mac-var (when (symbol? op) (get-expander op env))]
           (#?@(:clj [binding [*ns* (create-ns *cljs-ns*)]]
                :cljs [do])
-            (do-macroexpand-check form mac-var)
+            (do-macroexpand-check env form mac-var)
             (let [form' (try
                           (apply @mac-var form env (rest form))
                           #?(:clj (catch ArityException e
-                                    (throw (ArityException. (- (.actual e) 2) (.name e))))))]
+                                    (throw (ArityException. (- (.actual e) 2) (.name e)))))
+                          (catch #?(:clj Throwable :cljs :default) e
+                            (throw (ex-info nil (error-data env :macroexpansion (var->sym mac-var)) e))))]
               (if #?(:clj (seq? form') :cljs (cljs-seq? form'))
                 (let [sym' (first form')
                       sym  (first form)]

@@ -673,7 +673,7 @@
         {:eval node-eval}
         (fn [{:keys [error value]}]
           (is (nil? value))
-          (is (= "if-let requires exactly 2 forms in binding vector at line 1 " (ex-message (ex-cause error))))
+          (is (= "if-let requires exactly 2 forms in binding vector" (ex-message (ex-cause (ex-cause error)))))
           (inc! l)))
       (cljs/eval-str st
         "(if-let [x true] 1 2 3)"
@@ -681,7 +681,7 @@
         {:eval node-eval}
         (fn [{:keys [error value]}]
           (is (nil? value))
-          (is (= "if-let requires 1 or 2 forms after binding vector at line 1 " (ex-message (ex-cause error))))
+          (is (= "if-let requires 1 or 2 forms after binding vector" (ex-message (ex-cause (ex-cause error)))))
           (inc! l)))
       (cljs/eval-str st
         "(if-let '(x true) 1)"
@@ -689,7 +689,7 @@
         {:eval node-eval}
         (fn [{:keys [error value]}]
           (is (nil? value))
-          (is (= "if-let requires a vector for its binding at line 1 " (ex-message (ex-cause error))))
+          (is (= "if-let requires a vector for its binding" (ex-message (ex-cause (ex-cause error)))))
           (inc! l))))))
 
 (deftest test-CLJS-1573

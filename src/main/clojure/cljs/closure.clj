@@ -86,7 +86,8 @@
         _      (when (nil? ns)
                  (throw
                    (ex-info (str kw " symbol " sym " is not fully qualified")
-                     (merge ex-data {kw sym}))))
+                     (merge ex-data {kw sym
+                                     :clojure.error/phase :compilation}))))
         var-ns (symbol ns)]
     (when (not (find-ns var-ns))
       (try
@@ -94,7 +95,8 @@
           (require var-ns))
         (catch Throwable t
           (throw (ex-info (str "Cannot require namespace referred by " kw " value " sym)
-                   (merge ex-data {kw sym})
+                   (merge ex-data {kw sym
+                                   :clojure.error/phase :compilation})
                    t)))))
 
     (find-var sym)))
@@ -227,7 +229,7 @@
       (ex-info
         (str "Invalid :closure-output-charset " charset " given, only "
              (string/join ", " (keys string->charset)) " supported ")
-        {}))))
+        {:clojure.error/phase :compilation}))))
 
 (defn ^CompilerOptions$LanguageMode lang-key->lang-mode [key]
   (case (keyword (string/replace (name key) #"^es" "ecmascript"))
@@ -261,7 +263,7 @@
           :off AnonymousFunctionNamingPolicy/OFF
           :unmapped AnonymousFunctionNamingPolicy/UNMAPPED
           :mapped AnonymousFunctionNamingPolicy/MAPPED
-          (throw (IllegalArgumentException. (str "Invalid :anon-fn-naming-policy value " policy " - only :off, :unmapped, :mapped permitted")))))))
+          (throw (util/compilation-error (IllegalArgumentException. (str "Invalid :anon-fn-naming-policy value " policy " - only :off, :unmapped, :mapped permitted"))))))))
 
   (when-let [lang-key (:language-in opts :ecmascript5)]
     (.setLanguageIn compiler-options (lang-key->lang-mode lang-key)))
@@ -369,8 +371,8 @@
   [{:keys [externs use-only-custom-externs target ups-externs infer-externs] :as opts}]
   (let [validate (fn validate [p us]
                    (if (empty? us)
-                     (throw (IllegalArgumentException.
-                              (str "Extern " p " does not exist")))
+                     (throw (util/compilation-error (IllegalArgumentException.
+                                                      (str "Extern " p " does not exist"))))
                      us))
         filter-cp-js (fn [paths]
                        (for [p paths
@@ -413,7 +415,7 @@
       (doseq [next (seq warnings)]
         (println "WARNING:" (.toString ^JSError next)))
       (when (seq errors)
-        (throw (Exception. "Closure compilation failed"))))))
+        (throw (util/compilation-error (Exception. "Closure compilation failed")))))))
 
 ;; Protocols for IJavaScript and Compilable
 ;; ========================================
@@ -876,10 +878,11 @@
                                    (io/resource relpath)))]
                  {:relative-path relpath :uri js-res :ext :js}
                  (throw
-                   (IllegalArgumentException.
-                     (str "Namespace " ns " does not exist."
-                          (when (string/includes? ns "-")
-                            " Please check that namespaces with dashes use underscores in the ClojureScript file name.")))))))))))))
+                   (util/compilation-error
+                     (IllegalArgumentException.
+                       (str "Namespace " ns " does not exist."
+                         (when (string/includes? ns "-")
+                           " Please check that namespaces with dashes use underscores in the ClojureScript file name."))))))))))))))
 
 (defn cljs-dependencies
   "Given a list of all required namespaces, return a list of
@@ -1284,8 +1287,8 @@
                           (swap! used into entries)
                           (into ret unused))
                         (throw
-                          (IllegalArgumentException.
-                            (str "Could not find matching namespace for " entry-sym)))))
+                          (util/compilation-error (IllegalArgumentException.
+                                                    (str "Could not find matching namespace for " entry-sym))))))
                     [] entries)
                   foreign-deps (atom [])]
               ;; add inputs to module
@@ -1304,8 +1307,8 @@
                     (when (:verbose opts)
                       (util/debug-prn "  module" name "depends on" dep))
                     (.addDependency js-module ^JSModule parent-module))
-                  (throw (IllegalArgumentException.
-                           (str "Parent module " dep " does not exist")))))
+                  (throw (util/compilation-error (IllegalArgumentException.
+                                                   (str "Parent module " dep " does not exist"))))))
               (conj ret
                 [name (assoc module-desc
                         :closure-module js-module
@@ -2052,7 +2055,7 @@
           (deps/-closure-lib? js)
           (deps/-foreign? js)))
     (catch Throwable t
-      (throw (Exception. (str "Could not write JavaScript " (pr-str js)))))))
+      (throw (util/compilation-error (Exception. (str "Could not write JavaScript " (pr-str js))))))))
 
 (defn source-on-disk
   "Ensure that the given IJavaScript exists on disk in the output directory.
@@ -2160,8 +2163,8 @@
                                   (:url-min ijs))
                              (:url ijs))]
               (slurp url)
-              (throw (IllegalArgumentException.
-                       (str "Foreign lib " ijs " does not exist")))))]
+              (throw (util/compilation-error (IllegalArgumentException.
+                                               (str "Foreign lib " ijs " does not exist"))))))]
     (str (string/join "\n" (map to-js-str sources)) "\n")))
 
 (defn add-wrapper [{:keys [output-wrapper] :as opts} js]
@@ -2689,7 +2692,8 @@
         (catch Throwable t
           (throw (ex-info (str "Error running preprocessing function " preprocess)
                    {:file       (:file js-module)
-                    :preprocess preprocess}
+                    :preprocess preprocess
+                    :clojure.error/phase :compilation}
                    t)))))
 
     :else
@@ -2772,19 +2776,22 @@
       (let [new-mappings (reader/read {:eof nil :read-cond :allow} rdr)]
         (when (not (map? new-mappings))
           (throw (ex-info (str "Not a valid data-reader map")
-                   {:url url})))
+                   {:url url
+                    :clojure.error/phase :compilation})))
         (reduce
           (fn [m [k v]]
             (when (not (symbol? k))
               (throw (ex-info (str "Invalid form in data-reader file")
                        {:url url
-                        :form k})))
+                        :form k
+                        :clojure.error/phase :compilation})))
             (when (and (contains? mappings k)
                     (not= (mappings k) v))
               (throw (ex-info "Conflicting data-reader mapping"
                        {:url url
                         :conflict k
-                        :mappings m})))
+                        :mappings m
+                        :clojure.error/phase :compilation})))
             (assoc m k v))
           mappings
           new-mappings)))))
@@ -3241,8 +3248,8 @@
             "js" (cond-> (:provides (parse-js-ns src))
                    (not all-provides) first)
             (throw
-              (IllegalArgumentException.
-                (str "Can't create goog.require expression for " src))))]
+              (util/compilation-error (IllegalArgumentException.
+                                        (str "Can't create goog.require expression for " src)))))]
       (if (and (not all-provides) wrap)
         (if (:reload options)
           (str "goog.require(\"" goog-ns "\", true);")

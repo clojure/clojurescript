@@ -39,9 +39,10 @@
   `(try
      ~@body
      (catch :default err#
-       (if (cljs.analyzer/analysis-error? err#)
-         (throw err#)
-         (throw (cljs.analyzer/error ~env (.-message err#) err#))))))
+       (cond
+         (cljs.analyzer/has-error-data? err#) (throw err#)
+         (cljs.analyzer/analysis-error? err#) (throw (ex-info nil (cljs.analyzer/error-data ~env :compilation) err#))
+         :else (throw (ex-info nil (cljs.analyzer/error-data ~env :compilation) (cljs.analyzer/error ~env (.getMessage err#) err#)))))))
 
 (defmacro disallowing-recur [& body]
   `(cljs.core/binding [cljs.analyzer/*recur-frames*

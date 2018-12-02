@@ -71,115 +71,115 @@
         (try
           (analyze ns-env '(ns foo.bar (:require {:foo :bar})))
           (catch Exception e
-            (.getMessage e)))
+            (.getMessage (.getCause e))))
         "Only [lib.ns & options] and lib.ns specs supported in :require / :require-macros"))
   (is (.startsWith
         (try
           (analyze ns-env '(ns foo.bar (:require [:foo :bar])))
           (catch Exception e
-            (.getMessage e)))
+            (.getMessage (.getCause e))))
         "Library name must be specified as a symbol in :require / :require-macros"))
   (is (.startsWith
         (try
           (analyze ns-env '(ns foo.bar (:require [baz.woz :as woz :refer [] :plop])))
           (catch Exception e
-            (.getMessage e)))
+            (.getMessage (.getCause e))))
         "Only :as alias, :refer (names) and :rename {from to} options supported in :require"))
   (is (.startsWith
         (try
           (analyze ns-env '(ns foo.bar (:require [baz.woz :as woz :refer [] :plop true])))
           (catch Exception e
-            (.getMessage e)))
+            (.getMessage (.getCause e))))
         "Only :as, :refer and :rename options supported in :require / :require-macros"))
   (is (.startsWith
         (try
           (analyze ns-env '(ns foo.bar (:require [baz.woz :as woz :refer [] :as boz :refer []])))
           (catch Exception e
-            (.getMessage e)))
+            (.getMessage (.getCause e))))
         "Each of :as and :refer options may only be specified once in :require / :require-macros"))
   (is (.startsWith
         (try
           (analyze ns-env '(ns foo.bar (:refer-clojure :refer [])))
           (catch Exception e
-            (.getMessage e)))
+            (.getMessage (.getCause e))))
         "Only [:refer-clojure :exclude (names)] and optionally `:rename {from to}` specs supported"))
   (is (.startsWith
         (try
           (analyze ns-env '(ns foo.bar (:refer-clojure :rename [1 2])))
           (catch Exception e
-            (.getMessage e)))
+            (.getMessage (.getCause e))))
         "Only [:refer-clojure :exclude (names)] and optionally `:rename {from to}` specs supported"))
   (is (.startsWith
         (try
           (analyze ns-env '(ns foo.bar (:use [baz.woz :exclude []])))
           (catch Exception e
-            (.getMessage e)))
+            (.getMessage (.getCause e))))
         "Only [lib.ns :only (names)] and optionally `:rename {from to}` specs supported in :use / :use-macros"))
   (is (.startsWith
         (try
           (analyze ns-env '(ns foo.bar (:use [baz.woz])))
           (catch Exception e
-            (.getMessage e)))
+            (.getMessage (.getCause e))))
         "Only [lib.ns :only (names)] and optionally `:rename {from to}` specs supported in :use / :use-macros"))
   (is (.startsWith
         (try
           (analyze ns-env '(ns foo.bar (:use [baz.woz :only])))
           (catch Exception e
-            (.getMessage e)))
+            (.getMessage (.getCause e))))
         "Only [lib.ns :only (names)] and optionally `:rename {from to}` specs supported in :use / :use-macros"))
   (is (.startsWith
         (try
           (analyze ns-env '(ns foo.bar (:use [baz.woz :only [1 2 3]])))
           (catch Exception e
-            (.getMessage e)))
+            (.getMessage (.getCause e))))
         "Only [lib.ns :only (names)] and optionally `:rename {from to}` specs supported in :use / :use-macros"))
   (is (.startsWith
         (try
           (analyze ns-env '(ns foo.bar (:use [baz.woz :rename [1 2]])))
           (catch Exception e
-            (.getMessage e)))
+            (.getMessage (.getCause e))))
         "Only [lib.ns :only (names)] and optionally `:rename {from to}` specs supported in :use / :use-macros"))
   (is (.startsWith
         (try
           (analyze ns-env '(ns foo.bar (:use [foo.bar :rename {baz qux}])))
           (catch Exception e
-            (.getMessage e)))
+            (.getMessage (.getCause e))))
         "Only [lib.ns :only (names)] and optionally `:rename {from to}` specs supported in :use / :use-macros"))
   (is (.startsWith
         (try
           (analyze ns-env '(ns foo.bar (:use [baz.woz :only [foo] :only [bar]])))
           (catch Exception e
-            (.getMessage e)))
+            (.getMessage (.getCause e))))
         "Each of :only and :rename options may only be specified once in :use / :use-macros"))
   (is (.startsWith
         (try
           (analyze ns-env '(ns foo.bar (:require [baz.woz :as []])))
           (catch Exception e
-            (.getMessage e)))
+            (.getMessage (.getCause e))))
         ":as must be followed by a symbol in :require / :require-macros"))
   (is (.startsWith
         (try
           (analyze ns-env '(ns foo.bar (:require [baz.woz :as woz] [noz.goz :as woz])))
           (catch Exception e
-            (.getMessage e)))
+            (.getMessage (.getCause e))))
         ":as alias must be unique"))
   (is (.startsWith
         (try
           (analyze ns-env '(ns foo.bar (:require [foo.bar :rename {baz qux}])))
           (catch Exception e
-            (.getMessage e)))
+            (.getMessage (.getCause e))))
         "Renamed symbol baz not referred"))
   (is (.startsWith
         (try
           (analyze ns-env '(ns foo.bar (:unless [])))
           (catch Exception e
-            (.getMessage e)))
+            (.getMessage (.getCause e))))
         "Only :refer-clojure, :require, :require-macros, :use, :use-macros, and :import libspecs supported. Got (:unless []) instead."))
   (is (.startsWith
         (try
           (analyze ns-env '(ns foo.bar (:require baz.woz) (:require noz.goz)))
           (catch Exception e
-            (.getMessage e)))
+            (.getMessage (.getCause e))))
         "Only one ")))
 
 ;; =============================================================================
@@ -543,7 +543,7 @@
         (try
           (analyze test-env '(defn foo 123))
           (catch Exception e
-            (.getMessage e)))
+            (.getMessage (.getCause e))))
         "Parameter declaration \"123\" should be a vector")))
 
 ;; =============================================================================
@@ -630,13 +630,13 @@
         (try
           (analyze test-env '(do (def ^:const foo 123)  (def foo 246)))
           (catch Exception e
-            (.getMessage e)))
+            (.getMessage (.getCause e))))
         "Can't redefine a constant"))
   (is (.startsWith
         (try
           (analyze test-env '(do (def ^:const foo 123)  (set! foo 246)))
           (catch Exception e
-            (.getMessage e)))
+            (.getMessage (.getCause e))))
         "Can't set! a constant")))
 
 (deftest test-cljs-1508-rename
@@ -681,7 +681,7 @@
 (deftest test-cljs-1274
   (let [test-env (assoc-in (a/empty-env) [:ns :name] 'cljs.user)]
     (binding [a/*cljs-ns* a/*cljs-ns*]
-      (is (thrown-with-msg? Exception #"Can't def ns-qualified name in namespace foo.core"
+      (is (thrown-with-cause-msg? Exception #"Can't def ns-qualified name in namespace foo.core"
             (analyze test-env '(def foo.core/foo 43))))
       (is (analyze test-env '(def cljs.user/foo 43))))))
 
@@ -816,16 +816,16 @@
   (testing "arguments to require should be quoted"
     (binding [a/*cljs-ns* a/*cljs-ns*
               a/*cljs-warnings* nil]
-      (is (thrown-with-msg? Exception #"Arguments to require must be quoted"
+      (is (thrown-with-cause-msg? Exception #"Arguments to require must be quoted"
             (analyze test-env
               '(require [clojure.set :as set]))))
-      (is (thrown-with-msg? Exception #"Arguments to require must be quoted"
+      (is (thrown-with-cause-msg? Exception #"Arguments to require must be quoted"
             (analyze test-env
               '(require clojure.set))))))
   (testing "`:ns` and `:ns*` should throw if not `:top-level`"
     (binding [a/*cljs-ns* a/*cljs-ns*
               a/*cljs-warnings* nil]
-      (are [analyzed] (thrown-with-msg? Exception
+      (are [analyzed] (thrown-with-cause-msg? Exception
                         #"Namespace declarations must appear at the top-level."
                         analyzed)
           (analyze test-env
@@ -839,7 +839,7 @@
         (analyze test-env
           '(map #(ns foo.core
                    (:require [clojure.set :as set])) [1 2])))
-      (are [analyzed] (thrown-with-msg? Exception
+      (are [analyzed] (thrown-with-cause-msg? Exception
                         #"Calls to `require` must appear at the top-level."
                         analyzed)
         (analyze test-env
@@ -1439,19 +1439,19 @@
         (try
           (ana (quote))
           (catch Exception e
-            (.getMessage e)))
+            (.getMessage (.getCause e))))
         "Wrong number of args to quote"))
   (is (.startsWith
         (try
           (ana (quote a b))
           (catch Exception e
-            (.getMessage e)))
+            (.getMessage (.getCause e))))
         "Wrong number of args to quote"))
   (is (.startsWith
         (try
           (ana (quote a b c d))
           (catch Exception e
-            (.getMessage e)))
+            (.getMessage (.getCause e))))
         "Wrong number of args to quote")))
 
 (deftest var-args-error-test
@@ -1459,19 +1459,19 @@
         (try
           (ana (var))
           (catch Exception e
-            (.getMessage e)))
+            (.getMessage (.getCause e))))
         "Wrong number of args to var"))
   (is (.startsWith
         (try
           (ana (var a b))
           (catch Exception e
-            (.getMessage e)))
+            (.getMessage (.getCause e))))
         "Wrong number of args to var"))
   (is (.startsWith
         (try
           (ana (var nil))
           (catch Exception e
-            (.getMessage e)))
+            (.getMessage (.getCause e))))
         "Argument to var must be symbol")))
 
 (deftest test-has-extern?-basic
@@ -1637,11 +1637,11 @@
   (let [test-env (assoc-in (a/empty-env) [:ns :name] 'cljs.user)]
     (binding [a/*cljs-ns* a/*cljs-ns*
               a/*analyze-deps* false]
-      (is (thrown-with-msg? Exception #"Alias str already exists in namespace cljs.user, aliasing clojure.string"
+      (is (thrown-with-cause-msg? Exception #"Alias str already exists in namespace cljs.user, aliasing clojure.string"
             (analyze test-env '(do
                                    (require '[clojure.string :as str])
                                    (require '[clojure.set :as str])))))
-      (is (thrown-with-msg? Exception #"Alias str already exists in namespace cljs.user, aliasing clojure.string"
+      (is (thrown-with-cause-msg? Exception #"Alias str already exists in namespace cljs.user, aliasing clojure.string"
             (analyze test-env '(do
                                    (require-macros '[clojure.string :as str])
                                    (require-macros '[clojure.set :as str])))))
@@ -1652,7 +1652,7 @@
 
 (deftest test-cljs-2182
   (let [cenv (atom @test-cenv)]
-    (is (thrown-with-msg? Exception
+    (is (thrown-with-cause-msg? Exception
           #"Argument to resolve must be a quoted symbol"
           (e/with-compiler-env test-cenv
             (analyze test-env '(resolve foo.core)))))))
@@ -1664,7 +1664,7 @@
   (is (= {} (get-in @test-cenv [::a/namespaces 'analyzer-test.no-defs :defs]))))
 
 (deftest test-cljs-2475
-  (is (thrown-with-msg? Exception #"recur argument count mismatch, expected: 2 args, got: 1"
+  (is (thrown-with-cause-msg? Exception #"recur argument count mismatch, expected: 2 args, got: 1"
         (analyze test-env '(loop [x 1 y 2] (recur 3))))))
 
 (deftest test-cljs-2476
@@ -1672,7 +1672,7 @@
                                    (loop [] (try (catch js/Error t (recur))))
                                    (loop [] (try (catch :default t (recur))))
                                    (loop [] (try (finally (recur))))]]
-    (is (thrown-with-msg? Exception
+    (is (thrown-with-cause-msg? Exception
           #"Can't recur here"
           (analyze test-env invalid-try-recur-form)))))
 

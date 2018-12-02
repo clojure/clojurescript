@@ -304,7 +304,8 @@
     (ex-info (str "failed compiling constant: " x "; "
                (pr-str (type x)) " is not a valid ClojureScript constant.")
       {:constant x
-       :type (type x)})))
+       :type (type x)
+       :clojure.error/phase :compilation})))
 
 (defmethod emit-constant* nil [x] (emits "null"))
 
@@ -1398,8 +1399,8 @@
          (clojure.string/replace file-str #"\.cljc$" ".js"))
 
        :else
-       (throw (IllegalArgumentException.
-                (str "Invalid source file extension " file-str))))))
+       (throw (util/compilation-error (IllegalArgumentException.
+                                        (str "Invalid source file extension " file-str)))))))
 
 #?(:clj
    (defn with-core-cljs
@@ -1702,8 +1703,8 @@
                       (with-core-cljs opts (fn [] (ana/analyze-file src-file opts))))
                     (assoc ns-info :out-file (.toString dest-file)))))
               (catch Exception e
-                (throw (ex-info (str "failed compiling file:" src) {:file src} e))))
-            (throw (java.io.FileNotFoundException. (str "The file " src " does not exist.")))))))))
+                (throw (ex-info (str "failed compiling file:" src) {:file src :clojure.error/phase :compilation} e))))
+            (throw (util/compilation-error (java.io.FileNotFoundException. (str "The file " src " does not exist."))))))))))
 
 #?(:clj
    (defn cljs-files-in
@@ -1788,7 +1789,8 @@
         :else (throw
                 (ex-info
                   (str "Cannot emit constant for type " (type sym))
-                  {:error :invalid-constant-type})))
+                  {:error :invalid-constant-type
+                   :clojure.error/phase :compilation})))
       (emits ";\n"))))
 
 #?(:clj
