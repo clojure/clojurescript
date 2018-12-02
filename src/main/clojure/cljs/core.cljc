@@ -2022,14 +2022,29 @@
   => 17"
   [psym & doc+methods]
   (core/let [p (:name (cljs.analyzer/resolve-var (dissoc &env :locals) psym))
-             [doc methods] (if (core/string? (first doc+methods))
-                             [(first doc+methods) (next doc+methods)]
-                             [nil doc+methods])
-             psym (vary-meta psym assoc
-                    :doc doc
-                    :protocol-symbol true)
+             [opts methods]
+             (core/loop [opts {:protocol-symbol true}
+                         methods []
+                         sigs doc+methods]
+               (core/if-not (seq sigs)
+                 [opts methods]
+                 (core/let [[head & tail] sigs]
+                   (core/cond
+                     (core/string? head)
+                     (recur (assoc opts :doc head) methods tail)
+                     (core/keyword? head)
+                     (recur (assoc opts head (first tail)) methods (rest tail))
+                     (core/list? head)
+                     (recur opts (conj methods head) tail)
+                     :else
+                     (throw #?(:clj  (Exception.
+                                       (core/str "Invalid protocol, " psym " received unexpected argument"))
+                               :cljs (js/Error.
+                                       (core/str "Invalid protocol, " psym " received unexpected argument"))))
+                     ))))
+             psym (vary-meta psym merge opts)
              ns-name (core/-> &env :ns :name)
-             fqn (core/fn [n] (symbol (core/str ns-name "." n)))
+             fqn (core/fn [n] (symbol (core/str ns-name) (core/str n)))
              prefix (protocol-prefix p)
              _ (core/doseq [[mname & arities] methods]
                  (core/when (some #{0} (map count (filter vector? arities)))
@@ -2047,21 +2062,44 @@
                                                      (core/symbol? arg) arg
                                                      (core/and (map? arg) (core/some? (:as arg))) (:as arg)
                                                      :else (gensym))) sig)
-                                           sig)]
-                            `(~sig
-                              (if (and (not (nil? ~(first sig)))
-                                    (not (nil? (. ~(first sig) ~(symbol (core/str "-" slot)))))) ;; Property access needed here.
-                                (. ~(first sig) ~slot ~@sig)
-                                (let [x# (if (nil? ~(first sig)) nil ~(first sig))
-                                      m# (unchecked-get ~(fqn fname) (goog/typeOf x#))]
-                                  (if-not (nil? m#)
-                                    (m# ~@sig)
-                                    (let [m# (unchecked-get ~(fqn fname) "_")]
-                                      (if-not (nil? m#)
-                                        (m# ~@sig)
-                                        (throw
-                                          (missing-protocol
-                                            ~(core/str psym "." fname) ~(first sig)))))))))))
+                                           sig)
+
+                                     fqn-fname (fqn fname)
+                                     fsig (first sig)
+
+                                     ;; construct protocol checks in reverse order
+                                     ;; check the.protocol/fn["_"] for default impl last
+                                     check
+                                     `(let [m# (unchecked-get ~fqn-fname "_")]
+                                        (if-not (nil? m#)
+                                          (m# ~@sig)
+                                          (throw
+                                            (missing-protocol
+                                              ~(core/str psym "." fname) ~fsig))))
+
+                                     ;; then check protocol fn in metadata (only when protocol is marked with :extend-via-metadata true)
+                                     check
+                                     (core/if-not (:extend-via-metadata opts)
+                                       check
+                                       `(if-let [meta-impl# (-> ~fsig (core/meta) (core/get '~fqn-fname))]
+                                          (meta-impl# ~@sig)
+                                          ~check))
+
+                                     ;; then check protocol on js string,function,array,object
+                                     check
+                                     `(let [x# (if (nil? ~fsig) nil ~fsig)
+                                            m# (unchecked-get ~fqn-fname (goog/typeOf x#))]
+                                        (if-not (nil? m#)
+                                          (m# ~@sig)
+                                          ~check))
+
+                                     ;; then check protocol property on object (first check actually executed)
+                                     check
+                                     `(if (and (not (nil? ~fsig))
+                                               (not (nil? (. ~fsig ~(symbol (core/str "-" slot)))))) ;; Property access needed here.
+                                        (. ~fsig ~slot ~@sig)
+                                        ~check)]
+                            `(~sig ~check)))
              psym (core/-> psym
                     (vary-meta update-in [:jsdoc] conj
                       "@interface")
