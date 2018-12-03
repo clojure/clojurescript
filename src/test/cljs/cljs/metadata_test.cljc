@@ -129,13 +129,24 @@
       (testing "Medium"
         (seq-interface-tests (seq (hash-map 0 1 2 3 4 5))))
       (testing "Large"
-        (seq-interface-tests (seq (apply hash-map (range 100))))))
+        (seq-interface-tests (seq (apply hash-map (range 100)))))
+      (testing "KeySeq"
+        (seq-interface-tests (keys (apply hash-map (range 10)))))
+      (testing "ValSeq"
+        (seq-interface-tests (vals (apply hash-map (range 10))))))
 
     (testing "PersistentArrayMap"
       (testing "Empty"
         (seq-interface-tests (seq (array-map))))
       (testing "Medium"
-        (seq-interface-tests (seq (array-map 0 1 2 3 4 5))))))
+        (seq-interface-tests (seq (array-map 0 1 2 3 4 5))))
+      (testing "KeySeq"
+        (seq-interface-tests (keys (apply array-map (range 10)))))
+      (testing "ValSeq"
+        (seq-interface-tests (vals (apply array-map (range 10))))))
+
+    (testing "PersistentTreeMap"
+      (seq-interface-tests (seq (sorted-map :a 1 :b 2 :c 3)))))
 
   (testing "generators"
     (testing "cycle"
@@ -145,4 +156,8 @@
     (testing "repeat"
       (seq-interface-tests (repeat 10 :x)))
     (testing "iterate"
-      (seq-interface-tests (iterate inc 0)))))
+      (seq-interface-tests (iterate inc 0))))
+
+  (testing "ChunkedCons"
+    (let [chunked-cons (seq (map inc (vec (range 100))))]
+      (seq-interface-tests chunked-cons))))

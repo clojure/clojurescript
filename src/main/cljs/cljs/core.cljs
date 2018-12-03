@@ -3590,7 +3590,7 @@ reduces them without incurring seq initialization"
   (-first [coll] (-nth chunk 0))
   (-rest [coll]
     (if (> (-count chunk) 1)
-      (ChunkedCons. (-drop-first chunk) more meta nil)
+      (ChunkedCons. (-drop-first chunk) more nil nil)
       (if (nil? more)
         ()
         more)))
@@ -3598,7 +3598,7 @@ reduces them without incurring seq initialization"
   INext
   (-next [coll]
     (if (> (-count chunk) 1)
-      (ChunkedCons. (-drop-first chunk) more meta nil)
+      (ChunkedCons. (-drop-first chunk) more nil nil)
       (when-not (nil? more)
         (-seq more))))
 
@@ -3620,7 +3620,7 @@ reduces them without incurring seq initialization"
     (cons o this))
 
   IEmptyableCollection
-  (-empty [coll] (-with-meta (.-EMPTY List) meta))
+  (-empty [coll] (.-EMPTY List))
 
   IHash
   (-hash [coll] (caching-hash coll hash-ordered-coll __hash)))
@@ -8210,7 +8210,7 @@ reduces them without incurring seq initialization"
   (-conj [coll o] (cons o coll))
 
   IEmptyableCollection
-  (-empty [coll] (-with-meta (.-EMPTY List) meta))
+  (-empty [coll] (.-EMPTY List))
 
   IHash
   (-hash [coll] (caching-hash coll hash-ordered-coll __hash))
@@ -9051,7 +9051,7 @@ reduces them without incurring seq initialization"
     (cons o coll))
 
   IEmptyableCollection
-  (-empty [coll] (-with-meta (.-EMPTY List) _meta))
+  (-empty [coll] (.-EMPTY List))
 
   IHash
   (-hash [coll] (hash-ordered-coll coll))
@@ -9066,7 +9066,7 @@ reduces them without incurring seq initialization"
                  (-next mseq)
                  (next mseq))]
       (if-not (nil? nseq)
-        (ValSeq. nseq _meta)
+        (ValSeq. nseq nil)
         ())))
 
   INext
@@ -9075,7 +9075,7 @@ reduces them without incurring seq initialization"
                  (-next mseq)
                  (next mseq))]
       (when-not (nil? nseq)
-        (ValSeq. nseq _meta))))
+        (ValSeq. nseq nil))))
 
   IReduce
   (-reduce [coll f] (seq-reduce f coll))
@@ -9746,7 +9746,7 @@ reduces them without incurring seq initialization"
   (-conj [rng o] (cons o rng))
 
   IEmptyableCollection
-  (-empty [rng] (-with-meta (.-EMPTY List) nil))
+  (-empty [rng] (.-EMPTY List))
 
   ISequential
   IEquiv
