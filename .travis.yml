@@ -1,7 +1,7 @@
 dist: trusty
 
 git:
-  depth: 500
+  depth: 1000
 
 language: node_js
 
