@@ -3274,7 +3274,7 @@ reduces them without incurring seq initialization"
   (-conj [coll o] (Cons. nil o coll nil))
 
   IEmptyableCollection
-  (-empty [coll] (-with-meta (.-EMPTY List) meta))
+  (-empty [coll] (.-EMPTY List))
 
   ISequential
   IEquiv
@@ -3295,10 +3295,10 @@ reduces them without incurring seq initialization"
 (defn cons
   "Returns a new seq where x is the first element and coll is the rest."
   [x coll]
-  (if (or (nil? coll)
-          (implements? ISeq coll))
-    (Cons. nil x coll nil)
-    (Cons. nil x (seq coll) nil)))
+  (cond
+    (nil? coll)             (List. nil x nil 1 nil)
+    (implements? ISeq coll) (Cons. nil x coll nil)
+    :default                (Cons. nil x (seq coll) nil)))
 
 (defn hash-keyword [k]
   (int (+ (hash-symbol k) 0x9e3779b9)))

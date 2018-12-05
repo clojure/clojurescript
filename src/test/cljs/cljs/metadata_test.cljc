@@ -160,4 +160,8 @@
 
   (testing "ChunkedCons"
     (let [chunked-cons (seq (map inc (vec (range 100))))]
-      (seq-interface-tests chunked-cons))))
+      (seq-interface-tests chunked-cons)))
+
+  (testing "Cons"
+    (seq-interface-tests (cons 'a ()))
+    (seq-interface-tests (cons 'b (cons 'a ())))))
