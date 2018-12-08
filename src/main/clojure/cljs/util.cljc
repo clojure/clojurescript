@@ -20,7 +20,7 @@
 (def ^:dynamic *clojurescript-version*)
 
 (defn compilation-error [cause]
-  (ex-info nil {:closure.error/phase :compilation}) cause)
+  (ex-info nil {:clojure.error/phase :compilation} cause))
 
 (defn- main-src-directory []
   (some (fn [file]

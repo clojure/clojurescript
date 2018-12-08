@@ -60,3 +60,6 @@
 (deftest test-content-sha
   (is (= "40BD001563085FC35165329EA1FF5C5ECBDBBEEF" (util/content-sha "123")))
   (is (= "40BD0" (util/content-sha "123" 5))))
+
+(deftest test-cljs-3008
+  (is (= :compilation (:clojure.error/phase (ex-data (util/compilation-error (Exception.)))))))
