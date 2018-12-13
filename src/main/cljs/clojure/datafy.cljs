@@ -21,7 +21,7 @@
   (let [v ((or (-> x meta ::datafy) -datafy) x)]
     (if (identical? v x)
       v
-      (if (object? v)
+      (if (implements? IWithMeta v)
         (vary-meta v assoc ::obj x)
         v))))
 
