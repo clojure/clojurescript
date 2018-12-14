@@ -86,7 +86,7 @@ var server = net.createServer(function (socket) {
                     type: "result",
                     repl: repl,
                     status: "exception",
-                    value: err.stack
+                    value: cljs.repl.error__GT_str(err)
                 }));
             } else if(ret !== undefined && ret !== null) {
                 socket.write(JSON.stringify({
