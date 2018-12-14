@@ -14,11 +14,11 @@
 (deftest datafy-test
   (testing "Datafy works when datafied value is arbitrary JS objects"
     (let [datafied #js {}
-          x (with-meta [1 2 3] {:clojure.datafy/datafy (fn [_] datafied)})]
+          x (with-meta [1 2 3] {`clojure.core.protocols/datafy (fn [_] datafied)})]
       (is (= datafied (d/datafy x)))))
   (testing "Datafy adds ::obj metadata when return value != original value and supports metadata"
     (let [datafied [2 3 4]
           original [1 2 3]
-          x (with-meta original {:clojure.datafy/datafy (fn [_] datafied)})]
+          x (with-meta original {`clojure.core.protocols/datafy (fn [_] datafied)})]
       (is (= datafied (d/datafy x)))
       (is (= {:clojure.datafy/obj original} (meta (d/datafy x)))))))

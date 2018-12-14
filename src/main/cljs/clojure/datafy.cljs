@@ -8,48 +8,50 @@
 
 (ns
   ^{:doc "Functions to turn objects into data. Alpha, subject to change"}
-  clojure.datafy)
+    clojure.datafy
+  (:require [clojure.core.protocols :as p]))
 
 (defn datafy
-  "Attempts to return x as data. If :clojure.datafy/datafy is present
-  as metadata of x, it will be called with x as an argument, else
-  datafy will return the value of clojure.protocols/datafy. If the
-  value has been transformed and the result supports
+  "Attempts to return x as data.
+  datafy will return the value of clojure.protocols/datafy. If
+  the value has been transformed and the result supports
   metadata, :clojure.datafy/obj will be set on the metadata to the
   original value of x."
   [x]
-  (let [v ((or (-> x meta ::datafy) -datafy) x)]
+  (let [v (p/datafy x)]
     (if (identical? v x)
       v
       (if (implements? IWithMeta v)
-        (vary-meta v assoc ::obj x)
+        (vary-meta v assoc ::obj x
+                   ;; Circling back to this at a later date per @dnolen
+                   ;; ::class (-> x .-constructor .-name symbol)
+                   )
         v))))
 
 (defn nav
   "Returns (possibly transformed) v in the context of coll and k (a
   key/index or nil). Callers should attempt to provide the key/index
   context k for Indexed/Associative/ILookup colls if possible, but not
-  to fabricate one e.g. for sequences (pass nil). If :clojure.datafy/nav is
-  present as metadata on coll, it will be called with coll, k and v as
-  arguments, else nav will call :clojure.protocols/nav."
+  to fabricate one e.g. for sequences (pass nil). nav will return the
+  value of clojure.core.protocols/nav."
   [coll k v]
-  ((or (-> coll meta ::nav) -nav) coll k v))
+  (p/nav coll k v))
 
 (defn- datify-ref [r]
   (with-meta [(deref r)] (meta r)))
 
-(extend-protocol IDatafiable
+(extend-protocol p/Datafiable
   Var
-  (-datafy [r] (datify-ref r))
+  (datafy [r] (datify-ref r))
 
   Reduced
-  (-datafy [r] (datify-ref r))
+  (datafy [r] (datify-ref r))
 
   Atom
-  (-datafy [r] (datify-ref r))
+  (datafy [r] (datify-ref r))
 
   Volatile
-  (-datafy [r] (datify-ref r))
+  (datafy [r] (datify-ref r))
 
   Delay
-  (-datafy [r] (datify-ref r)))
+  (datafy [r] (datify-ref r)))
