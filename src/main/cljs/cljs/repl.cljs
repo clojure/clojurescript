@@ -73,12 +73,7 @@
   (let [base (fn [t]
                (merge {:type (cond
                                (instance? ExceptionInfo t) 'ExceptionInfo
-                               (instance? js/EvalError t) 'js/EvalError
-                               (instance? js/RangeError t) 'js/RangeError
-                               (instance? js/ReferenceError t) 'js/ReferenceError
-                               (instance? js/SyntaxError t) 'js/SyntaxError
-                               (instance? js/URIError t) 'js/URIError
-                               (instance? js/Error t) 'js/Error
+                               (instance? js/Error t) (symbol "js" (.-name t))
                                :else nil)}
                  (when-let [msg (ex-message t)]
                    {:message msg})
