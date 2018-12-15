@@ -72,7 +72,7 @@
   [o]
   (let [base (fn [t]
                (merge {:type (cond
-                               (instance? ExceptionInfo t) 'ExceptionInfo
+                               (instance? ExceptionInfo t) `ExceptionInfo
                                (instance? js/Error t) (symbol "js" (.-name t))
                                :else nil)}
                  (when-let [msg (ex-message t)]

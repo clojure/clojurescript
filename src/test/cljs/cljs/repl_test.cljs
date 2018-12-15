@@ -14,3 +14,7 @@
 (deftest test-cljs-3017
   (let [m (cljs.repl/Error->map (js/TypeError.))]
     (is (= 'js/TypeError (get-in m [:via 0 :type])))))
+
+(deftest test-cljs-3019
+  (let [m (cljs.repl/Error->map (ex-info "" {}))]
+    (is (= 'cljs.core/ExceptionInfo (get-in m [:via 0 :type])))))
