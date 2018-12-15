@@ -148,25 +148,12 @@
       {:status :success
        :value  (if-let [r (eval-str engine js)] (safe-to-string r) "")}
       (catch ScriptException e
-        (let [^Throwable root-cause (clojure.stacktrace/root-cause e)]
-          {:status :exception
-           :value  (.getMessage root-cause)
-           :stacktrace
-                   (apply str
-                     (interpose "\n"
-                       (map #(subs % 5)
-                         (filter #(clojure.string/starts-with? % "<js>.")
-                           (map str
-                             (.getStackTrace root-cause))))))}))
+        {:status :exception
+         :value  (eval-str engine "cljs.repl.error__GT_str(cljs.core._STAR_e)")})
       (catch Throwable e
         (let [^Throwable root-cause (clojure.stacktrace/root-cause e)]
           {:status :exception
-           :value  (.getMessage root-cause)
-           :stacktrace
-                   (apply str
-                     (interpose "\n"
-                       (map str
-                         (.getStackTrace root-cause))))}))))
+           :value  (cljs.repl/ex-str (cljs.repl/ex-triage (Throwable->map root-cause)))}))))
   (-load [{engine :engine :as this} ns url]
     (load-ns engine ns))
   (-tear-down [this]

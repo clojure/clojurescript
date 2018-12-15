@@ -86,8 +86,7 @@
         (ScriptableObject/putProperty top-level "_STAR_e"
           (Context/javaToJS ex scope))
         {:status :exception
-         :value (.toString ex)
-         :stacktrace (stacktrace ex)}))))
+         :value  (cljs.repl/ex-str (cljs.repl/ex-triage (Throwable->map ex)))}))))
 
 (defn load-file
   "Load a JavaScript. This is needed to load JavaScript files before the Rhino

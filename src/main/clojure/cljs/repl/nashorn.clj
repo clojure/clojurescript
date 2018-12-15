@@ -138,17 +138,11 @@
           (catch ScriptException e
             (let [^Throwable root-cause (clojure.stacktrace/root-cause e)]
               {:status :exception
-               :value (.getMessage root-cause)
-               :stacktrace (NashornException/getScriptStackString root-cause)}))
+               :value  (eval-str engine "cljs.repl.error__GT_str(cljs.core._STAR_e)")}))
           (catch Throwable e
             (let [^Throwable root-cause (clojure.stacktrace/root-cause e)]
               {:status :exception
-               :value (.getMessage root-cause)
-               :stacktrace
-               (apply str
-                 (interpose "\n"
-                   (map str
-                     (.getStackTrace root-cause))))}))))
+               :value (cljs.repl/ex-str (cljs.repl/ex-triage (Throwable->map root-cause)))}))))
       (-load [{engine :engine :as this} ns url]
         (load-ns engine ns))
       (-tear-down [this]

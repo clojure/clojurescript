@@ -69,12 +69,7 @@
            :value (str (js* "eval(~{block})"))}
           (catch :default e
             {:status :exception
-             :ua-product (get-ua-product)
-             :value (str e)
-             :stacktrace
-             (if (.hasOwnProperty e "stack")
-               (.-stack e)
-               "No stacktrace available.")}))]
+             :value (cljs.repl/error->str e)}))]
     (pr-str result)))
 
 (defn send-result [connection url data]
