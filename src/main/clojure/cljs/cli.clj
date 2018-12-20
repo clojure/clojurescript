@@ -60,9 +60,11 @@ classpath. Classpath-relative paths have prefix of @ or @/")
          (let [w (.substring ws s e)
                word-len (.length w)
                line-len (+ line-len word-len)]
-           (if (> line-len max-len)
-             (recur e (.next b) word-len w (conj ret line))
-             (recur e (.next b) line-len (str line w) ret)))
+           (if (= w "--") ; long-form options are single tokens (i.e. --repl)
+             (recur s (.next b) (- line-len 2) line ret)
+             (if (> line-len max-len)
+               (recur e (.next b) word-len w (conj ret line))
+               (recur e (.next b) line-len (str line w) ret))))
          (conj ret (str line (.substring ws s (.length ws)))))))))
 
 (defn- opt->str [cs {:keys [arg doc]}]
