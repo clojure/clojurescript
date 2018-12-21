@@ -133,7 +133,7 @@
   "prepl bound to *in* and *out*, suitable for use with e.g. server/repl (socket-repl).
   :ret and :tap vals will be processed by valf, a fn of one argument
   or a symbol naming same (default identity)"
-  [& {:keys [valf repl-env opts] :or {valf identity}}]
+  [& {:keys [valf repl-env opts] :or {valf #(if (string? %) % (pr-str %))}}]
   (let [valf (resolve-fn valf)
         out *out*
         lock (Object.)]
