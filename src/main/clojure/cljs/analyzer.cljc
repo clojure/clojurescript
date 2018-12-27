@@ -3495,12 +3495,16 @@
 ;; TODO: analyzed analyzed? should take pass name as qualified keyword arg
 ;; then compiler passes can mark/check individually - David
 
+(defn- unsorted-map? [x]
+  (and (map? x)
+       (not (sorted? x))))
+
 (defn analyzed
   "Mark a form as being analyzed. Assumes x satisfies IMeta. Useful to suppress
   warnings that will have been caught by a first compiler pass."
   [x]
   (cond
-    (map? x) (assoc x ::analyzed true)
+    (unsorted-map? x) (assoc x ::analyzed true)
     :else (vary-meta x assoc ::analyzed true)))
 
 (defn analyzed?
@@ -3509,7 +3513,7 @@
   [x]
   (boolean
     (cond
-      (map? x) (::analyzed x)
+      (unsorted-map? x) (::analyzed x)
       :else (::analyzed (meta x)))))
 
 (defn- all-values?

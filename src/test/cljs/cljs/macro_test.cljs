@@ -9,7 +9,7 @@
 (ns cljs.macro-test
   (:refer-clojure :exclude [==])
   (:require [cljs.test :refer-macros [deftest is]])
-  (:use-macros [cljs.macro-test.macros :only [==]])
+  (:use-macros [cljs.macro-test.macros :only [== sm-cljs-3027]])
   (:require-macros [cljs.macro-test.cljs2852]))
 
 (deftest test-macros
@@ -28,3 +28,6 @@
   (is (= '([x])) (cljs.macro-test.cljs2852/beta))
   (is (= '([x] [x y])) (cljs.macro-test.cljs2852/delta))
   (is (= '([x] [x & xs])) (cljs.macro-test.cljs2852/zeta)))
+
+(deftest test-cljs-3027
+  (is (= {"a" "b"} (sm-cljs-3027))))

@@ -11,3 +11,6 @@
 
 (defmacro == [a b]
   `(+ ~a ~b))
+
+(defmacro sm-cljs-3027 []
+  (sorted-map "a" "b"))
