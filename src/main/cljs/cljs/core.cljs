@@ -8992,9 +8992,9 @@ reduces them without incurring seq initialization"
 (es6-iterable KeySeq)
 
 (defn keys
-  "Returns a sequence of the map's keys."
-  [hash-map]
-  (when-let [mseq (seq hash-map)]
+  "Returns a sequence of the map's keys, in the same order as (seq map)."
+  [map]
+  (when-let [mseq (seq map)]
     (KeySeq. mseq nil)))
 
 (defn key
@@ -9071,9 +9071,9 @@ reduces them without incurring seq initialization"
 (es6-iterable ValSeq)
 
 (defn vals
-  "Returns a sequence of the map's values."
-  [hash-map]
-  (when-let [mseq (seq hash-map)]
+  "Returns a sequence of the map's values, in the same order as (seq map)."
+  [map]
+  (when-let [mseq (seq map)]
     (ValSeq. mseq nil)))
 
 (defn val
