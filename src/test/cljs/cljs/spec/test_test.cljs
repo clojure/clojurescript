@@ -111,8 +111,6 @@
                      (fn-2953 "abc"))))
   (is @#'stest/*instrument-enabled*))
 
-(s/fdef cljs.core/= :args (s/+ any?))
-
 (defn foo-2955 [n] "ret")
 
 (s/fdef foo-2955
@@ -122,11 +120,14 @@
 (deftest test-cljs-2955
   (is (seq (stest/check `foo-2955))))
 
+(s/fdef cljs.core/= :args (s/+ any?))
+
 (deftest test-cljs-2956
-  (stest/instrument 'cljs.core/=)
+  (is (= '[cljs.core/=] (stest/instrument `=)))
   (is (true? (= 1)))
-  (is (thrown? js/Error (=)))
-  (stest/unstrument 'cljs.core/=))
+  (is (thrown-with-msg?
+       js/Error #"Call to #'cljs.core/= did not conform to spec\." (=)))
+  (is (= '[cljs.core/=] (stest/unstrument `=))))
 
 (defn fn-2975 [x])
 
@@ -177,3 +178,11 @@
                            :clojure.test.check/ret
                            :num-tests)))
                 check-res))))
+
+(s/fdef cljs.core/next :args (s/cat :coll seqable?))
+
+(deftest test-3023
+  (is (= '[cljs.core/next] (stest/instrument `next)))
+  (is (= [2 3] (next [1 2 3])))
+  (is (thrown-with-msg? js/Error #"Call to #'cljs.core/next did not conform to spec\." (next 1)))
+  (is (= '[cljs.core/next] (stest/unstrument `next))))

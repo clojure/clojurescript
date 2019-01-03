@@ -3878,6 +3878,13 @@ reduces them without incurring seq initialization"
 
 (set! *unchecked-if* true)
 
+(defn- ^seq next*
+  "Internal. DO NOT USE! Next without the nil? check."
+  [coll]
+  (if (implements? INext coll)
+    (-next ^not-native coll)
+    (seq (rest coll))))
+
 (defn- apply-to-simple
   "Internal. DO NOT USE!
   Assumes args was already called with seq beforehand!"
@@ -3886,25 +3893,25 @@ reduces them without incurring seq initialization"
      (if (.-cljs$core$IFn$_invoke$arity$0 f)
        (.cljs$core$IFn$_invoke$arity$0 f)
        (.call f f))
-     (apply-to-simple f (-first args) (next args))))
+     (apply-to-simple f (-first args) (next* args))))
   ([f a0 ^seq args]
    (if (nil? args)
      (if (.-cljs$core$IFn$_invoke$arity$1 f)
        (.cljs$core$IFn$_invoke$arity$1 f a0)
        (.call f f a0))
-     (apply-to-simple f a0 (-first args) (next args))))
+     (apply-to-simple f a0 (-first args) (next* args))))
   ([f a0 a1 ^seq args]
    (if (nil? args)
      (if (.-cljs$core$IFn$_invoke$arity$2 f)
        (.cljs$core$IFn$_invoke$arity$2 f a0 a1)
        (.call f f a0 a1))
-     (apply-to-simple f a0 a1 (-first args) (next args))))
+     (apply-to-simple f a0 a1 (-first args) (next* args))))
   ([f a0 a1 a2 ^seq args]
    (if (nil? args)
      (if (.-cljs$core$IFn$_invoke$arity$3 f)
        (.cljs$core$IFn$_invoke$arity$3 f a0 a1 a2)
        (.call f f a0 a1 a2))
-     (apply-to-simple f a0 a1 a2 (-first args) (next args))))
+     (apply-to-simple f a0 a1 a2 (-first args) (next* args))))
   ([f a0 a1 a2 a3 ^seq args]
    (if (nil? args)
      (if (.-cljs$core$IFn$_invoke$arity$4 f)
