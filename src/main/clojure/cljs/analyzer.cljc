@@ -11,7 +11,7 @@
      :cljs (:refer-clojure :exclude [macroexpand-1 ns-interns ensure js-reserved]))
   #?(:cljs (:require-macros
              [cljs.analyzer.macros
-              :refer [no-warn wrapping-errors
+              :refer [no-warn wrapping-errors with-warning-handlers
                       disallowing-recur allowing-redef disallowing-ns*]]
              [cljs.env.macros :refer [ensure]]))
   #?(:clj (:require [cljs.util :as util :refer [ns->relpath topo-sort]]
@@ -721,6 +721,14 @@
 (defn warning [warning-type env extra]
   (doseq [handler *cljs-warning-handlers*]
     (handler warning-type env extra)))
+
+(defn- accumulating-warning-handler [warn-acc]
+  (fn [warning-type env extra]
+    (when (warning-type *cljs-warnings*)
+      (swap! warn-acc conj [warning-type env extra]))))
+
+(defn- replay-accumulated-warnings [warn-acc]
+  (run! #(apply warning %) @warn-acc))
 
 (defn- error-data
   ([env phase]
@@ -2323,7 +2331,14 @@
         loop-lets    (cond
                        (true? is-loop) *loop-lets*
                        (some? *loop-lets*) (cons {:params bes} *loop-lets*))
-        expr         (analyze-let-body env context exprs recur-frames loop-lets)
+        ;; Accumulate warnings for deferred replay iff there's a possibility of re-analyzing
+        warn-acc     (when (and is-loop
+                                (not widened-tags))
+                       (atom []))
+        expr         (if warn-acc
+                       (with-warning-handlers [(accumulating-warning-handler warn-acc)]
+                         (analyze-let-body env context exprs recur-frames loop-lets))
+                       (analyze-let-body env context exprs recur-frames loop-lets))
         children     [:bindings :body]
         nil->any     (fnil identity 'any)]
     (if (and is-loop
@@ -2331,12 +2346,15 @@
              (not= (mapv nil->any @(:tags recur-frame))
                    (mapv (comp nil->any :tag) bes)))
       (recur encl-env form is-loop @(:tags recur-frame))
-      {:op       op
-       :env      encl-env
-       :bindings bes
-       :body     (assoc expr :body? true)
-       :form     form
-       :children children})))
+      (do
+        (when warn-acc
+          (replay-accumulated-warnings warn-acc))
+        {:op       op
+         :env      encl-env
+         :bindings bes
+         :body     (assoc expr :body? true)
+         :form     form
+         :children children}))))
 
 (defmethod parse 'let*
   [op encl-env form _ _]

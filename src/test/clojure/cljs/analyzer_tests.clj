@@ -1958,3 +1958,22 @@
       (analyze ns-env
         '(def *foo* 1)))
     (is (string/starts-with? (first @ws) "*foo* not declared dynamic and thus"))))
+
+(deftest test-cljs-3031
+  (let [ws (atom [])]
+    (a/with-warning-handlers [(collecting-warning-handler ws)]
+      (analyze ns-env
+        '(loop [x "a"]
+           (if (identical? "a" x)
+             (recur true)
+             (+ 3 x)))))
+    (is (= 1 (count @ws)))
+    (is (string/starts-with? (first @ws) "cljs.core/+, all arguments must be numbers, got [number #{boolean string}] instead")))
+  (let [ws (atom [])]
+    (a/with-warning-handlers [(collecting-warning-handler ws)]
+      (analyze ns-env
+        '(loop [x "a"]
+           (if (identical? "a" x)
+             (recur 1)
+             (+ 3 x)))))
+    (is (zero? (count @ws)))))
