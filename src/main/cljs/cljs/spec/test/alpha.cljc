@@ -193,11 +193,17 @@ Returns a collection of syms naming the vars unstrumented."
   [[quote s :as qs] f spec opts]
   (let [{:keys [name] :as v} (when qs (ana-api/resolve &env s))]
     `(let [s#        '~name
-           opts#     ~opts
            v#        ~(when v `(var ~name))
            spec#     (or ~spec ~(when v `(s/get-spec (var ~name))))
            re-inst?# (and v# (seq (unstrument '~name)) true)
-           f#        (or ~f (when v# @v#))]
+           f#        (or ~f (when v# @v#))
+           opts#     ~opts
+           old-tc-ns# "clojure.test.check"
+           old-tc-opts-key# (keyword old-tc-ns# "opts")
+           [tc-ns# opts#] (if-let [old-tc-opts# (get opts# old-tc-opts-key#)]
+                            [old-tc-ns# (assoc opts# :clojure.spec.test.check/opts
+                                               old-tc-opts#)]
+                            ["clojure.spec.test.check" opts#])]
        (try
          (cond
            (nil? f#)
@@ -206,7 +212,8 @@ Returns a collection of syms naming the vars unstrumented."
 
            (:args spec#)
            (let [tcret# (#'quick-check f# spec# opts#)]
-             (#'make-check-result s# spec# tcret#))
+             (#'make-check-result s# spec# tcret#
+                                  (keyword tc-ns# "ret")))
 
            :default
            {:failure (ex-info "No :args spec" {::s/failure :no-args-spec})

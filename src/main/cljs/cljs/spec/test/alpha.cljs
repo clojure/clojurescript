@@ -236,9 +236,9 @@ with explain-data + ::s/failure."
 
 (defn- make-check-result
   "Builds spec result map."
-  [check-sym spec test-check-ret]
+  [check-sym spec test-check-ret tc-ret-key]
   (merge {:spec spec
-          :clojure.spec.test.check/ret test-check-ret}
+          tc-ret-key test-check-ret}
     (when check-sym
       {:sym check-sym})
     (when-let [result (-> test-check-ret :result)]

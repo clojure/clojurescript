@@ -164,3 +164,16 @@
                            :clojure.spec.test.check/ret
                            :num-tests)))
                 check-res))))
+
+(defn cljs-3033 [x] true)
+(s/fdef cljs-3033 :args (s/cat :x int?) :ret true?)
+
+(deftest test-cljs-3033
+  (let [check-res
+        (stest/check `cljs-3033 {:clojure.test.check/opts {:num-tests 1}})]
+    (is (seq check-res))
+    (is (every? (fn [res]
+                  (= 1 (-> res
+                           :clojure.test.check/ret
+                           :num-tests)))
+                check-res))))
