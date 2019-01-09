@@ -1593,19 +1593,27 @@
                        (get-in env [:locals sym]))
               [sym tag])))))))
 
-(defn- add-predicate-induced-tags
-  "Looks at the test and adds any tags which are induced by virtue
-  of the predicate being satisfied. For example in (if (string? x) x :bar)
+(defn- truth-induced-tag
+  "Refine a tag to exclude clj-nil if the test is a simple symbol."
+  [env test]
+  (when (and (symbol? test)
+             (nil? (namespace test)))
+    (let [analyzed-symbol (no-warn (analyze (assoc env :context :expr) test))]
+      (when-let [tag (:tag analyzed-symbol)]
+        (when (and (set? tag)
+                   (contains? tag 'clj-nil))
+          [test (canonicalize-type (disj tag 'clj-nil))])))))
+
+(defn- set-test-induced-tags
+  "Looks at the test and sets any tags which are induced by virtue
+  of the test being truthy. For example in (if (string? x) x :bar)
   the local x in the then branch must be of string type."
   [env test]
   (let [[local tag] (or (simple-predicate-induced-tag env test)
-                        (type-check-induced-tag env test))]
+                        (type-check-induced-tag env test)
+                        (truth-induced-tag env test))]
     (cond-> env
-      local (update-in [:locals local :tag] (fn [prev-tag]
-                                              (if (or (nil? prev-tag)
-                                                      (= 'any prev-tag))
-                                                tag
-                                                prev-tag))))))
+      local (assoc-in [:locals local :tag] tag))))
 
 (defmethod parse 'if
   [op env [_ test then else :as form] name _]
@@ -1614,7 +1622,7 @@
   (when (> (count form) 4)
     (throw (compile-syntax-error env "Too many arguments to if" 'if)))
   (let [test-expr (disallowing-recur (analyze (assoc env :context :expr) test))
-        then-expr (allowing-redef (analyze (add-predicate-induced-tags env test) then))
+        then-expr (allowing-redef (analyze (set-test-induced-tags env test) then))
         else-expr (allowing-redef (analyze env else))]
     {:env env :op :if :form form
      :test test-expr :then then-expr :else else-expr

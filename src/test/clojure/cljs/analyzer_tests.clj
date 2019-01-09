@@ -267,7 +267,11 @@
   (is (= (a/no-warn
            (e/with-compiler-env test-cenv
              (:tag (a/analyze test-env '(let [x ^any []] (if (seqable? x) x :kw))))))
-        '#{cljs.core/ISeqable array string cljs.core/Keyword})))
+        '#{cljs.core/ISeqable array string cljs.core/Keyword}))
+  (is (= (a/no-warn
+           (e/with-compiler-env test-cenv
+             (:tag (a/analyze test-env '(let [x (namespace :x)] (if x x :kw))))))
+        '#{string cljs.core/Keyword})))
 
 (deftest loop-recur-inference
   (is (= (a/no-warn
