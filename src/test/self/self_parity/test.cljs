@@ -288,6 +288,7 @@
                  #_[cljs.ns-test]
                  [clojure.string-test]
                  [clojure.data-test]
+                 [clojure.datafy-test]
                  [clojure.edn]
                  [clojure.walk-test]
                  [cljs.macro-test]
@@ -332,6 +333,7 @@
              'cljs.reader-test
              'clojure.string-test
              'clojure.data-test
+             'clojure.datafy-test
              'clojure.edn
              'clojure.walk-test
              'cljs.letfn-test
