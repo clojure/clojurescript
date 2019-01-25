@@ -3638,8 +3638,11 @@
           ret  {:env env :form sym}
           lcls (:locals env)]
       (if-some [lb (handle-symbol-local sym (get lcls sym))]
-        (merge (assoc ret :op :local :info lb)
-               (select-keys lb [:name :local :arg-id :variadic? :init]))
+        (merge
+          (assoc ret :op :local :info lb)
+          ;; this is a temporary workaround for core.async see CLJS-3030 - David
+          (when (map? lb)
+            (select-keys lb [:name :local :arg-id :variadic? :init])))
         (let [sym-meta (meta sym)
               sym-ns (namespace sym)
               cur-ns (str (-> env :ns :name))
