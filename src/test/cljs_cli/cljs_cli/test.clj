@@ -4,7 +4,7 @@
    [clojure.java.io :as io]
    [clojure.java.shell :as shell :refer [with-sh-dir]]
    [clojure.string :as str]
-   [cljs-cli.util :refer [cljs-main output-is with-sources with-in with-post-condition with-repl-env-filter repl-title]]
+   [cljs-cli.util :refer [cljs-main output-is check-result with-sources with-in with-post-condition with-repl-env-filter repl-title]]
    [clojure.string :as string]))
 
 (deftest eval-test
@@ -127,3 +127,21 @@
   (with-repl-env-filter #{"graaljs"}
     (-> (cljs-main "-e" "(.eval js/Polyglot \"js\" \"1+1\")")
       (output-is 2))))
+
+(deftest test-cljs-3043
+  (with-repl-env-filter (complement #{"rhino"})
+    (let [check-fn (fn [result]
+                     (is (= 1 (:exit result)))
+                     (is (str/includes? (:err result) "Execution error"))
+                     (is (not (str/includes? (:err result) "error__GT_str"))))]
+      (-> (cljs-main
+            "-e" "js/foo")
+        (check-result check-fn))
+      (with-sources {"src/foo/core.cljs"
+                     "(ns foo.core) (prn js/bogus)"}
+        (-> (cljs-main "-m" "foo.core")
+          (check-result check-fn)))
+      (with-sources {"src/foo/core.cljs"
+                     "(ns foo.core) (prn js/bogus)"}
+        (-> (cljs-main "src/foo/core.cljs")
+          (check-result check-fn))))))

@@ -354,6 +354,9 @@ present"
         (fn []
           (try
             (repl/setup renv repl/*repl-opts*)
+            ;; Load cljs.repl runtime (so ex-str, ex-triage, etc. are available)
+            (repl/evaluate-form renv (ana-api/empty-env) "<cljs repl>"
+              `(~'require ~''cljs.repl))
             ;; REPLs don't normally load cljs_deps.js
             (when (and coptsf (.exists coptsf))
               (let [depsf (io/file (:output-dir opts) "cljs_deps.js")]

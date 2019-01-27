@@ -102,5 +102,9 @@
     (is (= (string/trim (apply str (map print-str (interleave expected-lines (repeat "\n")))))
           (string/trim (:out result))))))
 
+(defn check-result [result pred]
+  (when-not (:repl-env-filtered result)
+    (pred result)))
+
 (defn repl-title []
   (string/trim (with-out-str (repl/repl-title))))
