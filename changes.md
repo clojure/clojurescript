@@ -1,3 +1,72 @@
+## 1.10.514
+
+### Changes
+* CLJS-3036: Provide a clojure.edn namespace for Clojure compatibility
+* CLJS-2967: Make clojure.spec.alpha reloadable
+* CLJS-2968: Support immutable GCC DependencyOptions
+* CLJS-2693: Have Range implement IChunkedSeq
+* CLJS-2971: Make cljs.spec.alpha/fn-sym private
+* CLJS-2912: Reuse seq in some
+
+### Enhancements
+* CLJS-2865: Optimize string expression concatenation
+* CLJS-2866: Predicate-induced type inference
+* CLJS-2901: Return type inference for multi-arity & variadic fns
+
+### Fixes
+* CLJS-3043: error__GT_str not defined for cli scripts
+* CLJS-3037: Self-host: Add datafy tests to self-parity tests
+* CLJS-3031: loop / recur inference, warnings not suppressed on initial pass
+* CLJS-3030: Regression with core.async surrounding select-keys / find on String
+* CLJS-3038: Improve error message when clojure.test.check is not required
+* CLJS-3034: Truthy-induced inference
+* CLJS-3023: Instrumenting next gives maximum call stack size exceeded
+* CLJS-3033: Maintain backward compatibility test.check keyword
+* CLJS-2964: Requiring spec.test.alpha loads clojure.test.check
+* CLJS-2103: clarify arg type and order constraints of keys and vals
+* CLJS-3011: Port improved runtime exception printing to non-Node REPLs
+* CLJS-2981: Mishandling of :npm-deps Boolean value computing upstream deps
+* CLJS-3027: sorted-map can no longer be returned by a macro unless it has keyword keys
+* CLJS-3028: atom docstring typo
+* CLJS-2994 Ensure all prepl :vals are pr-str-ed
+* CLJS-3020: cljs.main: Incorrect documentation for the --compile flag
+* CLJS-2652: Line breaks in long options for compile
+* CLJS-3025: Typo when updating cljs.analyzer.macros/wrapping-errors
+* CLJS-2955: Self-host: spec check macro compile-time expansion
+* CLJS-2999: Update datafy to use inherent support for protocols via metadata
+* CLJS-2945: Print spec failure details
+* CLJS-3010: Datafy does not properly check for whether the datafied value supports metadata
+* CLJS-3008: Typo in error phase key placed in exception and misplaced cause
+* CLJS-2956: Stack overflow when specing core =
+* CLJS-2913: improvements to exception messages and printing
+* CLJS-3005: empty on Cons shouldn't keep metadata
+* CLJS-2958 - make symbol work on keywords and vars
+* CLJS-3000: Don't pass meta to next/rest/empty of seqs
+* Add support for protocols via metadata
+* CLJS-3000: Don't pass meta to next/rest/empty of seqs
+* CLJS-1888 - Seqs of PHMs and PAMs do not handle metadata correctly
+* CLJS-2794 :Return identity when with-meta is called with identical meta
+* CLJS-2980: Calling "check-fn" gives "is not public" warning
+* CLJS-2977: Spec instrumentation regression with varargs / :static-fns
+* CLJS-2929: Port datafy
+* CLJS-2995: Instrumented self-calling multi-arity fn throws maximum call stack exceeded with optimizations advanced
+* Fix source maps missing local binding names
+* CLJS-2991: Need to wrap js-obj output with parens
+* CLJS-2976: s/fdef docstring should refer to cljs.spec.test.alpha/check
+* CLJS-2538: nth on fractional indices near array and string bounds
+* CLJS-2909: clojure.walk/postwalk does not preserve MapEntry type objects
+* CLJS-2537: Negative fractional index in contains? on array
+* CLJS-2933: Consistent #object printing whitespace
+* CLJS-2873: Improved inference for loop / recur
+* CLJS-2989: Fast-path issues for predicate-induced inference based on satisfies?
+* CLJS-2867: Inferred return type of namespace is string
+* CLJS-2975: unstrument returns symbol of non-instrumented var
+* CLJS-2974: empty for non-emptyable should return nil
+* CLJS-2825: Eliminate unnecessary ^boolean annotations
+* CLJS-2979: re-seq is relying on undefined behavior of subs
+* remove redundant exists? check in dynaload
+* fix incorrect cljs.core.MapEntry usage
+
 ## 1.10.439
 
 ### Changes
