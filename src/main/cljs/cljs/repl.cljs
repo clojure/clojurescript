@@ -118,7 +118,7 @@
   [datafied-throwable]
   (let [{:keys [via trace phase] :or {phase :execution}} datafied-throwable
         {:keys [type message data]} (last via)
-        {::spec/keys [:problems :fn :cljs.spec.test.alpha/caller]} data
+        {:cljs.spec.alpha/keys [problems fn] :cljs.spec.test.alpha/keys [caller]} data
         {:keys [:clojure.error/source] :as top-data} (:data (first via))]
     (assoc
      (case phase
