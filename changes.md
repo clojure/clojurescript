@@ -1,4 +1,4 @@
-## 1.10.514
+## 1.10.516
 
 ### Changes
 * CLJS-3036: Provide a clojure.edn namespace for Clojure compatibility
