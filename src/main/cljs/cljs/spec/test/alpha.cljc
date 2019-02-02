@@ -305,8 +305,8 @@ spec itself will have an ::s/failure value in ex-data:
                    (fn [sym]
                      (do `(check-1 '~sym nil nil ~opts-sym)))))])
         (throw
-         (js/Error. (str "Require clojure.test.check "
-                         "before calling check.")))))))
+         (js/Error. (str "Require clojure.test.check and "
+                         "clojure.test.check.properties before calling check.")))))))
 
 (defmacro ^:private maybe-setup-static-dispatch [f ret conform! arity]
   (let [arity-accessor (symbol (str ".-cljs$core$IFn$_invoke$arity$" arity))
