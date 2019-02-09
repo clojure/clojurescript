@@ -186,3 +186,12 @@
   (is (= [2 3] (next [1 2 3])))
   (is (thrown-with-msg? js/Error #"Call to #'cljs.core/next did not conform to spec\." (next 1)))
   (is (= '[cljs.core/next] (stest/unstrument `next))))
+
+(defn cljs-3049 [x] x)
+(deftest test-3049
+  (s/fdef cljs-3049 :args (s/cat :x number?) :ret number?)
+  (testing "the spec'ed fn is checkable"
+    (is (contains? (stest/checkable-syms) `cljs-3049)))
+  (s/def cljs-3049 nil)
+  (testing "the spec'ed fn is not checkable anymore"
+    (is (not (contains? (stest/checkable-syms) `cljs-3049)))))

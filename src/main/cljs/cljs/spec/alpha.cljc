@@ -68,7 +68,10 @@
   [k spec-form]
   (let [k    (if (symbol? k) (ns-qualify &env k) k)
         form (res &env spec-form)]
-    (swap! registry-ref assoc k form)
+    (swap! registry-ref (fn [r]
+                          (if (nil? form)
+                            (dissoc r k)
+                            (assoc r k form))))
     `(def-impl '~k '~form ~spec-form)))
 
 (defmacro spec
