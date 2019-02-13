@@ -37,10 +37,22 @@
   {".html" "text/html"
    ".css" "text/css"
 
+   ".ttf" "font/ttf"
+   ".otf" "font/otf"
+
+   ".pdf" "application/pdf"
+
    ".jpg" "image/jpeg"
    ".png" "image/png"
    ".gif" "image/gif"
    ".svg" "image/svg+xml"
+
+   ".mp4" "video/mp4"
+   ".m4a" "audio/m4a"
+   ".m4v" "video/mp4"
+   ".mp3" "audio/mpeg"
+   ".mpeg" "video/mpeg"
+   ".wav" "audio/wav"
 
    ".js" "text/javascript"
    ".json" "application/json"
@@ -53,10 +65,23 @@
 (def mime-type->encoding
   {"text/html" "UTF-8"
    "text/css" "UTF-8"
+
+   "font/ttf" "ISO-8859-1"
+   "font/otf" "ISO-8859-1"
+
+   "application/pdf" "ISO-8859-1"
+
    "image/jpeg" "ISO-8859-1"
    "image/png" "ISO-8859-1"
    "image/gif" "ISO-8859-1"
    "image/svg+xml" "UTF-8"
+
+   "video/mp4" "ISO-8859-1"
+   "audio/m4a" "ISO-8859-1"
+   "audio/mpeg" "ISO-8859-1"
+   "video/mpeg" "ISO-8859-1"
+   "audio/wav" "ISO-8859-1"
+
    "text/javascript" "UTF-8"
    "text/x-clojure" "UTF-8"
    "application/json" "UTF-8"})
