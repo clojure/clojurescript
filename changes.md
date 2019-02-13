@@ -1,3 +1,12 @@
+## 1.10.520
+
+### Changes
+* Browser REPL serves more mime types
+
+### Fixes
+* CLJS-3048: Revert CLJS-3038
+* CLJS-3049: Undefined fdef is still present in result of (stest/checkable-syms)
+
 ## 1.10.516
 
 ### Changes
