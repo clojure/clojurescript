@@ -2970,8 +2970,8 @@ reduces them without incurring seq initialization"
 (defn subs
   "Returns the substring of s beginning at start inclusive, and ending
   at end (defaults to length of string), exclusive."
-  ([s start] (.substring s start))
-  ([s start end] (.substring s start end)))
+  ([s start] ^string (.substring s start))
+  ([s start end] ^string (.substring s start end)))
 
 (declare map name)
 
@@ -11475,7 +11475,7 @@ reduces them without incurring seq initialization"
             (str ret "|\\$"))))))
   DEMUNGE_PATTERN)
 
-(defn- munge-str [name]
+(defn- ^string munge-str [name]
   (let [sb (StringBuffer.)]
     (loop [i 0]
       (if (< i (. name -length))

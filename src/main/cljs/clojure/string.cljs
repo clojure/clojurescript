@@ -18,7 +18,7 @@
 (def ^:private re-surrogate-pair
   (js/RegExp. "([\\uD800-\\uDBFF])([\\uDC00-\\uDFFF])" "g"))
 
-(defn reverse
+(defn ^string reverse
   "Returns s with its characters reversed."
   [s]
   (-> (.replace s re-surrogate-pair "$2$1")
@@ -41,7 +41,7 @@
         (f (first matches))
         (f (vec matches))))))
 
-(defn replace
+(defn ^string replace
   "Replaces all instance of match with replacement in s.
 
    match/replacement can be:
@@ -73,7 +73,7 @@
 
     :else (throw (str "Invalid match arg: " match))))
 
-(defn replace-first
+(defn ^string replace-first
   "Replaces the first instance of match with replacement in s.
 
    match/replacement can be:
@@ -104,7 +104,7 @@
    (loop [sb (StringBuffer.) coll (seq coll)]
      (if-not (nil? coll)
        (recur (. sb (append (str (first coll)))) (next coll))
-       (.toString sb))))
+       ^string (.toString sb))))
   ([separator coll]
    (loop [sb (StringBuffer.) coll (seq coll)]
      (if-not (nil? coll)
@@ -114,19 +114,19 @@
            (when-not (nil? coll)
              (. sb (append separator)))
            (recur sb coll)))
-       (.toString sb)))))
+       ^string (.toString sb)))))
 
-(defn upper-case
+(defn ^string upper-case
   "Converts string to all upper-case."
   [s]
   (.toUpperCase s))
 
-(defn lower-case
+(defn ^string lower-case
   "Converts string to all lower-case."
   [s]
   (.toLowerCase s))
 
-(defn capitalize
+(defn ^string capitalize
   "Converts first character of the string to upper-case, all other
   characters to lower-case."
   [s]
@@ -193,22 +193,22 @@
   [s]
   (split s #"\n|\r\n"))
 
-(defn trim
+(defn ^string trim
   "Removes whitespace from both ends of string."
   [s]
   (gstring/trim s))
 
-(defn triml
+(defn ^string triml
   "Removes whitespace from the left side of string."
   [s]
   (gstring/trimLeft s))
 
-(defn trimr
+(defn ^string trimr
   "Removes whitespace from the right side of string."
   [s]
   (gstring/trimRight s))
 
-(defn trim-newline
+(defn ^string trim-newline
   "Removes all trailing newline \\n or return \\r characters from
   string.  Similar to Perl's chomp."
   [s]
@@ -226,7 +226,7 @@
   [s]
   (gstring/isEmptySafe s))
 
-(defn escape
+(defn ^string escape
   "Return a new string, using cmap to escape each character ch
    from s as follows:
 

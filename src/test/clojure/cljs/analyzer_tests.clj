@@ -1977,3 +1977,37 @@
              (recur 1)
              (+ 3 x)))))
     (is (zero? (count @ws)))))
+
+(deftest test-cljs-2868
+  (is (= 'string
+         (e/with-compiler-env test-cenv
+                              (:tag (analyze test-env '(subs "duck" 1 1))))))
+  (is (= 'string
+         (e/with-compiler-env test-cenv
+                              (:tag (analyze test-env '(subs "duck" 1))))))
+
+  (is (= 'string
+         (e/with-compiler-env test-cenv
+                              (:tag (analyze test-env '(str))))))
+  (is (= 'string
+         (e/with-compiler-env test-cenv
+                              (:tag (analyze test-env '(str 1))))))
+  (is (= 'string
+         (e/with-compiler-env test-cenv
+                              (:tag (analyze test-env '(str 1 2))))))
+
+  (is (= 'string
+         (e/with-compiler-env test-cenv
+                              (:tag (analyze test-env '(pr-str 0))))))
+  (is (= 'string
+         (e/with-compiler-env test-cenv
+                              (:tag (analyze test-env '(prn-str 0))))))
+  (is (= 'string
+         (e/with-compiler-env test-cenv
+                              (:tag (analyze test-env '(print-str 0))))))
+  (is (= 'string
+         (e/with-compiler-env test-cenv
+                              (:tag (analyze test-env '(munge-str ""))))))
+  (is (= 'string
+         (e/with-compiler-env test-cenv
+                              (:tag (analyze test-env '(demunge-str "")))))))
