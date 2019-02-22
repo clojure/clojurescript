@@ -1767,3 +1767,10 @@
   (is (thrown? js/Error (non-meta-protocol (with-meta {} {`non-meta-protocol (fn [_] 1)}))))
   ;; normal impl call just in case
   (is (= 2 (non-meta-protocol (with-meta (SomeMetaImpl. 2) {`non-meta-protocol (fn [_] 1)})))))
+
+(deftest test-cljs-3054
+  (testing "`into` behaves the same as Clojure"
+    (is (nil? (into nil #{})))
+    (is (= '(3 2 1) (into nil [1 2 3]))))
+  (testing "calling `set/union` with nilable sets returns a nilable set"
+    (is (nil? (set/union #{} nil nil)))))

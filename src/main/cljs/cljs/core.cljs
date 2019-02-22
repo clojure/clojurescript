@@ -5214,7 +5214,7 @@ reduces them without incurring seq initialization"
        (if (implements? IEditableCollection to)
          (-with-meta (persistent! (reduce -conj! (transient to) from)) (meta to))
          (reduce -conj to from))
-       (reduce conj () from)))
+       (reduce conj to from)))
   ([to xform from]
      (if (implements? IEditableCollection to)
        (-with-meta (persistent! (transduce xform conj! (transient to) from)) (meta to))
