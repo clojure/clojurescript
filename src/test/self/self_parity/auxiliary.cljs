@@ -55,7 +55,6 @@
     goog.date.month
     goog.date.relative.TimeDeltaFormatter
     goog.date.relative.Unit
-    goog.date.relativeWithPlurals
     goog.date.weekDay
     goog.format
     goog.format.EmailAddress
