@@ -2167,7 +2167,7 @@ reduces them without incurring seq initialization"
 (declare ChunkedCons ChunkedSeq)
 
 (defn chunked-seq?
-  "Return true if x is satisfies IChunkedSeq."
+  "Return true if x satisfies IChunkedSeq."
   [x] (implements? IChunkedSeq x))
 
 ;;;;;;;;;;;;;;;;;;;; js primitives ;;;;;;;;;;;;
