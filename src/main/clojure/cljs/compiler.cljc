@@ -1557,7 +1557,7 @@
                         emit)]
              (loop [forms       (ana/forms-seq* rdr (util/path src))
                     ns-name     nil
-                    deps        nil]
+                    deps        []]
                (if (seq forms)
                  (let [env (assoc env :ns (ana/get-namespace ana/*cljs-ns*))
                        {:keys [op] :as ast} (ana/analyze env (first forms) nil opts)]
@@ -1569,7 +1569,7 @@
                                      'cljs.core$macros
                                      ns-name)]
                        (emit ast)
-                       (recur (rest forms) ns-name (merge (:uses ast) (:requires ast))))
+                       (recur (rest forms) ns-name (into deps (:deps ast))))
 
                      (= :ns* (:op ast))
                      (let [ns-emitted? (some? ns-name)
@@ -1579,7 +1579,7 @@
                        (if-not ns-emitted?
                          (emit (assoc ast :name ns-name :op :ns))
                          (emit ast))
-                       (recur (rest forms) ns-name (merge deps (:uses ast) (:requires ast))))
+                       (recur (rest forms) ns-name (into deps (:deps ast))))
 
                      :else
                      (let [ns-emitted? (some? ns-name)
@@ -1600,11 +1600,11 @@
                              {:ns         (or ns-name 'cljs.user)
                               :macros-ns  (:macros-ns opts)
                               :provides   [ns-name]
-                              :requires   (if (= ns-name 'cljs.core)
-                                            (set (vals deps))
-                                            (cond-> (conj (set (vals deps)) 'cljs.core)
-                                              (get-in @env/*compiler* [:options :emit-constants])
-                                              (conj ana/constants-ns-sym)))
+                              :requires   (cond-> (distinct deps)
+                                            (get-in @env/*compiler* [:options :emit-constants])
+                                            (conj ana/constants-ns-sym)
+                                            (not= ns-name 'cljs.core)
+                                            (conj 'cljs.core))
                               :file        dest
                               :out-file    (.toString ^File dest)
                               :source-file src}
