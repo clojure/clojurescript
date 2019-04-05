@@ -1602,10 +1602,11 @@
               [sym tag])))))))
 
 (defn- truth-induced-tag
-  "Refine a tag to exclude clj-nil if the test is a simple symbol."
+  "Refine a tag to exclude clj-nil if the test is a local."
   [env test]
   (when (and (symbol? test)
-             (nil? (namespace test)))
+             (nil? (namespace test))
+             (get-in env [:locals test]))
     (let [analyzed-symbol (no-warn (analyze (assoc env :context :expr) test))]
       (when-let [tag (:tag analyzed-symbol)]
         (when (and (set? tag)

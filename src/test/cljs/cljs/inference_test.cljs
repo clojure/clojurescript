@@ -88,3 +88,12 @@
                     (when (number? curr)
                       (reset! x (dec curr)))))
                 @x) (atom 1)))))
+
+(def foo-var-3068 (merge))
+
+(deftest cljs-3068-test
+  ;; Here we are essentially testing that valid JavaScript is
+  ;; emitted. Without the fix, tests fail with invalid JavaScript
+  ;; that cannot be parse by GCC, etc.
+  (if foo-var-3068 foo-var-3068)
+  (is true))
