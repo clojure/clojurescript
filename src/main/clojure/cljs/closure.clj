@@ -1230,12 +1230,13 @@
   compiled last after all inputs. This is because all inputs must be known and
   they must already be sorted in dependency order."
   [inputs {:keys [modules] :as opts}]
-  (when-let [loader (->> inputs
-                      (filter
-                        (fn [input]
-                          (some '#{"cljs.loader" cljs.loader}
-                            (:provides input))))
-                      first)]
+  (when-let [loader (when (seq modules)
+                      (->> inputs
+                           (filter
+                            (fn [input]
+                              (some '#{"cljs.loader" cljs.loader}
+                                    (:provides input))))
+                           first))]
     (let [module-uris  (module-graph/modules->module-uris modules inputs opts)
           module-infos (module-graph/modules->module-infos modules)]
       (swap! env/*compiler* ana/add-consts
