@@ -1703,6 +1703,14 @@
   (is (= "ab" (str "a" nil "b")))
   (is (= "ahellob" (str "a" (str-fn-2865) "b"))))
 
+(deftest test-cljs-2886
+  (is (zero? (count "")))
+  (is (== 1 (count "a")))
+  (is (zero? (count #js [])))
+  (is (== 1 (count #js [1])))
+  (is (zero? (count [])))
+  (is (== 1 (count [1]))))
+
 (deftest test-cljs-2934
   (let [x (delay 1)]
     (is (= "#object[cljs.core.Delay {:status :pending, :val nil}]" (pr-str x)))

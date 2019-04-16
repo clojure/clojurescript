@@ -1136,8 +1136,11 @@
                                 (not ('#{any clj clj-or-nil clj-nil number string boolean function object array js} tag))
                                 (when-let [ps (:protocols (ana/resolve-existing-var env tag))]
                                   (ps protocol)))))))
+        first-arg-tag (ana/infer-tag env (first (:args expr)))
         opt-not? (and (= (:name info) 'cljs.core/not)
-                      (= (ana/infer-tag env (first (:args expr))) 'boolean))
+                      (= first-arg-tag 'boolean))
+        opt-count? (and (= (:name info) 'cljs.core/count)
+                        (boolean ('#{string array} first-arg-tag)))
         ns (:ns info)
         js? (or (= ns 'js) (= ns 'Math))
         goog? (when ns
@@ -1192,6 +1195,9 @@
       (cond
        opt-not?
        (emits "(!(" (first args) "))")
+
+       opt-count?
+       (emits "((" (first args) ").length)")
 
        proto?
        (let [pimpl (str (munge (protocol-prefix protocol))
