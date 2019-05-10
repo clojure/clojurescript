@@ -1,4 +1,4 @@
-dist: trusty
+dist: xenial
 
 git:
   depth: 1000
@@ -11,7 +11,7 @@ node_js:
 before_install:
   - wget https://ftp.mozilla.org/pub/firefox/nightly/latest-mozilla-central/jsshell-linux-x86_64.zip
   - unzip jsshell-linux-x86_64.zip -d spidermoney
-  - sudo apt-get install -y libjavascriptcoregtk-3.0-bin
+  - sudo apt-get install -y libjavascriptcoregtk-4.0-bin
   - wget https://aka.ms/chakracore/cc_linux_x64_1_8_1 -O chakra-core.tar.gz
   - tar xvzf chakra-core.tar.gz
   - wget https://github.com/oracle/graal/releases/download/vm-1.0.0-rc12/graalvm-ce-1.0.0-rc12-linux-amd64.tar.gz
@@ -51,8 +51,6 @@ script:
   - grep '0 failures, 0 errors.' test-out.txt
   - ./spidermoney/js -f builds/out-adv/core-advanced-test.js | tee test-out.txt
   - grep '0 failures, 0 errors.' test-out.txt
-  - jjs builds/out-adv/core-advanced-test.js | tee test-out.txt
-  - grep '0 failures, 0 errors.' test-out.txt
   - ./ChakraCoreFiles/bin/ch builds/out-adv/core-advanced-test.js | tee test-out.txt
   - grep '0 failures, 0 errors.' test-out.txt
   - ./graalvm-ce-1.0.0-rc12/bin/js builds/out-adv/core-advanced-test.js | tee test-out.txt
@@ -62,8 +60,6 @@ script:
   - script/test-self-parity | tee test-out.txt
   - grep '0 failures, 0 errors.' test-out.txt
   - script/test-cli node | tee test-out.txt
-  - grep '0 failures, 0 errors.' test-out.txt
-  - script/test-cli nashorn | tee test-out.txt
   - grep '0 failures, 0 errors.' test-out.txt
   - script/test-cli rhino | tee test-out.txt
   - grep '0 failures, 0 errors.' test-out.txt
