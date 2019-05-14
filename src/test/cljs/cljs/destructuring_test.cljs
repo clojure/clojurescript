@@ -177,3 +177,11 @@
                 {:c c}))]
     (is (= (foo-fn foo {:a 1 :b 2})
           {:c 3}))))
+
+(deftest test-cljs-3076
+  (let [f (fn [& [a _]]
+            a)]
+    (is (nil? (f nil)))
+    (is (= 1 (f 1)))
+    (is (= 1 (f 1 2))))
+  (let []))

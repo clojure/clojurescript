@@ -68,11 +68,6 @@
   "The namespace of the constants table as a symbol."
   'cljs.core.constants)
 
-(def ^:private identity-counter (atom 0))
-
-(defn- add-identity [m]
-  (assoc m :identity (swap! identity-counter inc)))
-
 #?(:clj
    (def transit-read-opts
      (try
@@ -2290,8 +2285,7 @@
                         :variadic? (:variadic? init-expr)
                         :max-fixed-arity (:max-fixed-arity init-expr)
                         :method-params (map :params (:methods init-expr))})
-                     be)
-                be (add-identity be)]
+                     be)]
             (recur (conj bes be)
               (assoc-in env [:locals name] be)
               (next bindings))))
