@@ -11720,3 +11720,7 @@ reduces them without incurring seq initialization"
   which sets up an implementation of cljs.core/*eval* for that environment."
   [form]
   (*eval* form))
+
+(when ^boolean js/COMPILED
+  (when (= :nodejs *target*)
+    (set! goog/global js/global)))
