@@ -1879,9 +1879,11 @@
                         (disallowing-ns*
                           (analyze (assoc env :context :expr) (:init args) sym))))
           fn-var? (and (some? init-expr) (= (:op init-expr) :fn))
-          tag (if fn-var?
-                (or (:ret-tag init-expr) tag (:inferred-ret-tag init-expr))
-                (or tag (:tag init-expr)))
+          tag (cond
+                fn-var? (or (:ret-tag init-expr) tag (:inferred-ret-tag init-expr))
+                tag tag
+                dynamic ANY_SYM
+                :else (:tag init-expr))
           export-as (when-let [export-val (-> sym meta :export)]
                       (if (= true export-val) var-name export-val))
           doc (or (:doc args) (-> sym meta :doc))]

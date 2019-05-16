@@ -35,3 +35,22 @@
   (is (= 2 (with-redefs [a 10
                          b (inc a)]
              b))))
+
+(def ^:dynamic *foo* false)
+(def ^:dynamic ^boolean *foo-tagged* false)
+
+(defn bar [] (if *foo* 1 2))
+(defn bar-tagged [] (if *foo-tagged* 1 2))
+
+(deftest test-tag-inference
+  (is (= 2 (bar)))
+  (binding [*foo* "abc"]
+    (is (= 1 (bar))))
+  (binding [*foo* ""]
+    (is (= 1 (bar))))
+
+  (is (= 2 (bar-tagged)))
+  (binding [*foo-tagged* "abc"]
+    (is (= 1 (bar-tagged))))
+  (binding [*foo-tagged* ""]
+    (is (= 2 (bar-tagged)))))
