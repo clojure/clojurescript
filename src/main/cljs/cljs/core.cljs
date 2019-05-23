@@ -5849,7 +5849,8 @@ reduces them without incurring seq initialization"
 
   IStack
   (-peek [coll]
-    (-nth v (dec end)))
+    (when-not (== start end)
+      (-nth v (dec end))))
   (-pop [coll]
     (if (== start end)
       (throw (js/Error. "Can't pop empty vector"))
