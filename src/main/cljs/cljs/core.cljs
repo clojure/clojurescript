@@ -5963,12 +5963,10 @@ reduces them without incurring seq initialization"
     (do
       (when-not (vector? v)
         (throw (js/Error. "v must satisfy IVector")))
-      (let [c (count v)]
-        (when (or (neg? start)
-                  (neg? end)
-                  (> start c)
-                  (> end c))
-          (throw (js/Error. "Index out of bounds"))))
+      (when (or (neg? start)
+                (< end start)
+                (> end (count v)))
+        (throw (js/Error. "Index out of bounds")))
       (Subvec. meta v start end __hash))))
 
 (defn subvec

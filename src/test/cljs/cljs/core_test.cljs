@@ -1781,3 +1781,11 @@
   (is (nil? (peek (subvec [1 2] 0 0))))
   (is (nil? (peek (subvec [1 2] 1 1))))
   (is (nil? (peek (subvec [1 2] 2 2)))))
+
+(deftest test-cljs-3093
+  (is (thrown-with-msg? js/Error #"Index out of bounds" (subvec [1 2 3 4] -1)))
+  (is (= [1 2 3 4] (subvec [1 2 3 4] -0.9)))
+  (is (thrown-with-msg? js/Error #"Index out of bounds" (subvec [1 2 3 4] 2 1)))
+  (is (= [] (subvec [1 2 3 4] 1.7 1.3)))
+  (is (thrown-with-msg? js/Error #"Index out of bounds" (subvec [1 2 3 4] 0 5)))
+  (is (= [1 2 3 4] (subvec [1 2 3 4] 0 4.9))))
