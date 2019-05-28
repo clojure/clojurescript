@@ -2126,12 +2126,15 @@
         type         (::type form-meta)
         proto-impl   (::protocol-impl form-meta)
         proto-inline (::protocol-inline form-meta)
-        menv         (if (> (count meths) 1)
-                       (assoc env :context :expr)
-                       env)
-        menv         (merge menv
-                       {:protocol-impl proto-impl
-                        :protocol-inline proto-inline})
+        menv         (-> env
+                         (cond->
+                           (> (count meths) 1)
+                           (assoc :context :expr))
+                         ;; clear loop flag since method bodies won't be in a loop at first
+                         ;; only tracking this to keep track of locals we need to capture
+                         (dissoc :in-loop)
+                         (merge {:protocol-impl proto-impl
+                                 :protocol-inline proto-inline}))
         methods      (map #(disallowing-ns* (analyze-fn-method menv locals % type (nil? name))) meths)
         mfa          (transduce (map :fixed-arity) max 0 methods)
         variadic     (boolean (some :variadic? methods))
@@ -2166,6 +2169,7 @@
                       :tag 'function
                       :inferred-ret-tag inferred-ret-tag
                       :recur-frames *recur-frames*
+                      :in-loop (:in-loop env)
                       :loop-lets *loop-lets*
                       :jsdoc [js-doc]
                       :max-fixed-arity mfa
@@ -2343,7 +2347,10 @@
                               (partition 2 bindings)
                               widened-tags))
                        bindings)
-        [bes env]    (analyze-let-bindings encl-env bindings op)
+        [bes env]    (-> encl-env
+                         (cond->
+                           (true? is-loop) (assoc :in-loop true))
+                         (analyze-let-bindings bindings op))
         recur-frame  (when (true? is-loop)
                        {:params bes
                         :flag (atom nil)

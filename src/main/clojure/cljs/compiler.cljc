@@ -957,13 +957,17 @@
       (emitln "})()"))))
 
 (defmethod emit* :fn
-  [{variadic :variadic? :keys [name env methods max-fixed-arity recur-frames loop-lets]}]
+  [{variadic :variadic? :keys [name env methods max-fixed-arity recur-frames in-loop loop-lets]}]
   ;;fn statements get erased, serve no purpose and can pollute scope if named
   (when-not (= :statement (:context env))
-    (let [loop-locals (->> (concat (mapcat :params (filter #(and % @(:flag %)) recur-frames))
-                                   (mapcat :params loop-lets))
-                           (map munge)
-                           seq)]
+    (let [recur-params (mapcat :params (filter #(and % @(:flag %)) recur-frames))
+          loop-locals
+          (->> (concat recur-params
+                 ;; need to capture locals only if in recur fn or loop
+                 (when (or in-loop (seq recur-params))
+                   (mapcat :params loop-lets)))
+               (map munge)
+               seq)]
       (when loop-locals
         (when (= :return (:context env))
             (emits "return "))

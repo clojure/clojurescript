@@ -286,6 +286,51 @@
       (is (str/includes? content "cljs.invoke_test.foo_record.foo_field_a;")))))
 #_(test-vars [#'test-optimized-invoke-emit])
 
+(deftest test-cljs-3077
+  (let [opts {}
+        cenv (env/default-compiler-env opts)
+
+        test-compile
+        (fn [code]
+          (env/with-compiler-env cenv
+            (with-out-str
+              (emit
+                (comp/with-core-cljs
+                  opts
+                  (fn [] (analyze aenv code nil opts)))))))
+
+        snippet1
+        (test-compile
+          '(defn wrapper1 [foo]
+             (let [x 1]
+               (prn (fn inner [] foo))
+               (recur (inc foo)))))
+
+        snippet2
+        (test-compile
+          '(defn wrapper2 [foo]
+             (loop [x 1]
+               (prn (fn inner [] x))
+               (recur (inc x))
+               )))
+
+        snippet3
+        (test-compile
+          '(defn no-wrapper1 [foo]
+             (let [x 1]
+               (prn (fn inner [] foo)))))]
+
+    ;; FIXME: not exactly a clean way to test if function wrappers are created or not
+    ;; captures foo,x
+    (is (str/includes? snippet1 "(function (foo,x){"))
+    ;; captures x
+    (is (str/includes? snippet2 "(function (x){"))
+    ;; no capture, no loop or recur
+    (is (not (str/includes? snippet3 "(function (foo,x){")))
+    (is (not (str/includes? snippet3 "(function (foo){")))
+    (is (not (str/includes? snippet3 "(function (x){")))
+    ))
+
 ;; CLJS-1225
 
 (comment
