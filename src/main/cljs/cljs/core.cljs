@@ -5721,7 +5721,7 @@ reduces them without incurring seq initialization"
   "Creates a new vector containing the args."
   [& args]
   (if (and (instance? IndexedSeq args) (zero? (.-i args)))
-    (.fromArray PersistentVector (.-arr args) true)
+    (.fromArray PersistentVector (.-arr args) (not (array? (.-arr args))))
     (vec args)))
 
 (declare subvec)

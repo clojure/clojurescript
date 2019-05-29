@@ -1789,3 +1789,9 @@
   (is (= [] (subvec [1 2 3 4] 1.7 1.3)))
   (is (thrown-with-msg? js/Error #"Index out of bounds" (subvec [1 2 3 4] 0 5)))
   (is (= [1 2 3 4] (subvec [1 2 3 4] 0 4.9))))
+
+(deftest test-cljs-3095
+  (let [a #js [:original]
+        v (apply vector a)]
+    (aset a 0 :modified)
+    (is (= :original (v 0)))))
