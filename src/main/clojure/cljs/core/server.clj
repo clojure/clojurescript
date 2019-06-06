@@ -96,8 +96,8 @@
                                                        (apply merge
                                                          ((juxt :requires :require-macros)
                                                            (ana/get-namespace ana/*cljs-ns*)))]
-                                               (reader/read+string in-reader
-                                                 {:eof EOF :read-cond :allow :features #{:cljs}}))]
+                                               (reader/read+string {:eof EOF :read-cond :allow :features #{:cljs}}
+                                                 in-reader))]
                                 (try
                                   (when-not (identical? form EOF)
                                     (let [start (System/nanoTime)
