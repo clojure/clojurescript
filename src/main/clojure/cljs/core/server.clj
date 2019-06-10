@@ -118,11 +118,13 @@
                                         true)))
                                   (catch Throwable ex
                                     (out-fn {:tag :ret :val (Throwable->map ex)
-                                             :ns (name ana/*cljs-ns*) :form s})
+                                             :ns (name ana/*cljs-ns*) :form s
+                                             :exception true})
                                     true)))
                               (catch Throwable ex
                                 (out-fn {:tag :ret :val (Throwable->map ex)
-                                         :ns (name ana/*cljs-ns*)})
+                                         :ns (name ana/*cljs-ns*)
+                                         :exception true})
                                 true))
                         (recur)))
                     (finally
