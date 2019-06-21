@@ -1804,6 +1804,10 @@
     (aset a 0 :modified)
     (is (= :original (v 0)))))
 
+(deftest test-cljs-3119
+  (is (= "a" (get "abc" -0.5)))
+  (is (nil? (get "abc" -1))))
+
 (deftest test-cljs-3202
   (is (= :/ (keyword "/")))
   (is (= (hash :/) (hash (keyword "/")))))

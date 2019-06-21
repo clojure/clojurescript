@@ -1945,7 +1945,7 @@ reduces them without incurring seq initialization"
           (aget o (int k)))
 
         (string? o)
-        (when (and (some? k) (< k (.-length o)))
+        (when (and (some? k) (< -1 k (.-length o)))
           (.charAt o (int k)))
 
         (native-satisfies? ILookup o)
