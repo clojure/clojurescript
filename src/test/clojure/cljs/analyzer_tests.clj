@@ -186,6 +186,22 @@
 
 (def test-cenv (atom {}))
 (def test-env (assoc-in (ana/empty-env) [:ns :name] 'cljs.core))
+(def test-core-env (atom {}))
+
+(binding [ana/*unchecked-if* false
+          ana/*analyze-deps* false]
+  (env/with-compiler-env test-core-env
+    (comp/with-core-cljs nil
+      (fn []))))
+
+(defn core-env []
+  (atom @test-core-env))
+
+(defn analyze-forms [cenv xs]
+  (binding [ana/*unchecked-if* false
+            ana/*analyze-deps* false]
+    (env/with-compiler-env cenv
+      (ana/analyze-form-seq xs))))
 
 (ana/no-warn
   (env/with-compiler-env test-cenv
@@ -2022,3 +2038,19 @@
   (is (= 'string
          (env/with-compiler-env test-cenv
                               (:tag (analyze test-env '(demunge-str "")))))))
+
+(deftest test-cljs-3120
+  (let [cenv (core-env)
+        _ (analyze-forms cenv
+            '[(ns goz.core)
+              (defprotocol IAlpha
+                (foo [this] "foo fn")
+                (bar [this x] "bar fn")
+                (woz [this x y] "baz fn"))])
+        sigs (get-in @cenv [::ana/namespaces 'goz.core :defs 'IAlpha :sigs])]
+    (is (= #{:foo :bar :woz} (set (keys sigs))))
+    (is (every? #(set/subset? #{:name :doc :arglists} (set (keys %))) (vals sigs)))
+    (is #(= '#{foo bar woz} (set (map :name (vals sigs)))))
+    (is #(= '#{([this] [this x] [this x y])} (set (map :arglists (vals sigs)))))
+    (is #(= '#{"foo fn" "bar fn" "baz fn"} (set (map :doc (vals sigs)))))))
+

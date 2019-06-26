@@ -1409,7 +1409,7 @@
 (core/defn- to-property [sym]
   (symbol (core/str "-" sym)))
 
-(core/defn- warn-and-update-protocol [p type env]
+(core/defn- update-protocol-var [p type env]
   (core/when-not (= 'Object p)
     (core/if-let [var (cljs.analyzer/resolve-existing-var (dissoc env :locals) p)]
       (do
@@ -1440,7 +1440,7 @@
       ret)))
 
 (core/defn- base-assign-impls [env resolve tsym type [p sigs]]
-  (warn-and-update-protocol p tsym env)
+  (update-protocol-var p tsym env)
   (core/let [psym       (resolve p)
              pfn-prefix (subs (core/str psym) 0
                           (clojure.core/inc (.indexOf (core/str psym) "/")))]
@@ -1526,7 +1526,7 @@
         meths))))
 
 (core/defn- proto-assign-impls [env resolve type-sym type [p sigs]]
-  (warn-and-update-protocol p type env)
+  (update-protocol-var p type env)
   (core/let [psym      (resolve p)
              pprefix   (protocol-prefix psym)
              skip-flag (set (core/-> type-sym meta :skip-protocol-flag))]
@@ -2101,8 +2101,7 @@
                                         ~check)]
                             `(~sig ~check)))
              psym (core/-> psym
-                    (vary-meta update-in [:jsdoc] conj
-                      "@interface")
+                    (vary-meta update-in [:jsdoc] conj "@interface")
                     (vary-meta assoc-in [:protocol-info :methods]
                       (into {}
                         (map
@@ -2112,6 +2111,16 @@
                                        sigs (take-while vector? sigs)]
                               [(vary-meta fname assoc :doc doc)
                                (vec sigs)]))
+                          methods)))
+                    ;; for compatibility with Clojure
+                    (vary-meta assoc-in [:sigs]
+                      (into {}
+                        (map
+                          (core/fn [[fname & sigs]]
+                            (core/let [doc (core/as-> (last sigs) doc
+                                             (core/when (core/string? doc) doc))
+                                       sigs (take-while vector? sigs)]
+                              [(keyword fname) {:name fname :arglists (list* sigs) :doc doc}]))
                           methods))))
              method (core/fn [[fname & sigs]]
                       (core/let [doc (core/as-> (last sigs) doc
