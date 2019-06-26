@@ -11,8 +11,8 @@
   org.clojure/google-closure-library {:mvn/version "0.0-20170809-b9c14c6b"}
   org.mozilla/rhino {:mvn/version "1.7R5"}}
  :aliases
- {:test-clj {:extra-paths ["src/test/cljs" "src/test/cljs_build" "src/test/cljs_cp"
-                               "src/test/clojure" "src/test/self"]
-             :extra-deps {com.cognitect/test-runner {:git/url "https://github.com/cognitect-labs/test-runner.git"
-                                                     :sha "78d380d00e7a27f7b835bb90af37e73b20c49bcc"}}
-             :main-opts ["-m" "cognitect.test-runner" "-d" "src/test/clojure" "-r" ".*-tests$"]}}}
+ {:test {:extra-paths ["src/test/cljs" "src/test/cljs_build" "src/test/cljs_cp"
+                       "src/test/clojure" "src/test/self"]
+         :extra-deps {com.cognitect/test-runner {:git/url "https://github.com/cognitect-labs/test-runner.git"
+                                                 :sha "209b64504cb3bd3b99ecfec7937b358a879f55c1"}}}
+  :run-tests {:main-opts ["-m" "cognitect.test-runner" "-d" "src/test/clojure" "-r" ".*-tests$"]}}}

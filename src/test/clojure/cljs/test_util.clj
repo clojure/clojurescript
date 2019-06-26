@@ -8,7 +8,8 @@
 
 (ns cljs.test-util
   (:require [clojure.java.io :as io]
-            [clojure.string :as string])
+            [clojure.string :as string]
+            [clojure.test])
   (:import [java.io File]))
 
 (defn delete-out-files
