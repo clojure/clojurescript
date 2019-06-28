@@ -18,6 +18,8 @@
            [com.google.javascript.rhino
             Node Token JSTypeExpression]))
 
+(def ^:dynamic *source-file* nil)
+
 ;; ------------------------------------------------------------------------------
 ;; Externs Parsing
 
@@ -51,7 +53,8 @@
                 {:tag 'Function
                  :ret-tag (get-type* (.getReturnType info))
                  :arglists (list (into [] (map symbol (.getParameterNames info))))})))
-          {:line (.getLineno node)}
+          {:file *source-file*
+           :line (.getLineno node)}
           (when-let [doc (.getOriginalCommentString info)]
             {:doc doc}))))))
 
@@ -114,25 +117,26 @@
 (defmethod parse-extern-node :default [node])
 
 (defn parse-externs [^SourceFile source-file]
-  (let [^CompilerOptions compiler-options
-        (doto (CompilerOptions.)
-          (.setParseJsDocDocumentation
-            Config$JsDocParsing/INCLUDE_DESCRIPTIONS_WITH_WHITESPACE))
-        closure-compiler
-        (doto
-          (let [compiler (com.google.javascript.jscomp.Compiler.)]
-            (com.google.javascript.jscomp.Compiler/setLoggingLevel Level/WARNING)
-            compiler)
-          (.init (list source-file) '() compiler-options))
-        js-ast (JsAst. source-file)
-        ^Node root (.getAstRoot js-ast closure-compiler)]
-    (loop [nodes (.children root)
-           externs []]
-      (if (empty? nodes)
-        externs
-        (let [node (first nodes)
-              new-extern (parse-extern-node node)]
-          (recur (rest nodes) (concat externs new-extern)))))))
+  (binding [*source-file* (.getName source-file)]
+    (let [^CompilerOptions compiler-options
+          (doto (CompilerOptions.)
+            (.setParseJsDocDocumentation
+              Config$JsDocParsing/INCLUDE_DESCRIPTIONS_WITH_WHITESPACE))
+          closure-compiler
+          (doto
+            (let [compiler (com.google.javascript.jscomp.Compiler.)]
+              (com.google.javascript.jscomp.Compiler/setLoggingLevel Level/WARNING)
+              compiler)
+            (.init (list source-file) '() compiler-options))
+          js-ast (JsAst. source-file)
+          ^Node root (.getAstRoot js-ast closure-compiler)]
+      (loop [nodes (.children root)
+             externs []]
+        (if (empty? nodes)
+          externs
+          (let [node (first nodes)
+                new-extern (parse-extern-node node)]
+            (recur (rest nodes) (concat externs new-extern))))))))
 
 (defn index-externs [externs]
   (reduce
