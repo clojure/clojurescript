@@ -49,7 +49,8 @@
                   (.isInterface info) (merge {:iface qname})))
               (if (.hasReturnType info)
                 {:tag 'Function
-                 :ret-tag (get-type* (.getReturnType info))})))
+                 :ret-tag (get-type* (.getReturnType info))
+                 :arglists (list (into [] (map symbol (.getParameterNames info))))})))
           (when-let [doc (.getOriginalCommentString info)]
             {:doc doc}))))))
 
