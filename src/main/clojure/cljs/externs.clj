@@ -51,6 +51,7 @@
                 {:tag 'Function
                  :ret-tag (get-type* (.getReturnType info))
                  :arglists (list (into [] (map symbol (.getParameterNames info))))})))
+          {:line (.getLineno node)}
           (when-let [doc (.getOriginalCommentString info)]
             {:doc doc}))))))
 
@@ -178,6 +179,10 @@
           (io/input-stream (io/resource "goog/string/string.js"))))
       2)
     last meta)
+
+  (parse-externs
+    (closure/js-source-file "goog/string/string.js"
+      (io/input-stream (io/resource "goog/string/string.js"))))
 
   (externs-map
     [(closure/js-source-file "goog/string/string.js"
