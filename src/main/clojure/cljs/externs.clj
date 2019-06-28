@@ -18,6 +18,7 @@
            [com.google.javascript.rhino
             Node Token JSTypeExpression]))
 
+(def ^:dynamic *ignore-var* false)
 (def ^:dynamic *source-file* nil)
 
 ;; ------------------------------------------------------------------------------
@@ -78,7 +79,9 @@
           lhs (cond-> (first (parse-extern-node (.getFirstChild node)))
                 ty (annotate ty))]
       (if (> (.getChildCount node) 1)
-        (let [externs (parse-extern-node (.getChildAtIndex node 1))]
+        (let [externs
+              (binding [*ignore-var* true]
+                (parse-extern-node (.getChildAtIndex node 1)))]
           (conj (map (fn [ext] (concat lhs ext)) externs)
             lhs))
         [lhs]))))
@@ -92,10 +95,11 @@
       [lhs])))
 
 (defmethod parse-extern-node Token/GETPROP [node]
-  (let [props (map symbol (string/split (.getQualifiedName node) #"\."))]
-    [(if-let [ty (get-type node)]
-       (annotate props ty)
-       props)]))
+  (when-not *ignore-var*
+    (let [props (map symbol (string/split (.getQualifiedName node) #"\."))]
+      [(if-let [ty (get-type node)]
+         (annotate props ty)
+         props)])))
 
 (defmethod parse-extern-node Token/OBJECTLIT [node]
   (when (> (.getChildCount node) 0)
