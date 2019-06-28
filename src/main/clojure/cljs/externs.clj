@@ -14,6 +14,7 @@
   (:import [java.util.logging Level]
            [com.google.javascript.jscomp
             CompilerOptions SourceFile JsAst CommandLineRunner]
+           [com.google.javascript.jscomp.parsing Config$JsDocParsing]
            [com.google.javascript.rhino
             Node Token JSTypeExpression]))
 
@@ -38,16 +39,19 @@
   (when node
     (let [info (.getJSDocInfo node)]
       (when info
-        (if-let [^JSTypeExpression ty (.getType info)]
-          {:tag (get-type* ty)}
-          (if (or (.isConstructor info) (.isInterface info))
-            (let [qname (symbol (.. node getFirstChild getQualifiedName))]
-              (cond-> {:tag 'Function}
-                (.isConstructor info) (merge {:ctor qname})
-                (.isInterface info) (merge {:iface qname})))
-            (if (.hasReturnType info)
-              {:tag 'Function
-               :ret-tag (get-type* (.getReturnType info))})))))))
+        (merge
+          (if-let [^JSTypeExpression ty (.getType info)]
+            {:tag (get-type* ty)}
+            (if (or (.isConstructor info) (.isInterface info))
+              (let [qname (symbol (.. node getFirstChild getQualifiedName))]
+                (cond-> {:tag 'Function}
+                  (.isConstructor info) (merge {:ctor qname})
+                  (.isInterface info) (merge {:iface qname})))
+              (if (.hasReturnType info)
+                {:tag 'Function
+                 :ret-tag (get-type* (.getReturnType info))})))
+          (when-let [doc (.getOriginalCommentString info)]
+            {:doc doc}))))))
 
 (defmulti parse-extern-node
   (fn [^Node node]
@@ -108,7 +112,10 @@
 (defmethod parse-extern-node :default [node])
 
 (defn parse-externs [^SourceFile source-file]
-  (let [^CompilerOptions compiler-options (CompilerOptions.)
+  (let [^CompilerOptions compiler-options
+        (doto (CompilerOptions.)
+          (.setParseJsDocDocumentation
+            Config$JsDocParsing/INCLUDE_DESCRIPTIONS_WITH_WHITESPACE))
         closure-compiler
         (doto
           (let [compiler (com.google.javascript.jscomp.Compiler.)]
