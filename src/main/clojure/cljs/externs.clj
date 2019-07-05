@@ -7,16 +7,16 @@
 ;   You must not remove this notice, or any other, from this software.
 
 (ns cljs.externs
-  (:require [clojure.string :as string]
-            [cljs.util :as util]
+  (:require [cljs.util :as util]
+            [cljs.js-deps :as js-deps]
             [clojure.java.io :as io]
-            [cljs.js-deps :as js-deps])
-  (:import [java.util.logging Level]
-           [com.google.javascript.jscomp
+            [clojure.string :as string])
+  (:import [com.google.javascript.jscomp
             CompilerOptions SourceFile JsAst CommandLineRunner]
            [com.google.javascript.jscomp.parsing Config$JsDocParsing]
            [com.google.javascript.rhino
-            Node Token JSTypeExpression]))
+            Node Token JSTypeExpression]
+           [java.util.logging Level]))
 
 (def ^:dynamic *ignore-var* false)
 (def ^:dynamic *source-file* nil)
@@ -30,7 +30,7 @@
       (into [] (butlast props))
       (with-meta (last props) ty))))
 
-(defn get-type* [^JSTypeExpression texpr]
+(defn get-tag [^JSTypeExpression texpr]
   (when-let [root (.getRoot texpr)]
     (if (.isString root)
       (symbol (.getString root))
@@ -38,13 +38,13 @@
         (if (.isString child)
           (symbol (.. child getString)))))))
 
-(defn get-type [^Node node]
+(defn get-var-info [^Node node]
   (when node
     (let [info (.getJSDocInfo node)]
       (when info
         (merge
           (if-let [^JSTypeExpression ty (.getType info)]
-            {:tag (get-type* ty)}
+            {:tag (get-tag ty)}
             (if (or (.isConstructor info) (.isInterface info))
               (let [qname (symbol (.. node getFirstChild getQualifiedName))]
                 (cond-> {:tag 'Function}
@@ -52,7 +52,7 @@
                   (.isInterface info) (merge {:iface qname})))
               (if (.hasReturnType info)
                 {:tag 'Function
-                 :ret-tag (get-type* (.getReturnType info))
+                 :ret-tag (get-tag (.getReturnType info))
                  :arglists (list (into [] (map symbol (.getParameterNames info))))})))
           {:file *source-file*
            :line (.getLineno node)}
@@ -65,7 +65,7 @@
 
 (defmethod parse-extern-node Token/VAR [node]
   (when (> (.getChildCount node) 0)
-    (let [ty (get-type node)]
+    (let [ty (get-var-info node)]
       (cond-> (parse-extern-node (.getFirstChild node))
         ty (-> first (annotate ty) vector)))))
 
@@ -75,7 +75,7 @@
 
 (defmethod parse-extern-node Token/ASSIGN [node]
   (when (> (.getChildCount node) 0)
-    (let [ty  (get-type node)
+    (let [ty  (get-var-info node)
           lhs (cond-> (first (parse-extern-node (.getFirstChild node)))
                 ty (annotate ty))]
       (if (> (.getChildCount node) 1)
@@ -97,7 +97,7 @@
 (defmethod parse-extern-node Token/GETPROP [node]
   (when-not *ignore-var*
     (let [props (map symbol (string/split (.getQualifiedName node) #"\."))]
-      [(if-let [ty (get-type node)]
+      [(if-let [ty (get-var-info node)]
          (annotate props ty)
          props)])))
 
@@ -171,7 +171,17 @@
            externs (index-externs (parse-externs externs-file))))
        defaults sources))))
 
+(defn analyze-goog-file [f]
+  (let [rsrc (io/resource f)
+        desc (js-deps/parse-js-ns (line-seq (io/reader rsrc)))]
+    ;; TODO: figure out what to do about other provides
+    [(first (:provides desc))
+     ]))
+
 (comment
+
+  (analyze-goog-file "goog/string/string.js")
+
   (require '[clojure.java.io :as io]
            '[cljs.closure :as closure]
            '[clojure.pprint :refer [pprint]]
