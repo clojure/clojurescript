@@ -1499,6 +1499,64 @@
             (is (empty? (js-keys value)))
             (inc! l)))))))
 
+(deftest test-cljs-3129
+  (async done
+    (let [l (latch 1 done)]
+      (let [st (cljs/empty-state)]
+        (cljs/eval-str st
+          "(ns cljs.user (:require-macros foo-3129-1.core))"
+          nil
+          {:eval node-eval
+           :load (fn [_ cb] (cb {:lang :clj :source "(ns foo-3129-1.core) (defmacro add [a b] `(+ ~a ~b))"}))}
+          (fn [{:keys [value error]}]
+            (is (nil? error))
+            (cljs/eval-str st
+              "(foo-3129-1.core/add 1)"
+              nil
+              {:eval    node-eval
+               :context :expr}
+              (fn [{:keys [error value]}]
+                (is (nil? value))
+                (is (= "Wrong number of args (1) passed to foo-3129-1.core$macros/add"
+                      (ex-message (ex-cause (ex-cause error)))))
+                (inc! l))))))
+      (let [st (cljs/empty-state)]
+        (cljs/eval-str st
+          "(ns cljs.user (:require-macros foo-3129-2.core))"
+          nil
+          {:eval node-eval
+           :load (fn [_ cb] (cb {:lang :clj :source "(ns foo-3129-2.core) (defmacro add [a b] `(+ ~a ~b))"}))}
+          (fn [{:keys [value error]}]
+            (is (nil? error))
+            (cljs/eval-str st
+              "(foo-3129-2.core/add 1 2 3)"
+              nil
+              {:eval    node-eval
+               :context :expr}
+              (fn [{:keys [error value]}]
+                (is (nil? value))
+                (is (= "Wrong number of args (3) passed to foo-3129-2.core$macros/add"
+                      (ex-message (ex-cause (ex-cause error)))))
+                (inc! l))))))
+      (let [st (cljs/empty-state)]
+        (cljs/eval-str st
+          "(ns cljs.user (:require-macros foo-3129-3.core))"
+          nil
+          {:eval node-eval
+           :load (fn [_ cb] (cb {:lang :clj :source "(ns foo-3129-3.core) (defmacro when [test & body])"}))}
+          (fn [{:keys [value error]}]
+            (is (nil? error))
+            (cljs/eval-str st
+              "(foo-3129-3.core/when)"
+              nil
+              {:eval    node-eval
+               :context :expr}
+              (fn [{:keys [error value]}]
+                (is (nil? value))
+                (is (= "Wrong number of args (0) passed to foo-3129-3.core$macros/when"
+                      (ex-message (ex-cause (ex-cause error)))))
+                (inc! l)))))))))
+
 (defn -main [& args]
   (run-tests))
 

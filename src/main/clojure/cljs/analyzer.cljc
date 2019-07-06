@@ -3595,6 +3595,11 @@
   (and (record-tag? tag)
        (contains? (record-basis tag) field)))
 
+(defn- invalid-arity? [argc method-params variadic max-fixed-arity]
+  (and (not (valid-arity? argc method-params))
+       (or (not variadic)
+           (and variadic (< argc max-fixed-arity)))))
+
 (defn parse-invoke*
   [env [f & args :as form]]
   (let [enve    (assoc env :context :expr)
@@ -3623,9 +3628,7 @@
         (when (and #?(:cljs (not (and (gstring/endsWith (str cur-ns) "$macros")
                                       (symbol-identical? cur-ns ns)
                                       (true? macro))))
-                   (not (valid-arity? argc method-params))
-                   (or (not variadic)
-                       (and variadic (< argc max-fixed-arity))))
+                   (invalid-arity? argc method-params variadic max-fixed-arity))
           (warning :fn-arity env {:name name :argc argc}))))
     (when (and kw? (not (or (== 1 argc) (== 2 argc))))
       (warning :fn-arity env {:name (first form) :argc argc}))
@@ -3822,6 +3825,17 @@
         (catch #?(:clj Throwable :cljs :default) e
           (throw (ex-info nil (error-data env :macro-syntax-check (var->sym mac-var)) e))))))))
 
+#?(:cljs
+   (defn- check-macro-arity [mac-var form]
+     (let [mac-sym (.-sym mac-var)]
+       (when-let [{:keys [variadic? max-fixed-arity method-params]}
+                  (get-in @env/*compiler* [::namespaces (symbol (namespace mac-sym)) :defs (symbol (name mac-sym))])]
+         (let [argc   (count (rest form))
+               offset (if (= '&form (ffirst method-params)) 2 0)]
+           (when (invalid-arity? argc (map #(nthrest %1 offset) method-params)
+                   variadic? (when max-fixed-arity (- max-fixed-arity offset)))
+             (throw (js/Error. (error-message :fn-arity {:argc argc, :name mac-sym})))))))))
+
 (defn macroexpand-1*
   [env form]
   (let [op (first form)]
@@ -3836,6 +3850,7 @@
                :cljs [do])
             (do-macroexpand-check env form mac-var)
             (let [form' (try
+                          #?(:cljs (check-macro-arity mac-var form))
                           (apply @mac-var form env (rest form))
                           #?(:clj (catch ArityException e
                                     (throw (ArityException. (- (.actual e) 2) (.name e)))))
