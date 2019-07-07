@@ -3483,13 +3483,23 @@
             (contains? t 'js)
             (some array-types t))))))
 
+(defn- analyze-js-star-args [js-op env args]
+  (first (reduce
+           (fn [[argexprs env] arg]
+             [(conj argexprs (analyze env arg))
+              (if (= js-op 'cljs.core/and)
+                (set-test-induced-tags env arg)
+                env)])
+           [[] env]
+           args)))
+
 (defn analyze-js-star* [env jsform args form]
   (let [enve      (assoc env :context :expr)
-        argexprs  (vec (map #(analyze enve %) args))
         form-meta (meta form)
         segs      (js-star-seg jsform)
         tag       (get-js-tag form)
         js-op     (:js-op form-meta)
+        argexprs  (analyze-js-star-args js-op enve args)
         numeric   (:numeric form-meta)
         validate  (fn [warning-type valid-types?]
                     (let [types (map #(infer-tag env %) argexprs)]

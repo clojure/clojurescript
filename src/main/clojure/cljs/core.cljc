@@ -874,13 +874,19 @@
   ([x] x)
   ([x & next]
    (core/let [forms (concat [x] next)]
-     (if (every? #(simple-test-expr? &env %)
-           (map #(cljs.analyzer/no-warn (cljs.analyzer/analyze &env %)) forms))
+     (core/cond
+       (every? #(simple-test-expr? &env %)
+         (map #(cljs.analyzer/no-warn (cljs.analyzer/analyze &env %)) forms))
        (core/let [and-str (core/->> (repeat (count forms) "(~{})")
                             (interpose " && ")
                             (#(concat ["("] % [")"]))
                             (apply core/str))]
          (bool-expr `(~'js* ~and-str ~@forms)))
+
+       (typed-expr? &env x '#{boolean})
+       `(if ~x (and ~@next) false)
+
+       :else
        `(let [and# ~x]
           (if and# (and ~@next) and#))))))
 
