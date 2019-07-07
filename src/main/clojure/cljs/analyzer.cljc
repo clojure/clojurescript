@@ -1550,6 +1550,12 @@
     cljs.core/delay?          cljs.core/Delay
     cljs.core/reduced?        cljs.core/Reduced
 
+    ;; Subtypes
+    cljs.core/simple-keyword?    cljs.core/Keyword
+    cljs.core/qualified-keyword? cljs.core/Keyword
+    cljs.core/simple-symbol?     cljs.core/Symbol
+    cljs.core/qualified-symbol?  cljs.core/Symbol
+
     ;;; Note: For non-marker protocol entries below, we
     ;;; omit predicates that are based on satisfies? because
     ;;; we cannot safely apply the fast-path optimization
@@ -1570,6 +1576,10 @@
     ;; Composites
     cljs.core/seqable?        #{cljs.core/ISeqable array string}
     cljs.core/ident?          #{cljs.core/Keyword cljs.core/Symbol}
+
+    ;; Composite subtypes
+    cljs.core/simple-ident?    #{cljs.core/Keyword cljs.core/Symbol}
+    cljs.core/qualified-ident? #{cljs.core/Keyword cljs.core/Symbol}
     })
 
 (defn- simple-predicate-induced-tag

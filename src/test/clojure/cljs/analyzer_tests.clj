@@ -2054,3 +2054,40 @@
     (is #(= '#{([this] [this x] [this x y])} (set (map :arglists (vals sigs)))))
     (is #(= '#{"foo fn" "bar fn" "baz fn"} (set (map :doc (vals sigs)))))))
 
+(deftest test-cljs-3133
+  (is (= (ana/no-warn
+           (env/with-compiler-env test-cenv
+             (:tag (ana/analyze test-env '(let [x ^any []] (if (keyword? x) x nil))))))
+        '#{cljs.core/Keyword clj-nil}))
+  (is (= (ana/no-warn
+           (env/with-compiler-env test-cenv
+             (:tag (ana/analyze test-env '(let [x ^any []] (if (simple-keyword? x) x nil))))))
+        '#{cljs.core/Keyword clj-nil}))
+  (is (= (ana/no-warn
+           (env/with-compiler-env test-cenv
+             (:tag (ana/analyze test-env '(let [x ^any []] (if (qualified-keyword? x) x nil))))))
+        '#{cljs.core/Keyword clj-nil}))
+  (is (= (ana/no-warn
+           (env/with-compiler-env test-cenv
+             (:tag (ana/analyze test-env '(let [x ^any []] (if (symbol? x) x nil))))))
+        '#{cljs.core/Symbol clj-nil}))
+  (is (= (ana/no-warn
+           (env/with-compiler-env test-cenv
+             (:tag (ana/analyze test-env '(let [x ^any []] (if (simple-symbol? x) x nil))))))
+        '#{cljs.core/Symbol clj-nil}))
+  (is (= (ana/no-warn
+           (env/with-compiler-env test-cenv
+             (:tag (ana/analyze test-env '(let [x ^any []] (if (qualified-symbol? x) x nil))))))
+        '#{cljs.core/Symbol clj-nil}))
+  (is (= (ana/no-warn
+           (env/with-compiler-env test-cenv
+             (:tag (ana/analyze test-env '(let [x ^any []] (if (ident? x) x nil))))))
+        '#{cljs.core/Keyword cljs.core/Symbol clj-nil}))
+  (is (= (ana/no-warn
+           (env/with-compiler-env test-cenv
+             (:tag (ana/analyze test-env '(let [x ^any []] (if (simple-ident? x) x nil))))))
+        '#{cljs.core/Keyword cljs.core/Symbol clj-nil}))
+  (is (= (ana/no-warn
+           (env/with-compiler-env test-cenv
+             (:tag (ana/analyze test-env '(let [x ^any []] (if (qualified-ident? x) x nil))))))
+        '#{cljs.core/Keyword cljs.core/Symbol clj-nil})))
