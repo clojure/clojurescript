@@ -6149,9 +6149,11 @@ reduces them without incurring seq initialization"
   ILookup
   (-lookup [coll k] (-lookup coll k nil))
 
-  (-lookup [coll k not-found] (if (number? k)
-                                (-nth coll k not-found)
-                                not-found))
+  (-lookup [coll k not-found]
+    (cond
+      (not ^boolean (.-edit root)) (throw (js/Error. "lookup after persistent!"))
+      (number? k) (-nth coll k not-found)
+      :else not-found))
 
   IFn
   (-invoke [coll k]
