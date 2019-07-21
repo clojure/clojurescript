@@ -2091,3 +2091,13 @@
            (env/with-compiler-env test-cenv
              (:tag (ana/analyze test-env '(let [x ^any []] (if (qualified-ident? x) x nil))))))
         '#{cljs.core/Keyword cljs.core/Symbol clj-nil})))
+
+(deftest test-cljs-3140
+  (is (= (ana/no-warn
+           (env/with-compiler-env test-cenv
+             (:tag (ana/analyze test-env '(let [x ^any []] (if (instance? UUID x) x nil))))))
+        '#{cljs.core/UUID clj-nil}))
+  (is (= (ana/no-warn
+           (env/with-compiler-env test-cenv
+             (:tag (ana/analyze test-env '(let [x ^any []] (if (implements? ICounted x) x nil))))))
+        '#{cljs.core/ICounted clj-nil})))

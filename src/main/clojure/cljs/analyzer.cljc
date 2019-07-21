@@ -1599,14 +1599,15 @@
 
 (defn- type-check-induced-tag
   "Look for a type-check-induced tag when the test expression is the use of
-   instance? on a local, as in (instance? ICounted x)."
+  instance? on a local, as in (instance? UUID x) or implements? on a local, as
+  in (implements? ICounted x)."
   [env test]
   (when (and (list? test)
              (== 3 (count test))
              (every? symbol? test))
     (let [analyzed-fn (no-warn (analyze (assoc env :context :expr) (first test)))]
       (when (= :var (:op analyzed-fn))
-        (when ('#{cljs.core/instance?} (:name analyzed-fn))
+        (when ('#{cljs.core/instance? cljs.core/implements?} (:name analyzed-fn))
           (let [analyzed-type (no-warn (analyze (assoc env :context :expr) (second test)))
                 tag (:name analyzed-type)
                 sym (last test)]
