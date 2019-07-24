@@ -1073,7 +1073,8 @@
   [env sym full-ns current-ns]
   {:name (symbol (str current-ns) (str (munge-node-lib full-ns) "." (name sym)))
    :op :js-var
-   :ns current-ns})
+   :ns current-ns
+   :tag 'js})
 
 (defmethod resolve* :global
   [env sym full-ns current-ns]

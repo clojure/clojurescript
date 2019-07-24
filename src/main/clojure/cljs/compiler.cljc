@@ -1142,7 +1142,7 @@
         opt-count? (and (= (:name info) 'cljs.core/count)
                         (boolean ('#{string array} first-arg-tag)))
         ns (:ns info)
-        js? (or (= ns 'js) (= ns 'Math))
+        js? (or (= ns 'js) (= ns 'Math) (= tag 'js))
         goog? (when ns
                 (or (= ns 'goog)
                     (when-let [ns-str (str ns)]
