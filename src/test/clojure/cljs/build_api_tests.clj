@@ -290,7 +290,7 @@
   (test/delete-node-modules)
   (spit (io/file "package.json") "{}")
   (let [cenv (env/default-compiler-env)
-        out (.getPath (io/file "test-out" #_(test/tmp-dir) "npm-deps-test-out"))
+        out (.getPath (io/file (test/tmp-dir) "npm-deps-test-out"))
         {:keys [inputs opts]} {:inputs (str (io/file "src" "test" "cljs_build"))
                                :opts {:main 'npm-deps-test.invoke
                                       :output-dir out
