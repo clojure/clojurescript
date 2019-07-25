@@ -1142,14 +1142,16 @@
         opt-count? (and (= (:name info) 'cljs.core/count)
                         (boolean ('#{string array} first-arg-tag)))
         ns (:ns info)
-        js? (or (= ns 'js) (= ns 'Math) (:foreign info)) ;; foreign - i.e. global / Node.js library
+        ftag (ana/infer-tag env f)
+        js? (or (= ns 'js) (= ns 'Math)
+                (ana/js-tag? ftag) (:foreign info)) ;; foreign - i.e. global / Node.js library
         goog? (when ns
                 (or (= ns 'goog)
                     (when-let [ns-str (str ns)]
                       (= (get (string/split ns-str #"\.") 0 nil) "goog"))
                     (not (contains? (::ana/namespaces @env/*compiler*) ns))))
 
-        keyword? (or (= 'cljs.core/Keyword (ana/infer-tag env f))
+        keyword? (or (= 'cljs.core/Keyword ftag)
                      (let [f (ana/unwrap-quote f)]
                        (and (= (-> f :op) :const)
                             (keyword? (-> f :form)))))
