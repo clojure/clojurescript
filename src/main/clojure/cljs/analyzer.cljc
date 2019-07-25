@@ -1071,10 +1071,10 @@
 
 (defmethod resolve* :node
   [env sym full-ns current-ns]
-  {:name (symbol (str current-ns) (str (munge-node-lib full-ns) "." (name sym)))
+  {:ns current-ns
+   :name (symbol (str current-ns) (str (munge-node-lib full-ns) "." (name sym)))
    :op :js-var
-   :ns current-ns
-   :tag 'js})
+   :foreign true})
 
 (defmethod resolve* :global
   [env sym full-ns current-ns]
@@ -1082,10 +1082,11 @@
     (when-not (has-extern? pre)
       (swap! env/*compiler* update-in
         (into [::namespaces current-ns :externs] pre) merge {}))
-    {:name (symbol (str current-ns) (str (munge-global-export full-ns) "." (name sym)))
+    {:ns current-ns
+     :name (symbol (str current-ns) (str (munge-global-export full-ns) "." (name sym)))
      :op :js-var
-     :ns current-ns
-     :tag (with-meta 'js {:prefix pre})}))
+     :tag (with-meta 'js {:prefix pre})
+     :foreign true}))
 
 (def ^:private private-var-access-exceptions
   "Specially-treated symbols for which we don't trigger :private-var-access warnings."

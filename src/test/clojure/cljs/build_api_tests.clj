@@ -286,6 +286,30 @@
   (.delete (io/file "package.json"))
   (test/delete-node-modules))
 
+(deftest test-npm-deps-invoke-cljs-3144
+  (test/delete-node-modules)
+  (spit (io/file "package.json") "{}")
+  (let [cenv (env/default-compiler-env)
+        out (.getPath (io/file "test-out" #_(test/tmp-dir) "npm-deps-test-out"))
+        {:keys [inputs opts]} {:inputs (str (io/file "src" "test" "cljs_build"))
+                               :opts {:main 'npm-deps-test.invoke
+                                      :output-dir out
+                                      :optimizations :none
+                                      :install-deps true
+                                      :npm-deps {:react "15.6.1"
+                                                 :react-dom "15.6.1"
+                                                 :lodash-es "4.17.4"
+                                                 :lodash "4.17.4"}
+                                      :closure-warnings {:check-types :off
+                                                         :non-standard-jsdoc :off}}}]
+    (test/delete-out-files out)
+    (testing "invoking fns from Node.js libraries should not emit .call convention"
+      (build/build (build/inputs (io/file inputs "npm_deps_test/invoke.cljs")) opts cenv)
+      (is (.exists (io/file out "node_modules/react/react.js")))
+      (is (not (string/includes? (slurp (io/file out "npm_deps_test/invoke.cljs")) "call")))))
+  (.delete (io/file "package.json"))
+  (test/delete-node-modules))
+
 (deftest test-preloads
   (let [out (.getPath (io/file (test/tmp-dir) "preloads-test-out"))
         {:keys [inputs opts]} {:inputs (str (io/file "src" "test" "cljs"))
