@@ -3012,12 +3012,18 @@
                                 (compile-sources compiler-stats compile-opts)
                                 (#(map add-core-macros-if-cljs-js %))
                                 (add-js-sources opts)
-                                (cond-> (= :nodejs (:target opts)) (concat [(-compile (io/resource "cljs/nodejs.cljs") opts)]))
+                                (cond-> (= :nodejs (:target opts))
+                                  (concat
+                                    [(-compile (io/resource "cljs/nodejs.cljs")
+                                       (assoc opts :output-file "nodejs.js"))]))
                                 deps/dependency-order
                                 (add-preloads opts)
                                 remove-goog-base
                                 add-goog-base
-                                (cond-> (= :nodejs (:target opts)) (concat [(-compile (io/resource "cljs/nodejscli.cljs") opts)]))
+                                (cond-> (= :nodejs (:target opts))
+                                  (concat
+                                    [(-compile (io/resource "cljs/nodejscli.cljs")
+                                       (assoc opts :output-file "nodejscli.js"))]))
                                 (->> (map #(source-on-disk opts %)) doall)
                                 (compile-loader opts))
                  _ (when (:emit-constants opts)
