@@ -112,9 +112,12 @@ function nodeGlobalRequire(file) {
         _exports = global.exports,
         exportedRequire = false;
 
+    // to circumvent Node.js environment detection in bundled libraries
     global.module = undefined;
     global.exports = undefined;
 
+    // to allow requires of Node.js libraries (i.e. platform libs) that
+    // couldn't be bundled for some reason
     if(global.require == undefined) {
         exportedRequire = true;
         global.require = require;
