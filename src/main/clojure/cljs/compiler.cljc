@@ -1143,8 +1143,7 @@
                         (boolean ('#{string array} first-arg-tag)))
         ns (:ns info)
         ftag (ana/infer-tag env f)
-        js? (or (= ns 'js) (= ns 'Math)
-                (ana/js-tag? ftag) (:foreign info)) ;; foreign - i.e. global / Node.js library
+        js? (or (= ns 'js) (= ns 'Math) (:foreign info)) ;; foreign - i.e. global / Node.js library
         goog? (when ns
                 (or (= ns 'goog)
                     (when-let [ns-str (str ns)]
