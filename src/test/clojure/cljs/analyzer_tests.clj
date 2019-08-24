@@ -2101,3 +2101,12 @@
            (env/with-compiler-env test-cenv
              (:tag (ana/analyze test-env '(let [x ^any []] (if (implements? ICounted x) x nil))))))
         '#{cljs.core/ICounted clj-nil})))
+
+(deftest test-cljs-3158
+  (is (= (ana/no-warn
+           (env/with-compiler-env test-cenv
+             (:tag (analyze test-env '(loop [a "x" b "y"]
+                                        (if (= a 1)
+                                          a
+                                          (recur b 1)))))))
+        'any)))

@@ -2404,7 +2404,11 @@
     (reset! (:flag frame) true)
     (swap! (:tags frame) (fn [tags]
                            (mapv (fn [tag expr]
-                                   (add-types tag (:tag expr)))
+                                   ;; Widen by adding the type of the recur expression, except when recurring with a
+                                   ;; loop local: Since its final widened type is unknown, conservatively assume 'any.
+                                   (if (= :loop (:local expr))
+                                     'any
+                                     (add-types tag (:tag expr))))
                              tags exprs)))
     (assoc {:env env :op :recur :form form}
       :frame frame
