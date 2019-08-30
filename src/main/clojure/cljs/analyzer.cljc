@@ -3391,7 +3391,7 @@
         ;; Cannot determine type of the target
         (when (or (nil? target-tag) ('#{any} target-tag))
           (warning :infer-warning env
-            {:warn-type :target :form form}))
+            {:warn-type :target :form form :property prop}))
         ;; Unresolveable property on existing extern
         (let [[pre' pre] ((juxt butlast identity) (-> tag meta :prefix))]
           (when (and (has-extern? pre') (not (has-extern? pre)))
