@@ -1600,6 +1600,8 @@
                        (get-in env [:locals sym]))
               [sym tag])))))))
 
+(declare specials)
+
 (defn- type-check-induced-tag
   "Look for a type-check-induced tag when the test expression is the use of
   instance? on a local, as in (instance? UUID x) or implements? on a local, as
@@ -1607,7 +1609,8 @@
   [env test]
   (when (and (list? test)
              (== 3 (count test))
-             (every? symbol? test))
+             (every? symbol? test)
+             (not (contains? specials (first test))))
     (let [analyzed-fn (no-warn (analyze (assoc env :context :expr) (first test)))]
       (when (= :var (:op analyzed-fn))
         (when ('#{cljs.core/instance? cljs.core/implements?} (:name analyzed-fn))
