@@ -20,6 +20,7 @@
 
 (def ^:dynamic *ignore-var* false)
 (def ^:dynamic *source-file* nil)
+(def ^:dynamic *goog-ns* nil)
 
 ;; ------------------------------------------------------------------------------
 ;; Externs Parsing
@@ -37,6 +38,16 @@
         (if (.isString child)
           (symbol (.. child getString)))))))
 
+(defn params->method-params [xs]
+  (letfn [(not-opt? [x]
+            (not (string/starts-with? (name x) "opt_")))]
+    (let [required (into [] (take-while not-opt? xs))
+          opts (drop-while not-opt? xs)]
+      (loop [ret [required] opts opts]
+        (if-let [opt (first opts)]
+          (recur (conj ret (conj (last ret) opt)) (drop 1 opts))
+          (seq ret))))))
+
 (defn get-var-info [^Node node]
   (when node
     (let [info (.getJSDocInfo node)]
@@ -50,9 +61,15 @@
                   (.isConstructor info) (merge {:ctor qname})
                   (.isInterface info) (merge {:iface qname})))
               (if (.hasReturnType info)
-                {:tag 'Function
-                 :ret-tag (get-tag (.getReturnType info))
-                 :arglists (list (into [] (map symbol (.getParameterNames info))))})))
+                (let [arglist  (into [] (map symbol (.getParameterNames info)))
+                      arglists (params->method-params arglist)]
+                  {:tag             'Function
+                   :fn-var          true
+                   :ret-tag         (get-tag (.getReturnType info))
+                   :variadic?       (boolean (some '#{var_args} arglist))
+                   :max-fixed-arity (count (take-while #(not= 'var_args %) arglist))
+                   :method-params   arglists
+                   :arglists        arglists}))))
           {:file *source-file*
            :line (.getLineno node)}
           (when-let [doc (.getOriginalCommentString info)]
@@ -177,21 +194,25 @@
     (fn [m xs]
       (let [sym (last xs)]
         (cond-> m
-          (seq xs) (assoc sym (meta sym)))))
+          (seq xs) (assoc sym (merge (meta sym) {:ns *goog-ns* :name sym})))))
     {} externs))
 
 (defn analyze-goog-file [f]
   (let [rsrc (io/resource f)
-        desc (js-deps/parse-js-ns (line-seq (io/reader rsrc)))]
+        desc (js-deps/parse-js-ns (line-seq (io/reader rsrc)))
+        ns   (-> (:provides desc) first symbol)]
     ;; TODO: figure out what to do about other provides
-    {:name (first (:provides desc))
-     :defs (parsed->defs
-             (parse-externs
-               (SourceFile/fromInputStream f (io/input-stream rsrc))))}))
+    (binding [*goog-ns* ns]
+      {:name ns
+       :defs (parsed->defs
+               (parse-externs
+                 (SourceFile/fromInputStream f (io/input-stream rsrc))))})))
 
 (comment
 
-  (analyze-goog-file "goog/string/string.js")
+  (pprint (analyze-goog-file "goog/object/object.js"))
+
+  (pprint (analyze-goog-file "goog/string/string.js"))
 
   (require '[clojure.java.io :as io]
            '[cljs.closure :as closure]

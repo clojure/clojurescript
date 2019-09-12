@@ -14,16 +14,17 @@
               :refer [no-warn wrapping-errors with-warning-handlers
                       disallowing-recur allowing-redef disallowing-ns*]]
              [cljs.env.macros :refer [ensure]]))
-  #?(:clj (:require [cljs.util :as util :refer [ns->relpath topo-sort]]
-                    [clojure.java.io :as io]
-                    [clojure.string :as string]
-                    [clojure.set :as set]
-                    [cljs.env :as env :refer [ensure]]
-                    [cljs.js-deps :as deps]
-                    [cljs.tagged-literals :as tags]
-                    [clojure.tools.reader :as reader]
-                    [clojure.tools.reader.reader-types :as readers]
-                    [clojure.edn :as edn])
+  #?(:clj  (:require [cljs.util :as util :refer [ns->relpath topo-sort]]
+                     [clojure.java.io :as io]
+                     [clojure.string :as string]
+                     [clojure.set :as set]
+                     [cljs.env :as env :refer [ensure]]
+                     [cljs.js-deps :as deps]
+                     [cljs.tagged-literals :as tags]
+                     [clojure.tools.reader :as reader]
+                     [clojure.tools.reader.reader-types :as readers]
+                     [clojure.edn :as edn]
+                     [cljs.externs :as externs])
      :cljs (:require [goog.string :as gstring]
                      [clojure.string :as string]
                      [clojure.set :as set]
@@ -2576,18 +2577,23 @@
                  (some *cljs-dep-set* deps))))))
        (doseq [dep deps]
          (when-not (or (some? (get-in compiler [::namespaces dep :defs]))
-                       (contains? (:js-dependency-index compiler) (name dep))
                        (node-module-dep? dep)
                        (js-module-exists? (name dep))
                        #?(:clj (deps/find-classpath-lib dep)))
-           #?(:clj (if-some [src (locate-src dep)]
-                     (analyze-file src opts)
-                     (throw
-                       (error env
-                         (error-message :undeclared-ns {:ns-sym dep :js-provide (name dep)}))))
-              :cljs (throw
-                      (error env
-                        (error-message :undeclared-ns {:ns-sym dep :js-provide (name dep)}))))))))))
+           (if (contains? (:js-dependency-index compiler) (name dep))
+             (let [dep-name (name dep)]
+               (when (string/starts-with? dep-name "goog.")
+                 (let [js-lib (get-in compiler [:js-dependency-index dep-name])
+                       ns (externs/analyze-goog-file (:file js-lib))]
+                   (swap! env/*compiler* update-in [::namespaces dep] merge ns))))
+             #?(:clj (if-some [src (locate-src dep)]
+                       (analyze-file src opts)
+                       (throw
+                         (error env
+                           (error-message :undeclared-ns {:ns-sym dep :js-provide (name dep)}))))
+                :cljs (throw
+                        (error env
+                          (error-message :undeclared-ns {:ns-sym dep :js-provide (name dep)})))))))))))
 
 (defn missing-use? [lib sym cenv]
   (let [js-lib (get-in cenv [:js-dependency-index (name lib)])]
