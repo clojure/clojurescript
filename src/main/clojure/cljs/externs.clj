@@ -15,7 +15,7 @@
             CompilerOptions SourceFile JsAst CommandLineRunner]
            [com.google.javascript.jscomp.parsing Config$JsDocParsing]
            [com.google.javascript.rhino
-            Node Token JSTypeExpression]
+            Node Token JSTypeExpression JSDocInfo$Visibility]
            [java.util.logging Level]))
 
 (def ^:dynamic *ignore-var* false)
@@ -33,8 +33,7 @@
 (defn get-tag [^JSTypeExpression texpr]
   (when-let [root (.getRoot texpr)]
     (if (.isString root)
-      (symbol (.getString root))
-      (if-let [child (.. root getFirstChild)]
+      (symbol (.getString root))(if-let [child (.. root getFirstChild)]
         (if (.isString child)
           (symbol (.. child getString)))))))
 
@@ -57,7 +56,9 @@
           {:file *source-file*
            :line (.getLineno node)}
           (when-let [doc (.getOriginalCommentString info)]
-            {:doc doc}))))))
+            {:doc doc})
+          (when (= JSDocInfo$Visibility/PRIVATE (.getVisibility info))
+            {:private true}))))))
 
 (defmulti parse-extern-node
   (fn [^Node node]
@@ -202,10 +203,13 @@
     (closure/js-source-file "goog/string/string.js"
       (io/input-stream (io/resource "goog/string/string.js"))))
 
-  (externs-map
-    [(closure/js-source-file "goog/string/string.js"
-       (io/input-stream (io/resource "goog/string/string.js")))]
-    {})
+  (-> (externs-map
+        [(closure/js-source-file "goog/string/string.js"
+           (io/input-stream (io/resource "goog/string/string.js")))]
+        {})
+    (get-in '[goog string])
+    (find 'numberAwareCompare_)
+    first meta)
 
   (externs-map)
 
