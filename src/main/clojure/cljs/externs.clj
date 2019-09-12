@@ -172,12 +172,22 @@
            externs (index-externs (parse-externs externs-file))))
        defaults sources))))
 
+(defn parsed->defs [externs]
+  (reduce
+    (fn [m xs]
+      (let [sym (last xs)]
+        (cond-> m
+          (seq xs) (assoc sym (meta sym)))))
+    {} externs))
+
 (defn analyze-goog-file [f]
   (let [rsrc (io/resource f)
         desc (js-deps/parse-js-ns (line-seq (io/reader rsrc)))]
     ;; TODO: figure out what to do about other provides
-    [(first (:provides desc))
-     ]))
+    {:name (first (:provides desc))
+     :defs (parsed->defs
+             (parse-externs
+               (SourceFile/fromInputStream f (io/input-stream rsrc))))}))
 
 (comment
 
