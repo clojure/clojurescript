@@ -2583,9 +2583,9 @@
            (if (contains? (:js-dependency-index compiler) (name dep))
              (let [dep-name (name dep)]
                (when (string/starts-with? dep-name "goog.")
-                 (let [js-lib (get-in compiler [:js-dependency-index dep-name])
-                       ns (externs/analyze-goog-file (:file js-lib))]
-                   (swap! env/*compiler* update-in [::namespaces dep] merge ns))))
+                 #?(:clj (let [js-lib (get-in compiler [:js-dependency-index dep-name])
+                               ns (externs/analyze-goog-file (:file js-lib))]
+                           (swap! env/*compiler* update-in [::namespaces dep] merge ns)))))
              #?(:clj (if-some [src (locate-src dep)]
                        (analyze-file src opts)
                        (throw
