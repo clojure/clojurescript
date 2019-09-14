@@ -185,7 +185,7 @@
                 (gobj/set "onreadystatechange" onload)) ;; IE
               (if (nil? opt_sourceText)
                 (doto script (gobj/set "src" src))
-                (doto script (gdom/setTextContext opt_sourceText))))))))
+                (doto script (gdom/setTextContent opt_sourceText))))))))
     ;; queue or load
     (set! (.-writeScriptTag_ js/goog)
       (fn [src opt_sourceText]

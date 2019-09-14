@@ -60,12 +60,15 @@
                 (cond-> {:tag 'Function}
                   (.isConstructor info) (merge {:ctor qname})
                   (.isInterface info) (merge {:iface qname})))
-              (if (.hasReturnType info)
+              (if (or (.hasReturnType info)
+                      (as-> (.getParameterCount info) c
+                        (and c (pos? c))))
                 (let [arglist  (into [] (map symbol (.getParameterNames info)))
                       arglists (params->method-params arglist)]
                   {:tag             'Function
                    :js-fn-var       true
-                   :ret-tag         (get-tag (.getReturnType info))
+                   :ret-tag         (or (some-> (.getReturnType info) get-tag)
+                                        'clj-nil)
                    :variadic?       (boolean (some '#{var_args} arglist))
                    :max-fixed-arity (count (take-while #(not= 'var_args %) arglist))
                    :method-params   arglists
@@ -209,15 +212,16 @@
                  (SourceFile/fromInputStream f (io/input-stream rsrc))))})))
 
 (comment
-
-  (pprint (analyze-goog-file "goog/object/object.js"))
-
-  (pprint (analyze-goog-file "goog/string/string.js"))
-
   (require '[clojure.java.io :as io]
            '[cljs.closure :as closure]
            '[clojure.pprint :refer [pprint]]
            '[cljs.js-deps :as js-deps])
+
+  (pprint
+    (get-in (analyze-goog-file "goog/dom/dom.js")
+      [:defs 'setTextContent]))
+
+  (pprint (analyze-goog-file "goog/string/string.js"))
 
   (get (js-deps/js-dependency-index {}) "goog.string")
 
