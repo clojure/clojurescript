@@ -64,7 +64,7 @@
                 (let [arglist  (into [] (map symbol (.getParameterNames info)))
                       arglists (params->method-params arglist)]
                   {:tag             'Function
-                   :fn-var          true
+                   :js-fn-var       true
                    :ret-tag         (get-tag (.getReturnType info))
                    :variadic?       (boolean (some '#{var_args} arglist))
                    :max-fixed-arity (count (take-while #(not= 'var_args %) arglist))
