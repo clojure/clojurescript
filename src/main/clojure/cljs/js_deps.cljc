@@ -114,6 +114,8 @@ case."
   (letfn [(conj-in [m k v] (update-in m [k] (fn [old] (conj old v))))]
     (->> (for [line lines x (string/split line #";")] x)
          (map string/trim)
+         (drop-while #(not (or (string/includes? % "goog.provide(")
+                               (string/includes? % "goog.require("))))
          (take-while #(not (re-matches #".*=[\s]*function\(.*\)[\s]*[{].*" %)))
          (map #(re-matches #".*goog\.(provide|require)\(['\"](.*)['\"]\)" %))
          (remove nil?)
