@@ -2591,7 +2591,7 @@
              (let [dep-name (name dep)]
                (when (string/starts-with? dep-name "goog.")
                  #?(:clj (let [js-lib (get-in compiler [:js-dependency-index dep-name])
-                               ns (externs/analyze-goog-file (:file js-lib))]
+                               ns (externs/analyze-goog-file (:file js-lib) (symbol dep-name))]
                            (swap! env/*compiler* update-in [::namespaces dep] merge ns)))))
              #?(:clj (if-some [src (locate-src dep)]
                        (analyze-file src opts)

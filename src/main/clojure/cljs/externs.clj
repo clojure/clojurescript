@@ -192,24 +192,35 @@
            externs (index-externs (parse-externs externs-file))))
        defaults sources))))
 
-(defn parsed->defs [externs]
-  (reduce
-    (fn [m xs]
-      (let [sym (last xs)]
-        (cond-> m
-          (seq xs) (assoc sym (merge (meta sym) {:ns *goog-ns* :name sym})))))
-    {} externs))
+(defn ns-match? [ns-segs var-segs]
+  (and
+    (= (inc (count ns-segs)) (count var-segs))
+    (= ns-segs (take (count ns-segs) var-segs))))
 
-(defn analyze-goog-file [f]
-  (let [rsrc (io/resource f)
-        desc (js-deps/parse-js-ns (line-seq (io/reader rsrc)))
-        ns   (-> (:provides desc) first symbol)]
-    ;; TODO: figure out what to do about other provides
-    (binding [*goog-ns* ns]
-      {:name ns
-       :defs (parsed->defs
-               (parse-externs
-                 (SourceFile/fromInputStream f (io/input-stream rsrc))))})))
+(defn parsed->defs [externs]
+  (let [ns-segs (into [] (map symbol (string/split (str *goog-ns*) #"\.")))]
+    (reduce
+      (fn [m xs]
+        ;; ignore definitions from other provided namespaces not under consideration
+        (if (ns-match? ns-segs xs)
+          (let [sym (last xs)]
+            (cond-> m
+              (seq xs) (assoc sym (merge (meta sym) {:ns *goog-ns* :name sym}))))
+          m))
+      {} externs)))
+
+(defn analyze-goog-file
+  ([f]
+   (analyze-goog-file f nil))
+  ([f ns]
+   (let [rsrc (io/resource f)
+         desc (js-deps/parse-js-ns (line-seq (io/reader rsrc)))
+         ns   (or ns (-> (:provides desc) first symbol))]
+     (binding [*goog-ns* ns]
+       {:name ns
+        :defs (parsed->defs
+                (parse-externs
+                  (SourceFile/fromInputStream f (io/input-stream rsrc))))}))))
 
 (comment
   (require '[clojure.java.io :as io]
@@ -245,6 +256,15 @@
     (get-in '[goog string])
     (find 'numberAwareCompare_)
     first meta)
+
+  (-> (externs-map
+        [(closure/js-source-file "goog/date/date.js"
+           (io/input-stream (io/resource "goog/date/date.js")))]
+        {})
+    (get-in '[goog date month])
+    )
+
+  (pprint (analyze-goog-file "goog/date/date.js" 'goog.date.month))
 
   (externs-map)
 

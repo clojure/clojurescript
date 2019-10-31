@@ -21,3 +21,18 @@
             (= (count (distinct xs))
                (count xs)))
           externs))))
+
+(deftest cljs-3176
+  (let [ns (externs/analyze-goog-file "goog/date/date.js")
+        v  (get-in ns [:defs 'getWeekNumber])]
+    (is (= 3 (-> v :method-params first count))))
+  (let [ns (externs/analyze-goog-file "goog/date/date.js" 'goog.date.month)]
+    (is (= 12 (-> ns :defs count)))))
+
+(comment
+
+  (test/run-tests)
+
+  (externs/analyze-goog-file "goog/date/date.js" 'goog.date.month)
+
+  )
