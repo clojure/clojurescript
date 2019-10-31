@@ -1024,6 +1024,11 @@
               (chunk-append b 0)
               (next (chunk-cons (chunk b) nil))))))
 
+(deftest test-cljs-3124
+  (let [t (assoc! (transient []) 0 1)]
+    (persistent! t)
+    (is (= :fail (try (get t :a :not-found) (catch js/Error e :fail))))))
+
 (comment
 
   (run-tests)
