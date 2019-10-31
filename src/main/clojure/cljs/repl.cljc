@@ -599,6 +599,8 @@
                   (.exists (io/file f)) (io/file f)
                   :else (io/resource f))
             compiled (binding [ana/*reload-macros* true]
+                       (cljsc/handle-js-modules
+                         opts [(ana/parse-ns src)] env/*compiler*)
                        (cljsc/compile src
                          (assoc opts
                            :output-file (cljsc/src-file->target-file src)
