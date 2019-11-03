@@ -60,13 +60,23 @@
              (ana/resolve-var env s)))
     (symbol (str ana/*cljs-ns*) (str s))))
 
+(defonce ^:private _speced_vars (atom #{}))
+
+(defn speced-vars []
+  @_speced_vars)
+
 (defmacro def
   "Given a namespace-qualified keyword or resolveable symbol k, and a
   spec, spec-name, predicate or regex-op makes an entry in the
   registry mapping k to the spec. Use nil to remove an entry in
   the registry for k."
   [k spec-form]
-  (let [k    (if (symbol? k) (ns-qualify &env k) k)
+  (let [k    (if (symbol? k)
+               (let [sym (ns-qualify &env k)]
+                 (swap! _speced_vars conj
+                   (vary-meta sym assoc :fdef-ns (-> &env :ns :name)))
+                 sym)
+               k)
         form (res &env spec-form)]
     (swap! registry-ref (fn [r]
                           (if (nil? form)
@@ -403,11 +413,6 @@
   (clojure.core/assert (not (empty? preds)))
   `(tuple-impl '~(mapv #(res &env %) preds) ~(vec preds)))
 
-(defonce ^:private _speced_vars (atom #{}))
-
-(defn speced-vars []
-  @_speced_vars)
-
 (defmacro fdef
   "Takes a symbol naming a function, and one or more of the following:
 
@@ -441,9 +446,6 @@
                  :sym symbol?)
     :ret symbol?)"
   [fn-sym & specs]
-  (swap! _speced_vars conj
-    (vary-meta (ns-qualify &env fn-sym)
-      assoc :fdef-ns (-> &env :ns :name)))
   `(cljs.spec.alpha/def ~fn-sym (fspec ~@specs)))
 
 (defmacro keys*
