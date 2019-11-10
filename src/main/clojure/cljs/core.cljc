@@ -2061,16 +2061,18 @@
                         :cljs (js/Error.
                                 (core/str "Invalid protocol, " psym
                                   " defines method " mname " with arity 0"))))))
-             expand-sig (core/fn [fname slot sig]
-                          (core/let [sig (core/if-not (every? core/symbol? sig)
-                                           (mapv (core/fn [arg]
-                                                   (core/cond
-                                                     (core/symbol? arg) arg
-                                                     (core/and (map? arg) (core/some? (:as arg))) (:as arg)
-                                                     :else (gensym))) sig)
-                                           sig)
+             sig->syms (core/fn [sig]
+                         (core/if-not (every? core/symbol? sig)
+                           (mapv (core/fn [arg]
+                                   (core/cond
+                                     (core/symbol? arg) arg
+                                     (core/and (map? arg) (core/some? (:as arg))) (:as arg)
+                                     :else (gensym))) sig)
+                           sig))
+             expand-dyn (core/fn [fname sig]
+                          (core/let [sig (sig->syms sig)
 
-                                     fqn-fname (fqn fname)
+                                     fqn-fname (with-meta (fqn fname) {:cljs.analyzer/no-resolve true})
                                      fsig (first sig)
 
                                      ;; construct protocol checks in reverse order
@@ -2091,20 +2093,25 @@
                                           (meta-impl# ~@sig)
                                           ~check))
 
-                                     ;; then check protocol on js string,function,array,object
+                                     ;; then check protocol on js string,function,array,object (first dynamic check actually executed)
                                      check
                                      `(let [x# (if (nil? ~fsig) nil ~fsig)
                                             m# (unchecked-get ~fqn-fname (goog/typeOf x#))]
                                         (if-not (nil? m#)
                                           (m# ~@sig)
-                                          ~check))
+                                          ~check))]
+                            `(~sig ~check)))
+             expand-sig (core/fn [dyn-name slot sig]
+                          (core/let [sig (sig->syms sig)
 
-                                     ;; then check protocol property on object (first check actually executed)
+                                     fsig (first sig)
+
+                                     ;; check protocol property on object (first check executed)
                                      check
                                      `(if (and (not (nil? ~fsig))
                                                (not (nil? (. ~fsig ~(symbol (core/str "-" slot)))))) ;; Property access needed here.
                                         (. ~fsig ~slot ~@sig)
-                                        ~check)]
+                                        (~dyn-name ~@sig))]
                             `(~sig ~check)))
              psym (core/-> psym
                     (vary-meta update-in [:jsdoc] conj "@interface")
@@ -2142,15 +2149,20 @@
                                          :protocol-with-overwriting-method
                                          {} {:protocol psym :name fname :existing existing})))
                                  slot (symbol (core/str prefix (munge (name fname))))
+                                 dyn-name (symbol (core/str slot "$dyn"))
                                  fname (vary-meta fname assoc
                                          :protocol p
                                          :doc doc)]
-                        `(defn ~fname
-                           ~@(map (core/fn [sig]
-                                    (expand-sig fname
-                                      (symbol (core/str slot "$arity$" (count sig)))
-                                      sig))
-                               sigs))))]
+                        `(let [~dyn-name (core/fn
+                                           ~@(map (core/fn [sig]
+                                                    (expand-dyn fname sig))
+                                               sigs))]
+                           (defn ~fname
+                             ~@(map (core/fn [sig]
+                                      (expand-sig dyn-name
+                                        (symbol (core/str slot "$arity$" (count sig)))
+                                        sig))
+                                 sigs)))))]
     `(do
        (set! ~'*unchecked-if* true)
        (def ~psym (~'js* "function(){}"))
