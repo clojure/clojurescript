@@ -48,6 +48,17 @@
           (recur (conj ret (conj (last ret) opt)) (drop 1 opts))
           (seq ret))))))
 
+(defn generic? [t]
+  (let [s (name t)]
+    (boolean (re-matches #"[A-Z]" s))))
+
+(defn gtype->cljs-type [t]
+  (when t
+    (cond
+      (generic? t) 'any
+      (= t 'Array) 'array
+      :else t)))
+
 (defn get-var-info [^Node node]
   (when node
     (let [info (.getJSDocInfo node)]
@@ -67,7 +78,8 @@
                       arglists (params->method-params arglist)]
                   {:tag             'Function
                    :js-fn-var       true
-                   :ret-tag         (or (some-> (.getReturnType info) get-tag)
+                   :ret-tag         (or (some-> (.getReturnType info)
+                                          get-tag gtype->cljs-type)
                                         'clj-nil)
                    :variadic?       (boolean (some '#{var_args} arglist))
                    :max-fixed-arity (count (take-while #(not= 'var_args %) arglist))

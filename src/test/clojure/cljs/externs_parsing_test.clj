@@ -29,6 +29,11 @@
   (let [ns (externs/analyze-goog-file "goog/date/date.js" 'goog.date.month)]
     (is (= 12 (-> ns :defs count)))))
 
+(deftest cljs-3170&3189
+  (let [ns (externs/analyze-goog-file "goog/object/object.js")]
+    (is (= 'any (get-in ns [:defs 'get :ret-tag])))
+    (is (= 'array (get-in ns [:defs 'getKeys :ret-tag])))))
+
 (comment
 
   (test/run-tests)
