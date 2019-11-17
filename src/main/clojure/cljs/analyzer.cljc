@@ -3681,7 +3681,7 @@
                  (== 1 (count args))
                  (record-with-field? (:tag (first argexprs)) (symbol (name f))))
           (let [field-access-form (list* (symbol (str ".-" (name f))) args)]
-            (analyze env field-access-form))
+            (no-warn (analyze env field-access-form)))
           {:env      env :op :invoke :form form :fn fexpr :args argexprs
            :children [:fn :args]})))))
 

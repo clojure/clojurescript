@@ -2110,3 +2110,14 @@
                                           a
                                           (recur b 1)))))))
         'any)))
+
+(deftest test-cljs-3190
+  (let [ws (atom [])]
+    (ana/with-warning-handlers [(collecting-warning-handler ws)]
+      (env/with-compiler-env @test-cenv
+        (analyze (ana/empty-env)
+          '(do
+             (defrecord Foo [a])
+             (:a (->Foo))))))
+    (is (= 1 (count @ws)))
+    (is (string/starts-with? (first @ws) "Wrong number of args (0) passed to cljs.user/->Foo"))))
