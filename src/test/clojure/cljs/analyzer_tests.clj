@@ -399,6 +399,27 @@
       (catch Exception _))
     (is (.startsWith (first @ws) "myfun: Can't have 2 overloads with same arity"))))
 
+(deftest test-cljs-2863
+  (let [ws (atom [])]
+    (try
+      (ana/with-warning-handlers [(collecting-warning-handler ws)]
+       (analyze (ana/empty-env)
+                '(defn myfun
+                   ([x] x)
+                   ([& xs] xs))))
+      (catch Exception _))
+    (is (.startsWith (first @ws) "myfun: Can't have fixed arity function with more params than variadic function")))
+
+  (let [ws (atom [])]
+    (try
+      (ana/with-warning-handlers [(collecting-warning-handler ws)]
+       (analyze (ana/empty-env)
+                '(defn myfun
+                   ([& x] x)
+                   ([& xs] xs))))
+      (catch Exception _))
+    (is (.startsWith (first @ws) "myfun: Can't have more than 1 variadic overload"))))
+
 (deftest test-canonicalize-specs
   (is (= (ana/canonicalize-specs '((quote [clojure.set :as set])))
          '([clojure.set :as set])))

@@ -3217,18 +3217,23 @@
                       (fn ~method))))]
     (core/let [rname    (symbol (core/str ana/*cljs-ns*) (core/str name))
                arglists (map first fdecl)
-               varsig?  #(some '#{&} %)
-               variadic (boolean (some varsig? arglists))
-               sigs     (remove varsig? arglists)
+               macro?   (:macro meta)
+               varsig?  #(boolean (some '#{&} %))
+               {sigs false var-sigs true} (group-by varsig? arglists)
+               variadic? (core/pos? (core/count var-sigs))
+               variadic-params  (if variadic?
+                                  (core/cond-> (remove '#{&} (first var-sigs))
+                                     true core/count
+                                     macro? (core/- 2))
+                                  0)
                maxfa    (apply core/max
                           (concat
                             (map count sigs)
-                            [(core/- (count (first (filter varsig? arglists))) 2)]))
-               macro?   (:macro meta)
+                            [(core/- (count (first var-sigs)) 2)]))
                mfa      (core/cond-> maxfa macro? (core/- 2))
                meta     (assoc meta
                           :top-fn
-                          {:variadic? variadic
+                          {:variadic? variadic?
                            :fixed-arity mfa
                            :max-fixed-arity mfa
                            :method-params (core/cond-> sigs macro? elide-implicit-macro-args)
@@ -3237,6 +3242,11 @@
                args-sym (gensym "args")
                param-counts (map count arglists)
                name     (with-meta name meta)]
+      (core/when (core/< 1 (count var-sigs))
+        (ana/warning :multiple-variadic-overloads {} {:name name}))
+      (core/when (core/and (core/pos? variadic-params)
+                           (not (core/== variadic-params (core/+ 1 mfa))))
+        (ana/warning :variadic-max-arity {} {:name name}))
       (core/when (not= (distinct param-counts) param-counts)
         (ana/warning :overload-arity {} {:name name}))
       `(do
@@ -3244,7 +3254,7 @@
            (fn [~'var_args]
              (case (alength (js-arguments))
                ~@(mapcat #(fixed-arity rname %) sigs)
-               ~(if variadic
+               ~(if variadic?
                   `(let [args-arr# (array)]
                      (copy-arguments args-arr#)
                      (let [argseq# (new ^::ana/no-resolve cljs.core/IndexedSeq
