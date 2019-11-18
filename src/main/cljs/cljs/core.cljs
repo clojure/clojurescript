@@ -9992,8 +9992,8 @@ reduces them without incurring seq initialization"
   (if (string? s)
     (let [matches (.exec re s)]
       (when-not (nil? matches)
-        (if (== (count matches) 1)
-          (first matches)
+        (if (== (count ^array matches) 1)
+          (aget matches 0)
           (vec matches))))
     (throw (js/TypeError. "re-find must match against a string."))))
 
