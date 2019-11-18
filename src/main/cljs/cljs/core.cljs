@@ -10022,7 +10022,9 @@ reduces them without incurring seq initialization"
   (if (instance? js/RegExp s)
     s
     (let [[prefix flags] (re-find #"^\(\?([idmsux]*)\)" s)
-          pattern (subs s (count prefix))]
+          pattern (subs s (if (nil? prefix)
+                            0
+                            (count ^string prefix)))]
       (js/RegExp. pattern (or flags "")))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Printing ;;;;;;;;;;;;;;;;
