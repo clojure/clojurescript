@@ -1,3 +1,56 @@
+## 1.10.597
+
+### Changes
+* CLJS-3120: Add :sigs to protocol var for compatibility with Clojure
+* CLJS-2247: Warn when overwriting protocol method
+* CLJS-3085: Types are inferred for dynamic vars
+* CLJS-3097: Fix compatibility with tools.reader 1.3.1 and bump it
+* CLJS-2750: tag coll in ci-reduce as not-native
+* CLJS-3095: `apply vector` with array acts as `vec`
+* CLJS-3093: Check subvec arguments
+* CLJS-2868: Add ^string hints
+* CLJS-3054: Align behavior of set/union and into with Clojure
+
+### Enhancements
+* CLJS-3077: Avoid generating unnecessary functions
+* CLJS-3107: Eliminate checked ifs in TransientArrayMap
+* CLJS-3164: Optimize assoc on IAssociative values
+* CLJS-3147: Allow Node require from foreign lib
+* CLJS-3144: NPM Modules should have all their vars marked to avoid .call invokes
+* CLJS-3145: Node.js support libs cljs.nodejs and cljs.nodejscli generate random files
+* CLJS-3141: Improve perf of cljs.source-map.base64/encode
+* CLJS-3134: Thread predicate-induced inference through and
+* CLJS-3123: analyze google closure namespaces
+* CLJS-3133: simple-* / qualified-* predicate-induced inference
+* CLJS-2886: count specializations for string and array
+* CLJS-2950: Direct field access for keyword lookup on records
+
+### Fixes
+* CLJS-3190: Double arity warning constructing directly-accessed record
+* CLJS-3137: fspec cannot be reused in clojurescript but can be in clojure
+* CLJS-3124: Non-number lookup on transient vector succeeds after persistent!
+* CLJS-3149: REPL load-file doesn't resolve npm requires correctly
+* CLJS-3163: Skip analyzing specials in type-check-induced-tag
+* CLJS-3172: Unable to import goog.async.ConditionalDelay
+* CLJS-3158: Improperly widened cross-param loop/recur inference
+* CLJS-3168: Self-host: externs ns used unconditionally in analyzer
+* CLJS-3140: Not inferring on implements?
+* CLJS-3143: assoc docstring regarding growing vector
+* CLJS-3123: 'for' loop silently ignores extra forms in body
+* CLJS-3017: Error->map: Map js/InternalError and js/TypeError
+* CLJS-2683: Suppress compiler options in watch log
+* CLJS-2881: cl-format character directive with \space fails
+* CLJS-2879: Close analysis cache file
+* CLJS-3051: Update to Graal RC12 in CI
+* CLJS-3088: Update CI to use JavaScriptCore 4
+* CLJS-3092: Peek on subvecs doesn't behave properly
+* CLJS-3076: let defined variadic functions not destructuring as expected with :static-fns true
+* CLJS-3067: Fix compiler crash when requiring cljs.loader w/o modules
+* CLJS-3068: Compiler error with if and emit-var
+* CLJS-2301: Avoid use of deprecated goog.string/isEmptySafe in clojure.string/blank?
+* CLJS-3058: Remove dangling goog.date.relativeWithPlurals reference
+* CLJS-3061 Fix docstring for chunked-seq?
+
 ## 1.10.520
 
 ### Changes

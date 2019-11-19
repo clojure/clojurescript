@@ -6,14 +6,14 @@ Official web site: http://clojurescript.org
 
 ## Releases and dependency information ##
 
-Latest stable release: 1.10.520
+Latest stable release: 1.10.597
 
 * [All released versions](http://search.maven.org/#search%7Cgav%7C1%7Cg%3A%22org.clojure%22%20AND%20a%3A%22clojurescript%22)
 
 [Leiningen](http://github.com/technomancy/leiningen/) dependency information:
 
 ```
-[org.clojure/clojurescript "1.10.520"]
+[org.clojure/clojurescript "1.10.597"]
 ```
 
 [Maven](http://maven.apache.org) dependency information:
@@ -22,7 +22,7 @@ Latest stable release: 1.10.520
 <dependency>
   <groupId>org.clojure</groupId>
   <artifactId>clojurescript</artifactId>
-  <version>1.10.520</version>
+  <version>1.10.597</version>
 </dependency>
 ```
 
