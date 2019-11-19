@@ -3671,11 +3671,14 @@
             f-sym (when bind-f-expr? (gensym "fexpr__"))
             bindings (cond-> []
                        bind-args? (into (interleave arg-syms args))
-                       bind-f-expr? (conj f-sym (analyzed f)))]
+                       bind-f-expr? (conj f-sym (analyzed f)))
+            tag (:tag (meta form))]
         (analyze env
           `(let [~@bindings]
-             (~(analyzed (if bind-f-expr? f-sym f))
-               ~@(if bind-args? arg-syms args)))))
+             ~(with-meta
+               `(~(analyzed (if bind-f-expr? f-sym f))
+                 ~@(if bind-args? arg-syms args))
+               {:tag tag}))))
       (let [ana-expr #(analyze enve %)
             argexprs (mapv ana-expr args)]
         (if (and (and (keyword? f)

@@ -926,7 +926,7 @@
   ;; dotted :var
   (is (= [:host-field 'bar :host-field 'foo :var 'cljs.core/inc 'cljs.core/inc]
          (-> (ana inc.foo.bar)
-             ((juxt :op 
+             ((juxt :op
                     :field
                     (comp :op :target)
                     (comp :field :target)
@@ -936,7 +936,7 @@
   ;; dotted :local
   (is (= [:host-field 'c :host-field 'b :local 'a 'a]
          (-> (ana (let [a 1] a.b.c)) :body :ret
-             ((juxt :op 
+             ((juxt :op
                     :field
                     (comp :op :target)
                     (comp :field :target)
@@ -974,9 +974,9 @@
   (is (= (-> (ana (let [a 1] a)) :body :ret :form) 'a))
   (is (map? (-> (ana (let [a 1] a)) :body :ret :env)))
   ;; dotted :local
-  (is (= [:host-field 'c :host-field 'b :local 'a] 
+  (is (= [:host-field 'c :host-field 'b :local 'a]
          (-> (ana (let [a 1] a.b.c)) :body :ret
-             ((juxt :op 
+             ((juxt :op
                     :field
                     (comp :op :target)
                     (comp :field :target)
@@ -984,12 +984,12 @@
                     (comp :name :target :target))))))
   ;local shadow
   (is (= 'alert
-         (ana/no-warn (-> (ana (let [alert 1] js/alert)) :body 
+         (ana/no-warn (-> (ana (let [alert 1] js/alert)) :body
                         :env :locals
                         (get 'alert)
                         :name))))
   (is (= [:local 'alert]
-         (ana/no-warn (-> (ana (let [alert 1] js/alert)) :body :ret 
+         (ana/no-warn (-> (ana (let [alert 1] js/alert)) :body :ret
                         ((juxt :op :name))))))
   ;loop
   (is (= (-> (ana (loop [])) :op) :loop))
@@ -1020,7 +1020,7 @@
   ;   :finally
   (is (= (-> (ana (try (finally 1))) :finally :op) :do))
   (is (= (-> (ana (try (finally 1))) :finally :ret :op) :const))
-  ;TODO case 
+  ;TODO case
   (is (= (-> (ana (case 1)) :op) :let))
   (is (= (-> (ana (case 1)) :body :ret :op) :case))
   (is (= (-> (ana (case 1)) :body :ret :children) [:test :nodes :default]))
@@ -1063,7 +1063,7 @@
   ;   :ns/:name
   (is (= ['cljs.core 'cljs.core/a] (-> (ana (def a 1)) ((juxt :ns :name)))))
   ;   :var
-  (is (= [:var 'cljs.core 'cljs.core/a 'a] 
+  (is (= [:var 'cljs.core 'cljs.core/a 'a]
          (-> (ana (def a 1)) :var
              ((juxt :op :ns :name :form)))))
   ;   :init
@@ -1076,9 +1076,9 @@
   (is (= :do (-> (ana (deftype A [a] Object (toString [this] a))) :statements first :body :op)))
         ; field reference
   (is (= [:local :field]
-         (-> (ana (deftype A [a] Object (toString [this] a))) 
+         (-> (ana (deftype A [a] Object (toString [this] a)))
              :statements first :body :ret :val :methods
-             first :body :ret :body :ret 
+             first :body :ret :body :ret
              ((juxt :op :local)))))
   ;defrecord
   (is (= :defrecord (-> (ana (defrecord Ab [])) :body :statements first :ret :op)))
@@ -1139,10 +1139,10 @@
          (-> (ana (fn [])) :methods first :params)))
   (is (vector?
          (-> (ana (fn [a b])) :methods first :params)))
-  (is (= [:binding 'a :arg] 
+  (is (= [:binding 'a :arg]
          (-> (ana (fn [a b])) :methods first :params
              first ((juxt :op :name :local)))))
-  (is (= [:binding 'b :arg] 
+  (is (= [:binding 'b :arg]
          (-> (ana (fn [a b])) :methods first :params
              second ((juxt :op :name :local)))))
   ;if
@@ -1342,7 +1342,7 @@
   (is (= :throw (-> (ana (throw (js/Error. "bad"))) :op)))
   (is (= [:exception] (-> (ana (throw (js/Error. "bad"))) :children)))
   ;   :exception
-  (is (= [:js-var 'js 'js/Error] (-> (ana (throw (js/Error. "bad"))) :exception 
+  (is (= [:js-var 'js 'js/Error] (-> (ana (throw (js/Error. "bad"))) :exception
                                   :class
                                   ((juxt :op :ns :name)))))
   ;vector
@@ -1405,39 +1405,39 @@
   ;munging
   (is (=
        [false 'a]
-       (-> 
+       (->
          (ana (let [a (println 1)
                     b (println 2)]
                 [a b]))
-         :bindings first 
+         :bindings first
          ((juxt #(contains? % :ns) :name)))))
   ;shadowing
   (is (=
        'a
-       (-> 
+       (->
          (ana (let [a (println 1)
                     a (println 2)]
                 [a a]))
-         :bindings second 
+         :bindings second
          :shadow
          :name)))
   (is (=
        'a
-       (-> 
+       (->
          (ana (let [a (println 1)
                     a (println 2)
                     a (println 3)
                     ]
                 [a a a]))
-         :bindings (nth 2) 
+         :bindings (nth 2)
          :shadow
          :shadow
          :name)))
   ;ns
-  (is 
+  (is
     (binding [ana/*analyze-deps* false]
     (binding [ana/*cljs-ns* 'cljs.user]
-      (ana 
+      (ana
         (ns my.ns.foo
           (:require [clojure.repl]
                     [clojure.string]
@@ -2137,3 +2137,17 @@
       (is (= w2 "cljs.core/-, all arguments must be numbers, got [string] instead"))
       (is (= w3 "cljs.core//, all arguments must be numbers, got [number string] instead"))
       (is (= w4 "cljs.core/*, all arguments must be numbers, got [string] instead")))))
+
+(deftest test-cljs-3181
+  (let [ws  (atom [])
+        res (binding [ana/*cljs-static-fns* true]
+              (infer-test-helper
+                {:forms '[(ns warn-on-infer-test.app)
+                          (set! *warn-on-infer* true)
+                          (defn f [gfn]
+                            (.then ^js/Promise (gfn (inc 1)) identity))]
+                 :externs ["src/test/externs/test.js"]
+                 :warnings ws
+                 :warn false
+                 :with-core? true}))]
+    (is (empty? @ws))))
