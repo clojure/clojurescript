@@ -3395,6 +3395,7 @@ reduces them without incurring seq initialization"
             (symbol? name) (Keyword.
                              (cljs.core/namespace name)
                              (cljs.core/name name) (.-str name) nil)
+            (= "/" name) (Keyword. nil name name nil)
             (string? name) (let [parts (.split name "/")]
                              (if (== (alength parts) 2)
                                (Keyword. (aget parts 0) (aget parts 1) name nil)
