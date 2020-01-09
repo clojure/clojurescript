@@ -1192,6 +1192,11 @@
   [x]
   (satisfies? IIterable x))
 
+(defn js-iterable?
+  "Return true if x has a JavaScript iterator property"
+  [x]
+  (gobject/containsKey x ITER_SYMBOL))
+
 (defn clone
   "Clone the supplied value which must implement ICloneable."
   [value]
@@ -1201,6 +1206,8 @@
   "Return true if x implements ICloneable protocol."
   [value]
   (satisfies? ICloneable value))
+
+(declare es6-iterator-seq)
 
 (defn ^seq seq
   "Returns a seq on the collection. If the collection is
@@ -1219,6 +1226,10 @@
       (string? coll)
       (when-not (zero? (.-length coll))
         (IndexedSeq. coll 0 nil))
+
+      (js-iterable? coll)
+      (es6-iterator-seq
+        (.call (gobject/get coll ITER_SYMBOL) coll))
 
       (native-satisfies? ISeqable coll)
       (-seq coll)
@@ -1290,8 +1301,6 @@
   "EXPERIMENTAL: Return a ES2015 compatible iterator for coll."
   [coll]
   (ES6Iterator. (seq coll)))
-
-(declare es6-iterator-seq)
 
 (deftype ES6IteratorSeq [value iter ^:mutable _rest]
   ISeqable
