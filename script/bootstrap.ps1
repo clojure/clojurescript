@@ -124,7 +124,7 @@ Get-WebResource `
 
 Write-Host "Fetching Google Closure compiler..."
 Get-WebResource `
-    http://repo1.maven.org/maven2/com/google/javascript/closure-compiler/v$CLOSURE_RELEASE/closure-compiler-v$CLOSURE_RELEASE.jar `
+    https://repo1.maven.org/maven2/com/google/javascript/closure-compiler/v$CLOSURE_RELEASE/closure-compiler-v$CLOSURE_RELEASE.jar `
     $root\closure-compiler-v$CLOSURE_RELEASE.jar
 Copy-File $root\closure-compiler-v$CLOSURE_RELEASE.jar $root\lib\compiler.jar
 Delete-File $root\closure-compiler-v$CLOSURE_RELEASE.jar

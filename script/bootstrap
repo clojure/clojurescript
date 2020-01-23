@@ -96,7 +96,7 @@ if [ "$1" = "--closure-compiler-snapshot" ] ; then
     rm $CC_JAR_NAME
     rm maven-metadata.xml
 else
-    curl --retry 3 -O -s http://repo1.maven.org/maven2/com/google/javascript/closure-compiler/v$CLOSURE_RELEASE/closure-compiler-v$CLOSURE_RELEASE.jar || { echo "Download failed."; exit 1; }
+    curl --retry 3 -O -s https://repo1.maven.org/maven2/com/google/javascript/closure-compiler/v$CLOSURE_RELEASE/closure-compiler-v$CLOSURE_RELEASE.jar || { echo "Download failed."; exit 1; }
     cp closure-compiler-v$CLOSURE_RELEASE.jar lib/closure-compiler-v$CLOSURE_RELEASE.jar
     echo "Cleaning up closure-compiler.jar..."
     rm closure-compiler-v$CLOSURE_RELEASE.jar
