@@ -30,12 +30,12 @@
         <dependency>
             <groupId>com.google.javascript</groupId>
             <artifactId>closure-compiler-unshaded</artifactId>
-            <version>v20180805</version>
+            <version>v20200112</version>
         </dependency>
         <dependency>
             <groupId>org.clojure</groupId>
             <artifactId>google-closure-library</artifactId>
-            <version>0.0-20170809-b9c14c6b</version>
+            <version>0.0-20191016-6ae1f72f</version>
         </dependency>
         <dependency>
             <groupId>org.clojure</groupId>
