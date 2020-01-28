@@ -1993,6 +1993,8 @@
                 :op :var)
          :doc doc
          :jsdoc (:jsdoc sym-meta)}
+        (when-let [goog-type (:goog-define sym-meta)]
+          {:goog-define goog-type})
         (when (true? (:def-emits-var env))
           {:var-ast (var-ast env sym)})
         (when-some [test (:test sym-meta)]

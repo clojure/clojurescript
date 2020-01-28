@@ -762,8 +762,7 @@
                        (core/not (core/contains? m :tag))
                        (core/assoc :tag (core/symbol type))
                        ))))
-       (~'js* ~(core/str "/** @define {" type "} */"))
-       (goog/define ~defname ~default))))
+       (def ~(vary-meta sym assoc :goog-define type) (goog/define ~defname ~default)))))
 
 (core/defmacro let
   "binding => binding-form init-expr
