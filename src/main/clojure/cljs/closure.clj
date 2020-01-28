@@ -132,9 +132,7 @@
 
 (def warning-types
   {:access-controls DiagnosticGroups/ACCESS_CONTROLS
-   :ambiguous-function-decl DiagnosticGroups/AMBIGUOUS_FUNCTION_DECL
    :analyzer-checks DiagnosticGroups/ANALYZER_CHECKS
-   :check-eventful-object-disposal DiagnosticGroups/CHECK_EVENTFUL_OBJECT_DISPOSAL
    :check-regexp DiagnosticGroups/CHECK_REGEXP
    :check-types DiagnosticGroups/CHECK_TYPES
    :check-useless-code DiagnosticGroups/CHECK_USELESS_CODE
@@ -148,14 +146,11 @@
    :deprecated-annotations DiagnosticGroups/DEPRECATED_ANNOTATIONS
    :duplicate-message DiagnosticGroups/DUPLICATE_MESSAGE
    :duplicate-vars DiagnosticGroups/DUPLICATE_VARS
-   :es3 DiagnosticGroups/ES3
    :es5-strict DiagnosticGroups/ES5_STRICT
    :externs-validation DiagnosticGroups/EXTERNS_VALIDATION
    :extra-require DiagnosticGroups/EXTRA_REQUIRE
-   :fileoverview-jsdoc DiagnosticGroups/FILEOVERVIEW_JSDOC
    :function-params DiagnosticGroups/FUNCTION_PARAMS
    :global-this DiagnosticGroups/GLOBAL_THIS
-   :internet-explorer-checks DiagnosticGroups/INTERNET_EXPLORER_CHECKS
    :invalid-casts DiagnosticGroups/INVALID_CASTS
    :j2cl-checks DiagnosticGroups/J2CL_CHECKS
    :jsdoc-missing-type DiagnosticGroups/JSDOC_MISSING_TYPE
