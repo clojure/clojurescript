@@ -45,6 +45,7 @@
     :output-dir output-dir
     :optimizations :advanced
     :verbose true
+    :language-in :es6
     :modules
     {:cljs-base
      {:output-to (str (io/file output-dir "module-main.js"))}
