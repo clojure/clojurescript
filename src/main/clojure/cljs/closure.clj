@@ -1989,11 +1989,11 @@
         _ (report-failure (.getResult closure-compiler))
         inputs-by-name (into {} (map (juxt #(.getName %) identity) (vals (.getInputsById closure-compiler))))]
 
-    ;; This will rewrite CommonJS modules
-    (.whitespaceOnlyPasses closure-compiler)
     ;; This will take care of converting ES6 to CJS
     ;; Based on language-in setting, this could also handle ES7/8/TypeScript transpilation.
     (.transpileAndDontCheck closure-compiler)
+    ;; This will rewrite CommonJS modules
+    (.whitespaceOnlyPasses closure-compiler)
 
     (map (partial add-converted-source
            closure-compiler inputs-by-name opts)

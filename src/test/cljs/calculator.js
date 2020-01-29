@@ -7,4 +7,4 @@ var calculator = {
     }
 };
 
-exports = calculator;
+module.exports = calculator;
