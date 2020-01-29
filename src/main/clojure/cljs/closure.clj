@@ -23,7 +23,7 @@
             [clojure.tools.reader :as reader]
             [clojure.tools.reader.reader-types :as readers]
             [cljs.module-graph :as module-graph])
-  (:import [java.lang ProcessBuilder]
+  (:import [java.lang ProcessBuilder StringBuilder]
            [java.io
             File BufferedInputStream BufferedReader
             Writer InputStreamReader IOException StringWriter ByteArrayInputStream]
@@ -39,7 +39,9 @@
               Result JSError CheckLevel DiagnosticGroups
               CommandLineRunner AnonymousFunctionNamingPolicy
               JSModule SourceMap VariableMap]
-           [com.google.javascript.jscomp.deps ModuleLoader$ResolutionMode ModuleNames]
+           [com.google.javascript.jscomp.transpile BaseTranspiler]
+           [com.google.javascript.jscomp.deps ClosureBundler
+              ModuleLoader$ResolutionMode ModuleNames SimpleDependencyInfo]
            [com.google.javascript.rhino Node]
            [java.nio.file Path Paths Files StandardWatchEventKinds WatchKey
                           WatchEvent FileVisitor FileVisitResult]
