@@ -126,6 +126,7 @@
                                ["common" "app"])
         opts {:optimizations :simple
               :output-dir out
+              :language-in :es6
               :modules {:common {:entries #{"hello.foo.bar"}
                                  :output-to (.getAbsolutePath common-tmp)}
                         :app {:entries #{"hello.core"}
@@ -582,7 +583,7 @@
       ;; assert Closure finds and processes the left-pad dep in node_modules
       ;; if it can't be found the require will be issued to module$left_pad
       ;; so we assert it's of the form module$path$to$node_modules$left_pad$index
-      (is (re-find #"module\$.*\$node_modules\$left_pad\$index\[\"default\"\]\(42,5,0\)" (slurp foreign-lib-file))))
+      (is (re-find #"module\$.*\$node_modules\$left_pad\$index\[\"default\"\]\)\(42,5,0\)" (slurp foreign-lib-file))))
     (test/delete-out-files out)
     (test/delete-node-modules)))
 
@@ -676,6 +677,7 @@
   (let [out  (io/file (test/tmp-dir) "cljs-2903-out")
         opts {:output-to (.getPath (io/file out "main.js"))
               :output-dir (.getPath out)
+              :language-in :es6
               :fingerprint true
               :stable-names true
               :optimizations :advanced}]
