@@ -11729,5 +11729,5 @@ reduces them without incurring seq initialization"
   (*eval* form))
 
 (when ^boolean js/COMPILED
-  (when (= "nodejs" *target*)
+  (when (identical? "nodejs" *target*)
     (set! goog/global js/global)))
