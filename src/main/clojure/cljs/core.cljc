@@ -1069,7 +1069,7 @@
 
 (core/defmacro ^::ana/numeric +
   ([] 0)
-  ([x] x)
+  ([x] (core/list 'js* "(~{})" x))
   ([x y] (core/list 'js* "(~{} + ~{})" x y))
   ([x y & more] `(+ (+ ~x ~y) ~@more)))
 
@@ -1133,7 +1133,7 @@
 
 (core/defmacro ^::ana/numeric *
   ([] 1)
-  ([x] x)
+  ([x] (core/list 'js* "(~{})" x))
   ([x y] (core/list 'js* "(~{} * ~{})" x y))
   ([x y & more] `(* (* ~x ~y) ~@more)))
 

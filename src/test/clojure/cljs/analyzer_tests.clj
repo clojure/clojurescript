@@ -2121,3 +2121,19 @@
              (:a (->Foo))))))
     (is (= 1 (count @ws)))
     (is (string/starts-with? (first @ws) "Wrong number of args (0) passed to cljs.user/->Foo"))))
+
+(deftest test-cljs-3210
+  (let [ws (atom [])]
+    (ana/with-warning-handlers [(collecting-warning-handler ws)]
+       (analyze ns-env
+                '(do
+                   (+ "a")
+                   (- "a")
+                   (/ "a")
+                   (* "a"))))
+    (is (= 4 (count @ws)))
+    (let [[w1 w2 w3 w4] @ws]
+      (is (= w1 "cljs.core/+, all arguments must be numbers, got [string] instead"))
+      (is (= w2 "cljs.core/-, all arguments must be numbers, got [string] instead"))
+      (is (= w3 "cljs.core//, all arguments must be numbers, got [number string] instead"))
+      (is (= w4 "cljs.core/*, all arguments must be numbers, got [string] instead")))))
