@@ -7,7 +7,7 @@
   :jvm-opts ^:replace ["-Dclojure.compiler.direct-linking=true" "-Xmx512m" "-server"]
   :source-paths ["src/main/clojure" "src/main/cljs"]
   :resource-paths ["src/main/cljs" "resources"]
-  :test-paths ["src/test/clojure" "src/test/cljs" "src/test/self" "src/test/cljs_cp"]
+  :test-paths ["src/test/clojure" "src/test/cljs" "src/test/self" "src/test/cljs_build" "src/test/cljs_cp"]
   :dependencies [[org.clojure/clojure "1.10.0-alpha4"]
                  [org.clojure/spec.alpha "0.1.143"]
                  [org.clojure/core.specs.alpha "0.1.24"]

@@ -703,3 +703,16 @@
                 sha (string/lower-case (util/content-sha (slurp (io/file f)) 7))]
            (is (true? (.exists f)))
            (is (string/includes? (.getPath f) sha))))))))
+
+(deftest cljs-3209-trivial-output-size
+  (let [out (.getPath (io/file (test/tmp-dir) "3209-test-out"))
+        out-file (io/file out "main.js")
+        {:keys [inputs opts]} {:inputs (str (io/file "src" "test" "cljs_build"))
+                               :opts {:main 'trivial.core
+                                      :output-dir out
+                                      :output-to (.getPath out-file)
+                                      :optimizations :advanced}}
+        cenv (env/default-compiler-env)]
+    (test/delete-out-files out)
+    (build/build (build/inputs (io/file inputs "trivial/core.cljs")) opts cenv)
+    (is (< (.length out-file) 10000))))
