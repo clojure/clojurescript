@@ -102,7 +102,7 @@ global.CLOSURE_IMPORT_SCRIPT = function(src, opt_sourceText) {
  */
 global.CLOSURE_LOAD_FILE_SYNC = function(src) {
     return fs.readFileSync(
-      path.resolve(__dirname, '..', src), {encoding: 'utf-8'});
+      path.resolve(__dirname, "..", src), {encoding: "utf-8"});
 };
 
 
@@ -137,7 +137,7 @@ function nodeGlobalRequire(file) {
 // Load Closure's base.js into memory.  It is assumed base.js is in the
 // directory above this directory given this script's location in
 // bootstrap/nodejs.js.
-nodeGlobalRequire(path.resolve(__dirname, '..', 'base.js'));
+nodeGlobalRequire(path.resolve(__dirname, "..", "base.js"));
 
 
 /**
