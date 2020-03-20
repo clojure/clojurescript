@@ -711,6 +711,7 @@
         out-file (io/file out "main.js")
         {:keys [inputs opts]} {:inputs (str (io/file "src" "test" "cljs_build"))
                                :opts {:main 'trivial.core
+                                      :language-in :es6
                                       :output-dir out
                                       :output-to (.getPath out-file)
                                       :optimizations :advanced}}
