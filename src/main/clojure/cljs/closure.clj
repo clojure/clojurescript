@@ -3263,7 +3263,7 @@
 ;; Browser REPL client stuff
 
 (defn compile-client-js [opts]
-  (let [copts (select-keys opts [:optimizations :output-dir])]
+  (let [copts (select-keys opts [:optimizations :output-dir :language-in])]
     ;; we're inside the REPL process where cljs.env/*compiler* is already
     ;; established, need to construct a new one to avoid mutating the one
     ;; the REPL uses
@@ -3304,7 +3304,8 @@
       (ana/write-analysis-cache 'cljs.core cache src)
       (ana/write-analysis-cache 'cljs.core tcache src))
     (create-client-js-file
-      {:optimizations :simple
+      {:language-in :es6
+       :optimizations :simple
        :output-dir "aot_out"}
       (io/file "resources" "brepl_client.js"))
     (doseq [f (file-seq (io/file "aot_out"))
