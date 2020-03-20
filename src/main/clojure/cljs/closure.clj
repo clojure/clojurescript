@@ -2447,6 +2447,9 @@
       (contains? opts :modules)
       (ensure-module-opts)
 
+      (nil? (:language-in opts))
+      (assoc :language-in :es6)
+
       (:stable-names opts)
       (as-> opts
         (let [out-dir (if (true? (:stable-names opts))
