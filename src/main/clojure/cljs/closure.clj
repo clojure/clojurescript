@@ -1658,27 +1658,6 @@
                        (util/output-directory opts))
         closure-defines (json/write-str (:closure-defines opts))]
     (case (:target opts)
-      (:nashorn :graaljs)
-      (output-one-file
-        (merge opts
-          (when module
-            {:output-to (:output-to module)}))
-        (add-header opts
-          (str (when (or (not module) (= :cljs-base (:module-name opts)))
-                 (str "var CLJS_OUTPUT_DIR = \"" asset-path "\";\n"
-                      "load((new java.io.File(new java.io.File(\"" asset-path "\",\"goog\"), \"base.js\")).getPath());\n"
-                      "load((new java.io.File(new java.io.File(\"" asset-path "\",\"goog\"), \"deps.js\")).getPath());\n"
-                      "load((new java.io.File(new java.io.File(new java.io.File(\"" asset-path "\",\"goog\"),\"bootstrap\"),\"" (name (:target opts)) ".js\")).getPath());\n"
-                      "load((new java.io.File(\"" asset-path "\",\"cljs_deps.js\")).getPath());\n"
-                      "goog.global.CLOSURE_UNCOMPILED_DEFINES = " closure-defines ";\n"
-                   (apply str (preloads (:preloads opts)))))
-            (apply str
-              (map (fn [entry]
-                     (str "goog.require(\"" (comp/munge entry) "\");\n"))
-                (if-let [entries (when module (:entries module))]
-                  entries
-                  [(:main opts)]))))))
-
       :nodejs
       (output-one-file
         (merge opts
@@ -2875,7 +2854,7 @@
     opts))
 
 (defn output-bootstrap [{:keys [target] :as opts}]
-  (when (and (#{:nodejs :nashorn :graaljs} target)
+  (when (and (#{:nodejs} target)
              (not= (:optimizations opts) :whitespace))
     (let [target-str (name target)
           outfile    (io/file (util/output-directory opts)

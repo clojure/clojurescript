@@ -298,7 +298,7 @@ is trying load some arbitrary ns."
 
 (defn- fast-initial-prompt? [repl-env inits]
   (and (empty? inits)
-       (contains? #{"node" "nashorn" "graaljs" "rhino"} (repl-name repl-env))))
+       (contains? #{"node"} (repl-name repl-env))))
 
 (defn- repl-opt
   "Start a repl with args and inits. Print greeting if no eval options were
@@ -545,8 +545,8 @@ present"
                               {["-re" "--repl-env"]
                                {:arg "env"
                                 :doc (str "The REPL environment to use. Built-in "
-                                          "supported values: nashorn, graaljs, node, browser, "
-                                          "rhino. Defaults to browser")}}}
+                                          "supported values: node, browser. "
+                                          "Defaults to browser")}}}
               ::main {:desc "init options only for --main and --repl"}
               ::compile {:desc "init options only for --compile"}}
      :init
@@ -583,8 +583,8 @@ present"
                                 :arg "name"
                                 :doc
                                 (str "The JavaScript target. Configures environment bootstrap and "
-                                     "defaults to browser. Supported values: node or nodejs, nashorn, "
-                                     "graaljs, webworker, none") }
+                                     "defaults to browser. Supported values: node or nodejs "
+                                     "webworker, none") }
       ["-ro" "--repl-opts"]    {:group ::main&compile :fn repl-env-opts-opt
                                 :arg "edn"
                                 :doc (str "Options to configure the repl-env, can be an EDN string or "

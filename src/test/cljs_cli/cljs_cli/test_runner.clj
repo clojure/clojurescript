@@ -5,7 +5,7 @@
 
 (defn -main [& args]
   (try
-    (binding [cljs-cli.util/*repl-env* (or (first args) "nashorn")
+    (binding [cljs-cli.util/*repl-env* (or (first args) "node")
               cljs-cli.util/*repl-opts* (second args)]
       (clojure.test/run-tests 'cljs-cli.test))
     (finally

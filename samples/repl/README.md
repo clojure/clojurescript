@@ -17,15 +17,6 @@ There are currently four steps in starting a ClojureScript REPL.
 3. create a new evaluation environment
 4. start the REPL with the created environment
 
-## Evaluating with Rhino
-
-```clj
-(require '[cljs.repl :as repl])
-(require '[cljs.repl.rhino :as rhino])
-(def env (rhino/repl-env))
-(repl/repl env)
-``` 
-
 ## Evaluating in the Browser
 
 A browser-connected REPL works in much the same way as a normal REPL:

@@ -115,7 +115,7 @@
       (output-is "\"0000000003\""))))
 
 (deftest test-cljs-2780
-  (with-repl-env-filter #{"node" "nashorn" "graaljs"}
+  (with-repl-env-filter #{"node"}
     (-> (cljs-main
           "-e" "(do (js/setTimeout #(prn :end) 500) nil)"
           "-e" ":begin")
@@ -129,7 +129,7 @@
       (output-is 2))))
 
 (deftest test-cljs-3043
-  (with-repl-env-filter (complement #{"rhino"})
+  (with-repl-env-filter identity
     (let [check-fn (fn [result]
                      (is (= 1 (:exit result)))
                      (is (str/includes? (:err result) "Execution error"))

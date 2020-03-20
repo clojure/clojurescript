@@ -11,7 +11,7 @@
    (java.nio.file Files CopyOption)
    (java.nio.file.attribute FileAttribute)))
 
-(def ^:dynamic *repl-env* "nashorn")
+(def ^:dynamic *repl-env* "node")
 (def ^:dynamic *repl-env-filter* (constantly true))
 (def ^:dynamic *repl-opts* nil)
 (def ^:dynamic *sources* nil)

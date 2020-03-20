@@ -43,11 +43,6 @@
             <version>0.2.6</version>
         </dependency>
         <dependency>
-            <groupId>org.mozilla</groupId>
-            <artifactId>rhino</artifactId>
-            <version>1.7R5</version>
-        </dependency>
-        <dependency>
             <groupId>org.clojure</groupId>
             <artifactId>tools.reader</artifactId>
             <version>1.3.2</version>
@@ -311,7 +306,6 @@
                                 <namespace>cljs.repl.browser</namespace>
                                 <namespace>cljs.repl.node</namespace>
                                 <namespace>cljs.repl.reflect</namespace>
-                                <namespace>cljs.repl.rhino</namespace>
                                 <namespace>cljs.repl.server</namespace>
                                 <namespace>cljs.main</namespace>
                                 <namespace>cljs.cli</namespace>

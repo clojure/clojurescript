@@ -16,7 +16,7 @@
     (let [repl-ns (symbol
                     (str "cljs.repl."
                       (if (= 1 (count args))
-                        "nashorn"
+                        "browser"
                         (nth args 1))))]
       (try
         (require repl-ns)
