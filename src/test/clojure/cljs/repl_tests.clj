@@ -12,7 +12,6 @@
             [cljs.analyzer.api :as ana-api]
             [cljs.env :as env]
             [cljs.repl :as repl]
-            [cljs.repl.rhino :as rhino]
             [cljs.compiler :as comp])
     (:use clojure.test))
 
