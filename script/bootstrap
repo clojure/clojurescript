@@ -5,7 +5,7 @@ set -e
 CLOJURE_RELEASE="1.9.0"
 SPEC_ALPHA_RELEASE="0.1.143"
 CORE_SPECS_ALPHA_RELEASE="0.1.24"
-CLOSURE_RELEASE="20200112"
+CLOSURE_RELEASE="20200315"
 DJSON_RELEASE="0.2.6"
 TRANSIT_RELEASE="0.8.309"
 GCLOSURE_LIB_RELEASE="0.0-20191016-6ae1f72f"
@@ -112,7 +112,7 @@ if [ "$1" = "--closure-library-head" ] ; then
     echo "Building lib/google-closure-library-third-party-HEAD.jar..."
     mv closure/library/closure-library/third_party/closure/goog/deps.js orig-deps.js
     mv closure/library/closure-library/third_party/closure/goog/base.js orig-base.js
-    jar cf ./lib/google-closure-library-third-party-HEAD.jar -C closure/library/closure-library/third_party/closure/ goog 
+    jar cf ./lib/google-closure-library-third-party-HEAD.jar -C closure/library/closure-library/third_party/closure/ goog
     mv orig-base.js closure/library/closure-library/third_party/closure/goog/base.js
     mv orig-deps.js closure/library/closure-library/third_party/closure/goog/deps.js
 fi

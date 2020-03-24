@@ -188,7 +188,6 @@
    :unnecessary-escape DiagnosticGroups/UNNECESSARY_ESCAPE
    :unused-local-variable DiagnosticGroups/UNUSED_LOCAL_VARIABLE
    :unused-private-property DiagnosticGroups/UNUSED_PRIVATE_PROPERTY
-   :use-of-goog-base DiagnosticGroups/USE_OF_GOOG_BASE
    :violated-module-dep DiagnosticGroups/VIOLATED_MODULE_DEP
    :visiblity DiagnosticGroups/VISIBILITY})
 
