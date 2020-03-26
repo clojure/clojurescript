@@ -115,16 +115,21 @@ case."
     (->> (for [line lines x (string/split line #";")] x)
          (map string/trim)
          (drop-while #(not (or (string/includes? % "goog.provide(")
+                               (string/includes? % "goog.module(")
                                (string/includes? % "goog.require("))))
          (take-while #(not (re-matches #".*=[\s]*function\(.*\)[\s]*[{].*" %)))
-         (map #(re-matches #".*goog\.(provide|require)\(['\"](.*)['\"]\)" %))
+         (map #(re-matches #".*goog\.(provide|module|require)\(['\"](.*)['\"]\)" %))
          (remove nil?)
          (map #(drop 1 %))
          (reduce (fn [m ns]
                    (let [munged-ns (string/replace (last ns) "_" "-")]
-                     (if (= (first ns) "require")
-                       (conj-in m :requires munged-ns)
-                       (conj-in m :provides munged-ns))))
+                     (println (first ns))
+                     (case (first ns)
+                       "provide" (conj-in m :provides munged-ns)
+                       "module"  (-> m
+                                   (conj-in :provides munged-ns)
+                                   (assoc :module :goog))
+                       "require" (conj-in m :requires munged-ns))))
                  {:requires [] :provides []}))))
 
 (defprotocol IJavaScript
