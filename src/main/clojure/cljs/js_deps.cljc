@@ -8,6 +8,7 @@
 
 (ns cljs.js-deps
   (:require [cljs.util :as util :refer [distinct-by]]
+            [clojure.data.json :as json]
             [clojure.java.io :as io]
             [clojure.string :as string])
   (:import [java.io File]
@@ -317,6 +318,10 @@ JavaScript library containing provide/require 'declarations'."
 ;        (re-find #"(\/google-closure-library-0.0*|\/google-closure-library\/)" (.getPath ^URL res)))
 ;      (enumeration-seq (.getResources (.getContextClassLoader (Thread/currentThread)) path)))))
 
+;; NOTE: because this looks at deps.js for indexing the Closure Library we
+;; don't need to bother parsing file in Closure Library. But it's also a
+;; potential source of confusion as *other* Closure style libs will need to be
+;; parsed, user won't typically provide a deps.js
 (defn goog-dependencies*
   "Create an index of Google dependencies by namespace and file name."
   []
@@ -325,14 +330,21 @@ JavaScript library containing provide/require 'declarations'."
                                 (string/split #"'\s*,\s*'"))))]
     (with-open [reader (io/reader (io/resource "goog/deps.js"))]
       (->> (line-seq reader)
-           (map #(re-matches #"^goog\.addDependency\(['\"](.*)['\"],\s*\[(.*)\],\s*\[(.*)\],.*\);.*" %))
+           (map #(re-matches #"^goog\.addDependency\(['\"](.*)['\"],\s*\[(.*)\],\s*\[(.*)\],\s*(\{.*\})\);.*" %))
            (remove nil?)
            (map #(drop 1 %))
            (remove #(.startsWith ^String (first %) "../../third_party"))
-           (map #(hash-map :file (str "goog/" (nth % 0))
-                           :provides (parse-list (nth % 1))
-                           :requires (parse-list (nth % 2))
-                           :group :goog))
+           (map
+             (fn [[file provides requires load-opts-str]]
+               (let [{:strs [module]} (json/read-str
+                                        (string/replace load-opts-str "'" "\""))]
+                 (merge
+                   {:file     (str "goog/" file)
+                    :provides (parse-list provides)
+                    :requires (parse-list requires)
+                    :group    :goog}
+                   (when module
+                     {:module (keyword module)})))))
            (doall)))))
 
 (def goog-dependencies (memoize goog-dependencies*))

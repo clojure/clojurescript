@@ -29,7 +29,7 @@
             Writer InputStreamReader IOException StringWriter ByteArrayInputStream]
            [java.net URI URL]
            [java.util.logging Level]
-           [java.util List Random]
+           [java.util List Random HashMap]
            [java.util.concurrent
             TimeUnit LinkedBlockingDeque Executors CountDownLatch]
            [com.google.javascript.jscomp CompilerOptions CompilationLevel
@@ -38,9 +38,11 @@
                                          SourceMap$DetailLevel ClosureCodingConvention SourceFile
                                          Result JSError CheckLevel DiagnosticGroups
                                          CommandLineRunner AnonymousFunctionNamingPolicy
-                                         JSModule SourceMap VariableMap]
+                                         JSModule SourceMap VariableMap PrintStreamErrorManager]
            [com.google.javascript.jscomp.bundle Transpiler]
-           [com.google.javascript.jscomp.deps DepsGenerator ModuleLoader$ResolutionMode ModuleNames]
+           [com.google.javascript.jscomp.deps DepsGenerator ModuleLoader$ResolutionMode ModuleNames
+                                              DepsGenerator$InclusionStrategy BrowserModuleResolver
+                                              ModuleLoader ModuleLoader$PathResolver]
            [com.google.javascript.rhino Node]
            [java.nio.file Path Paths Files StandardWatchEventKinds WatchKey
                           WatchEvent FileVisitor FileVisitResult FileSystems]
@@ -516,6 +518,8 @@
       {:out-file out-file})
     (when (:closure-lib m)
       {:closure-lib true})
+    (when-let [module (:module m)]
+      {:module module})
     (when-let [ns (:ns m)]
       {:ns ns})
     (when (:macros-ns m)
@@ -809,9 +813,15 @@
 
 (comment
   ;; find dependencies
-  (js-dependencies {} ["goog.array"])
+  (binding [env/*compiler* (env/default-compiler-env)]
+    (js-dependencies {} ["goog.array"]))
+
   ;; find dependencies in an external library
-  (js-dependencies {:libs ["closure/library/third_party/closure"]} ["goog.dom.query"])
+  (binding [env/*compiler* (env/default-compiler-env)]
+   (js-dependencies {:libs ["closure/library/third_party/closure"]} ["goog.dom.query"]))
+
+  (binding [env/*compiler* (env/default-compiler-env)]
+    (js-dependencies {} ["goog.math.Long"]))
   )
 
 (defn add-core-macros-if-cljs-js
@@ -1585,10 +1595,18 @@
          (if (deps/-foreign? input) ", {'foreign-lib': true}")
          ");\n")))
 
-(defn deps-file
-  "Return a deps file string for a sequence of inputs."
-  [opts sources]
-  (apply str (map #(add-dep-string opts %) sources)))
+(defn deps-file [{:keys [output-dir] :as opts} sources]
+  (let [xs  (->js-source-files sources)
+        gen (DepsGenerator. [] xs DepsGenerator$InclusionStrategy/ALWAYS
+              (.getAbsolutePath (io/file output-dir "goog"))
+              ;; TODO: modernize
+              (PrintStreamErrorManager. System/err)
+              (ModuleLoader. nil [output-dir] []
+                BrowserModuleResolver/FACTORY ModuleLoader$PathResolver/ABSOLUTE))]
+    ;; We *always* lower goog.module files
+    (-> (.computeDependencyCalls gen)
+      (string/replace ", 'module': 'goog'" "")
+      (string/replace "'module': 'goog'" ""))))
 
 (comment
   (path-relative-to (io/file "out/goog/base.js") {:url (deps/to-url "out/cljs/core.js")})
@@ -1994,16 +2012,31 @@
   (let [raw-uri (.toURI url)
         arr     (-> raw-uri .toString (.split "!"))
         uri     (-> arr (aget 0) URI/create)
-        fs      (FileSystems/getFileSystem uri)]
+        fs      (try
+                  (FileSystems/getFileSystem uri)
+                  (catch Throwable t
+                    (FileSystems/newFileSystem uri (HashMap.))))]
     (.getPath fs ^String (.toString raw-uri) (make-array String 0))))
 
-(defn transpile-goog-module [rsc]
-  (let [cc (Transpiler/compilerSupplier)
-        result (.compile cc (url->nio-path rsc) (slurp rsc))]
-    (.source result)))
+(defn maybe-transpile-goog-module [rsc {:keys [module]}]
+  (let [cc     (Transpiler/compilerSupplier)
+        result (.compile cc (url->nio-path rsc) (slurp rsc))
+        source (.source result)]
+    (if (.transformed result)
+      (cond-> source
+        (= :goog module)
+        ;; remove things not removed by lowering
+        (->
+          (string/replace "goog.module(" "goog.provide(")
+          (string/replace "goog.module.declareLegacyNamespace();\n" "")))
+      source)))
 
 (comment
-  (transpile-goog-module (io/resource "goog/math/long.js"))
+  (println (slurp (io/resource "goog/math/long.js")))
+  (deps/parse-js-ns (-> (io/resource "goog/math/long.js") io/reader line-seq))
+  (url->nio-path (io/resource "goog/math/long.js") )
+  (println
+    (maybe-transpile-goog-module (io/resource "goog/math/long.js") {:module :goog}))
   )
 
 (defn write-javascript
@@ -2028,9 +2061,11 @@
                (or (not (.exists out-file))
                    (and res (util/changed? out-file res))))
       (when (and res (or ana/*verbose* (:verbose opts)))
-        (util/debug-prn "Copying" (str res) "to" (str out-file)))
+        (util/debug-prn "Copying JS" (str res) "to" (str out-file)))
       (util/mkdirs out-file)
-      (spit out-file (deps/-source js))
+      (if (= :goog (:module js))
+        (spit out-file (maybe-transpile-goog-module res js))
+        (spit out-file (deps/-source js)))
       (when res
         (.setLastModified ^File out-file (util/last-modified res))))
     (if (map? js)
@@ -2095,16 +2130,14 @@
    libraries."
   [{:keys [modules] :as opts} & sources]
   ;; this source-on-disk call is currently necessary for REPLs - David
-  (let [disk-sources (doall
-                       (remove #(= (:group %) :goog)
-                         (map #(source-on-disk opts %) sources)))
-        goog-deps    (io/file (util/output-directory opts) "goog" "deps.js")
+  (doall (map #(source-on-disk opts %) sources))
+  (let [goog-deps    (io/file (util/output-directory opts) "goog" "deps.js")
         main         (:main opts)
         output-deps  #(output-deps-file
                         (assoc opts :output-to
                           (str (util/output-directory opts)
                             File/separator "cljs_deps.js"))
-                        disk-sources)]
+                        sources)]
     (util/mkdirs goog-deps)
     (spit goog-deps (slurp (io/resource "goog/deps.js")))
     (when (:debug-inputs opts)
@@ -2128,7 +2161,7 @@
         (output-deps)
         (output-main-file opts))
 
-      :else (output-deps-file opts disk-sources))))
+      :else (output-deps-file opts sources))))
 
 (defn get-upstream-deps*
   "returns a merged map containing all upstream dependencies defined
