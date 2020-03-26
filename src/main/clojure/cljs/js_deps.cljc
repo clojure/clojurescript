@@ -123,7 +123,6 @@ case."
          (map #(drop 1 %))
          (reduce (fn [m ns]
                    (let [munged-ns (string/replace (last ns) "_" "-")]
-                     (println (first ns))
                      (case (first ns)
                        "provide" (conj-in m :provides munged-ns)
                        "module"  (-> m
