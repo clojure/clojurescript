@@ -1461,6 +1461,15 @@
                     :source-map-name source-map-name})))])))
       (report-failure result))))
 
+(defn ->js-source-files [sources]
+  (doall
+    (map (fn [src]
+           (let [src' (cond-> src
+                        (and (not (record? src)) (map? src))
+                        map->javascript-file)]
+             (js-source-file (javascript-name src') src')))
+      sources)))
+
 (defn optimize
   "Use the Closure Compiler to optimize one or more JavaScript files."
   [opts & sources]
@@ -1472,14 +1481,7 @@
         sources (if (= :whitespace (:optimizations opts))
                   (cons "var CLOSURE_NO_DEPS = true;" sources)
                   sources)
-        ^List inputs (doall
-                       (map
-                         (fn [source]
-                           (let [source (cond-> source
-                                          (and (not (record? source)) (map? source))
-                                          map->javascript-file)]
-                             (js-source-file (javascript-name source) source)))
-                         sources))
+        ^List inputs (->js-source-files sources)
         ^Result result (util/measure (:compiler-stats opts)
                          "Optimizing with Google Closure Compiler"
                          (.compile closure-compiler externs inputs compiler-options))]
