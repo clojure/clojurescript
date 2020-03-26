@@ -23,28 +23,27 @@
             [clojure.tools.reader :as reader]
             [clojure.tools.reader.reader-types :as readers]
             [cljs.module-graph :as module-graph])
-  (:import [java.lang ProcessBuilder StringBuilder]
+  (:import [java.lang ProcessBuilder]
            [java.io
             File BufferedInputStream BufferedReader
             Writer InputStreamReader IOException StringWriter ByteArrayInputStream]
-           [java.net URL]
+           [java.net URI URL]
            [java.util.logging Level]
            [java.util List Random]
            [java.util.concurrent
             TimeUnit LinkedBlockingDeque Executors CountDownLatch]
            [com.google.javascript.jscomp CompilerOptions CompilationLevel
-              CompilerInput CompilerInput$ModuleType DependencyOptions
-              CompilerOptions$LanguageMode SourceMap$Format
-              SourceMap$DetailLevel ClosureCodingConvention SourceFile
-              Result JSError CheckLevel DiagnosticGroups
-              CommandLineRunner AnonymousFunctionNamingPolicy
-              JSModule SourceMap VariableMap]
-           [com.google.javascript.jscomp.transpile BaseTranspiler]
-           [com.google.javascript.jscomp.deps ClosureBundler
-              ModuleLoader$ResolutionMode ModuleNames SimpleDependencyInfo]
+                                         CompilerInput CompilerInput$ModuleType DependencyOptions
+                                         CompilerOptions$LanguageMode SourceMap$Format
+                                         SourceMap$DetailLevel ClosureCodingConvention SourceFile
+                                         Result JSError CheckLevel DiagnosticGroups
+                                         CommandLineRunner AnonymousFunctionNamingPolicy
+                                         JSModule SourceMap VariableMap]
+           [com.google.javascript.jscomp.bundle Transpiler]
+           [com.google.javascript.jscomp.deps DepsGenerator ModuleLoader$ResolutionMode ModuleNames]
            [com.google.javascript.rhino Node]
            [java.nio.file Path Paths Files StandardWatchEventKinds WatchKey
-                          WatchEvent FileVisitor FileVisitResult]
+                          WatchEvent FileVisitor FileVisitResult FileSystems]
            [java.nio.charset Charset StandardCharsets]
            [com.sun.nio.file SensitivityWatchEventModifier]
            [com.google.common.base Throwables]))
@@ -1988,6 +1987,22 @@
 (defmethod js-transforms :default [ijs opts]
   (ana/warning :unsupported-preprocess-value @env/*compiler* ijs)
   ijs)
+
+(defn url->nio-path [url]
+  (let [raw-uri (.toURI url)
+        arr     (-> raw-uri .toString (.split "!"))
+        uri     (-> arr (aget 0) URI/create)
+        fs      (FileSystems/getFileSystem uri)]
+    (.getPath fs ^String (.toString raw-uri) (make-array String 0))))
+
+(defn transpile-goog-module [rsc]
+  (let [cc (Transpiler/compilerSupplier)
+        result (.compile cc (url->nio-path rsc) (slurp rsc))]
+    (.source result)))
+
+(comment
+  (transpile-goog-module (io/resource "goog/math/long.js"))
+  )
 
 (defn write-javascript
   "Write or copy a JavaScript file to output directory. Only write if the file
