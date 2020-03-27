@@ -2154,14 +2154,14 @@
    libraries."
   [{:keys [modules] :as opts} & sources]
   ;; this source-on-disk call is currently necessary for REPLs - David
-  (doall (map #(source-on-disk opts %) sources))
-  (let [goog-deps    (io/file (util/output-directory opts) "goog" "deps.js")
+  (let [disk-sources (doall (map #(source-on-disk opts %) sources))
+        goog-deps    (io/file (util/output-directory opts) "goog" "deps.js")
         main         (:main opts)
         output-deps  #(output-deps-file
                         (assoc opts :output-to
                           (str (util/output-directory opts)
                             File/separator "cljs_deps.js"))
-                        sources)]
+                        disk-sources)]
     (util/mkdirs goog-deps)
     (spit goog-deps (slurp (io/resource "goog/deps.js")))
     (when (:debug-inputs opts)
@@ -2185,7 +2185,7 @@
         (output-deps)
         (output-main-file opts))
 
-      :else (output-deps-file opts sources))))
+      :else (output-deps-file opts disk-sources))))
 
 (defn get-upstream-deps*
   "returns a merged map containing all upstream dependencies defined
