@@ -336,15 +336,17 @@ JavaScript library containing provide/require 'declarations'."
            (remove #(.startsWith ^String (first %) "../../third_party"))
            (map
              (fn [[file provides requires load-opts-str]]
-               (let [{:strs [module]} (json/read-str
-                                        (string/replace load-opts-str "'" "\""))]
+               (let [{:strs [lang module]}
+                     (-> (string/replace load-opts-str "'" "\"") (json/read-str))]
                  (merge
                    {:file     (str "goog/" file)
                     :provides (parse-list provides)
                     :requires (parse-list requires)
                     :group    :goog}
                    (when module
-                     {:module (keyword module)})))))
+                     {:module (keyword module)})
+                   (when lang
+                     {:lang (keyword lang)})))))
            (doall)))))
 
 (def goog-dependencies (memoize goog-dependencies*))
