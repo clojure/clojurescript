@@ -40,9 +40,8 @@
                                          CommandLineRunner AnonymousFunctionNamingPolicy
                                          JSModule SourceMap VariableMap PrintStreamErrorManager]
            [com.google.javascript.jscomp.bundle Transpiler]
-           [com.google.javascript.jscomp.deps DepsGenerator ModuleLoader$ResolutionMode ModuleNames
-                                              DepsGenerator$InclusionStrategy BrowserModuleResolver
-                                              ModuleLoader ModuleLoader$PathResolver]
+           [com.google.javascript.jscomp.deps ClosureBundler ModuleLoader$ResolutionMode ModuleNames
+                                              SimpleDependencyInfo]
            [com.google.javascript.rhino Node]
            [java.nio.file Path Paths Files StandardWatchEventKinds WatchKey
                           WatchEvent FileVisitor FileVisitResult FileSystems]
@@ -228,8 +227,16 @@
              (string/join ", " (keys string->charset)) " supported ")
         {:clojure.error/phase :compilation}))))
 
+(def lang-level
+  [:ecmascript3 :ecmascript5 :ecmascript5-strict :ecmascript6 :ecmascript6-strict
+   :ecmascript-2015 :ecmascript6-typed :ecmascript-2016 :ecmascript-2017 :ecmascript-next
+   :no-transpile])
+
+(defn expand-lang-key [key]
+  (keyword (string/replace (name key) #"^es" "ecmascript")))
+
 (defn ^CompilerOptions$LanguageMode lang-key->lang-mode [key]
-  (case (keyword (string/replace (name key) #"^es" "ecmascript"))
+  (case (expand-lang-key key)
     :no-transpile          CompilerOptions$LanguageMode/NO_TRANSPILE ;; same mode as input (for language-out only)
     :ecmascript3           CompilerOptions$LanguageMode/ECMASCRIPT3
     :ecmascript5           CompilerOptions$LanguageMode/ECMASCRIPT5
@@ -520,6 +527,8 @@
       {:closure-lib true})
     (when-let [module (:module m)]
       {:module module})
+    (when-let [lang (:lang m)]
+      {:lang lang})
     (when-let [ns (:ns m)]
       {:ns ns})
     (when (:macros-ns m)
@@ -818,10 +827,13 @@
 
   ;; find dependencies in an external library
   (binding [env/*compiler* (env/default-compiler-env)]
-   (js-dependencies {:libs ["closure/library/third_party/closure"]} ["goog.dom.query"]))
+    (js-dependencies {:libs ["closure/library/third_party/closure"]} ["goog.dom.query"]))
 
   (binding [env/*compiler* (env/default-compiler-env)]
     (js-dependencies {} ["goog.math.Long"]))
+
+  (binding [env/*compiler* (env/default-compiler-env)]
+    (js-dependencies {} ["goog.string.StringBuffer"]))
   )
 
 (defn add-core-macros-if-cljs-js
@@ -1595,23 +1607,15 @@
          (if (deps/-foreign? input) ", {'foreign-lib': true}")
          ");\n")))
 
-(defn deps-file [{:keys [output-dir] :as opts} sources]
-  (let [xs  (->js-source-files sources)
-        gen (DepsGenerator. [] xs DepsGenerator$InclusionStrategy/ALWAYS
-              (.getAbsolutePath (io/file output-dir "goog"))
-              ;; TODO: modernize
-              (PrintStreamErrorManager. System/err)
-              (ModuleLoader. nil [output-dir] []
-                BrowserModuleResolver/FACTORY ModuleLoader$PathResolver/ABSOLUTE))]
-    ;; We *always* lower goog.module files
-    (-> (.computeDependencyCalls gen)
-      (string/replace ", 'module': 'goog'" "")
-      (string/replace "'module': 'goog'" ""))))
+(defn deps-file
+  "Return a deps file string for a sequence of inputs."
+  [opts sources]
+  (apply str (map #(add-dep-string opts %) sources)))
 
 (comment
   (path-relative-to (io/file "out/goog/base.js") {:url (deps/to-url "out/cljs/core.js")})
   (add-dep-string {} {:url (deps/to-url "out/cljs/core.js") :requires ["goog.string"] :provides ["cljs.core"]})
-  (deps-file {} [{:url (deps/to-url "out/cljs/core.js") :requires ["goog.string"] :provides ["cljs.core"]}])
+  (deps-file {:output-dir "pubic/js"} [{:url (deps/to-url "out/cljs/core.js") :requires ["goog.string"] :provides ["cljs.core"]}])
   )
 
 (defn elide-strict [js {:keys [elide-strict] :as opts}]
@@ -2018,53 +2022,73 @@
                     (FileSystems/newFileSystem uri (HashMap.))))]
     (.getPath fs ^String (.toString raw-uri) (make-array String 0))))
 
-(defn maybe-transpile-goog-module [rsc {:keys [module]}]
-  (let [cc     (Transpiler/compilerSupplier)
-        result (.compile cc (url->nio-path rsc) (slurp rsc))
-        source (.source result)]
-    (if (.transformed result)
-      (cond-> source
-        (= :goog module)
-        ;; remove things not removed by lowering
-        (->
-          (string/replace "goog.module(" "goog.provide(")
-          (string/replace "goog.module.declareLegacyNamespace();\n" "")))
-      source)))
+(defn add-goog-load [source]
+  (let [sb (StringBuilder.)
+        module (-> (SimpleDependencyInfo/builder "" "")
+                 (.setGoogModule true) .build)
+        bundler (ClosureBundler.)]
+    (.appendTo bundler sb module source)
+    (.toString sb)))
+
+;; TODO: better error handling
+;; TODO: actually respect the target :language-out level
+;; currently just using default options for Transpiler
+(defn transpile
+  [{:keys [language-out] :or {language-out :es3}} rsc {:keys [module lang] :as js}]
+  (let [source  (slurp rsc)
+        source' (if (< (.indexOf lang-level (expand-lang-key language-out))
+                       (.indexOf lang-level (expand-lang-key lang)))
+                  (let [cc (Transpiler/compilerSupplier)
+                        result (.compile cc (url->nio-path rsc) source)]
+                    (.source result))
+                  source)]
+    (cond-> source'
+      (= :goog module) add-goog-load)))
 
 (comment
   (println (slurp (io/resource "goog/math/long.js")))
+
   (deps/parse-js-ns (-> (io/resource "goog/math/long.js") io/reader line-seq))
-  (url->nio-path (io/resource "goog/math/long.js") )
+  (deps/parse-js-ns (-> (io/resource "goog/string/stringbuffer.js") io/reader line-seq))
+
+  (url->nio-path (io/resource "goog/math/long.js"))
+
   (println
-    (maybe-transpile-goog-module (io/resource "goog/math/long.js") {:module :goog}))
+    (maybe-transpile {} (io/resource "goog/math/long.js") {:module :goog :lang :es6}))
   )
+
+(defn transpile? [opts {:keys [module lang]}]
+  (or module lang))
 
 (defn write-javascript
   "Write or copy a JavaScript file to output directory. Only write if the file
    does not already exist. Return IJavaScript for the file on disk at the new
    location."
-  [opts js]
+  [{:keys [optimizations] :as opts} js]
   (let [out-dir    (io/file (util/output-directory opts))
         out-name   (rel-output-path js opts)
         out-file   (io/file out-dir out-name)
         res        (or (:url js) (:source-file js))
         js-module? (and res out-dir
                      (.startsWith (util/path res) (util/path out-dir))) ;; We already Closure processed it and wrote it out
+        transpile? (transpile? opts js)
         ijs        (merge
                      {:requires (deps/-requires js)
                       :provides (deps/-provides js)
                       :group (:group js)}
-                     (when (not js-module?)
+                     (when-not js-module?
                        {:url (deps/to-url out-file)
                         :out-file (.toString out-file)}))]
     (when (and (not js-module?)
                (or (not (.exists out-file))
+                   ;; no caching yet for GCL files that need transpilation
+                   transpile?
                    (and res (util/changed? out-file res))))
       (when (and res (or ana/*verbose* (:verbose opts)))
         (util/debug-prn "Copying JS" (str res) "to" (str out-file)))
       (util/mkdirs out-file)
-      (if (= :goog (:module js))
-        (spit out-file (maybe-transpile-goog-module res js))
+      (if (and (= :none optimizations) transpile?)
+        (spit out-file (transpile opts res js))
         (spit out-file (deps/-source js)))
       (when res
         (.setLastModified ^File out-file (util/last-modified res))))
