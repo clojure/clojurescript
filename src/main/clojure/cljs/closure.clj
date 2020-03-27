@@ -2085,7 +2085,7 @@
                    transpile?
                    (and res (util/changed? out-file res))))
       (when (and res (or ana/*verbose* (:verbose opts)))
-        (util/debug-prn "Copying JS" (str res) "to" (str out-file)))
+        (util/debug-prn "Copying" (str res) "to" (str out-file)))
       (util/mkdirs out-file)
       (if (and (= :none optimizations) transpile?)
         (spit out-file (transpile opts res js))
