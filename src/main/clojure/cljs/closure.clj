@@ -2036,8 +2036,9 @@
 (defn transpile
   [{:keys [language-out] :or {language-out :es3}} rsc {:keys [module lang] :as js}]
   (let [source  (slurp rsc)
-        source' (if (< (.indexOf lang-level (expand-lang-key language-out))
-                       (.indexOf lang-level (expand-lang-key lang)))
+        source' (if (and lang
+                         (< (.indexOf lang-level (expand-lang-key language-out))
+                            (.indexOf lang-level (expand-lang-key lang))))
                   (let [cc (Transpiler/compilerSupplier)
                         result (.compile cc (url->nio-path rsc) source)]
                     (.source result))
