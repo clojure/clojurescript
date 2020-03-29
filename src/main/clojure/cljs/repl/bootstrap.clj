@@ -13,9 +13,16 @@
   "Install a version of goog.require that supports namespace reloading.
    IMPORTANT: must be invoked *after* loading cljs.core."
   [repl-env env]
+  ;; monkey patch goog.provide - it throws when namespaces are loaded multiple times
+  ;; we never care how many times a namespace is loaded it doesn't matter if
+  ;; Google Closure Library or ClojureScript
+  (repl/evaluate-form repl-env env "<cljs repl>"
+    '(set! (.-isProvided__ js/goog) js/goog.isProvided_))
+  (repl/evaluate-form repl-env env "<cljs repl>"
+    '(set! (.-isProvided_ js/goog) (fn [x] false)))
+  ;; monkey-patch goog.require
   (repl/evaluate-form repl-env env "<cljs repl>"
     '(set! (.-require__ js/goog) js/goog.require))
-  ;; monkey-patch goog.require
   (repl/evaluate-form repl-env env "<cljs repl>"
     '(set! (.-require js/goog)
        (fn [src reload]
@@ -38,4 +45,7 @@
            (let [ret (.require__ js/goog src)]
              (when (= reload "reload-all")
                (set! (.-cljsReloadAll_ js/goog) false))
-             ret))))))
+             ;; handle requires from Closure Library goog.modules
+             (if (js/goog.isInModuleLoader_)
+               (js/goog.module.getInternal_ src)
+               ret)))))))

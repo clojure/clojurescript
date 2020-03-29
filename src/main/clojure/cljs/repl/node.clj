@@ -192,9 +192,6 @@
            (str "require("
              (platform-path (conj root-path "node_repl_deps.js"))
              ")"))
-         ;; monkey-patch isProvided_ to avoid useless warnings - David
-         (node-eval repl-env
-           (str "goog.isProvided_ = function(x) { return false; };"))
          ;; load cljs.core, setup printing
          (repl/evaluate-form repl-env env "<cljs repl>"
            '(do
