@@ -30,6 +30,17 @@
                 "src/main/clojure"
                 "src/test/cljs"])
 
+(defn require*
+  [name reload]
+  (let [ret (js/CLOSURE_IMPORT_SCRIPT
+              (if goog/debugLoader_
+                (.getPathFromDeps_ goog/debugLoader_ name)
+                (gobj/get (.. js/goog -dependencies_ -nameToPath) name)))]
+    ;; handle requires from Closure Library goog.modules
+    (if (.isInModuleLoader_ js/goog)
+      (.getInternal_ (.. js/goog -module) name)
+      ret)))
+
 (defn init-runtime
   "Initializes the runtime so that we can use the cljs.user
   namespace and so that Google Closure is set up to work
@@ -39,12 +50,7 @@
   ;; monkey-patch isProvided_ to avoid useless warnings
   (js* "goog.isProvided_ = function(x) { return false; };")
   ;; monkey-patch goog.require, skip all the loaded checks
-  (set! (.-require js/goog)
-    (fn [name]
-      (js/CLOSURE_IMPORT_SCRIPT
-        (if goog/debugLoader_
-          (.getPathFromDeps_ goog/debugLoader_ name)
-          (gobj/get (.. js/goog -dependencies_ -nameToPath) name)))))
+  (set! (.-require js/goog) require*)
   ;; setup printing
   (nodejs/enable-util-print!)
   ;; redef goog.require to track loaded libs
@@ -53,10 +59,7 @@
     (fn [name reload]
       (when (or (not (contains? *loaded-libs* name)) reload)
         (set! *loaded-libs* (conj (or *loaded-libs* #{}) name))
-        (js/CLOSURE_IMPORT_SCRIPT
-          (if goog/debugLoader_
-            (.getPathFromDeps_ goog/debugLoader_ name)
-            (gobj/get (.. js/goog -dependencies_ -nameToPath) name)))))))
+        (require* name reload)))))
 
 ;; Node file reading fns
 
