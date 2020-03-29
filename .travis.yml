@@ -62,5 +62,3 @@ script:
   - script/test-cli node | tee test-out.txt
   - grep '0 failures, 0 errors.' test-out.txt
   - grep '0 failures, 0 errors.' test-out.txt
-  - PATH=`pwd`/graalvm-ce-1.0.0-rc12/bin:$PATH script/test-cli graaljs | tee test-out.txt
-  - grep '0 failures, 0 errors.' test-out.txt

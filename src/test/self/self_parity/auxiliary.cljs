@@ -147,5 +147,4 @@
     goog.structs.SimplePool
     goog.structs.StringSet
     goog.structs.TreeNode
-    goog.structs.Trie
-    goog.text.LoremIpsum))
+    goog.structs.Trie))
