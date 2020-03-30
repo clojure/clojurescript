@@ -145,7 +145,7 @@
    (closure/-find-sources x opts)))
 
 (defn add-dependency-sources
-  "Given a sequence of cljs.closure/IJavaSript values, return a set that includes
+  "Given a sequence of cljs.closure/IJavaScript values, return a set that includes
   all dependencies."
   ([xs]
    (add-dependency-sources xs {}))
