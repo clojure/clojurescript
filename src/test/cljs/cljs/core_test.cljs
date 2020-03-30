@@ -1808,6 +1808,10 @@
   (is (= "a" (get "abc" -0.5)))
   (is (nil? (get "abc" -1))))
 
+(deftest test-cljs-3130
+  (is (thrown-with-msg? js/Error #"Cannot compare f151d12d-7bd5-4409-9352-5900ee07baf7 to a"
+        (compare (uuid "f151d12d-7bd5-4409-9352-5900ee07baf7") "a"))))
+
 (deftest test-cljs-3202
   (is (= :/ (keyword "/")))
   (is (= (hash :/) (hash (keyword "/")))))

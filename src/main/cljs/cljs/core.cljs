@@ -11293,8 +11293,10 @@ reduces them without incurring seq initialization"
     __hash)
 
   IComparable
-  (-compare [_ other]
-    (garray/defaultCompare uuid (.-uuid other))))
+  (-compare [this other]
+    (if (instance? UUID other)
+      (garray/defaultCompare uuid (.-uuid other))
+      (throw (js/Error. (str "Cannot compare " this " to " other))))))
 
 (defn uuid [s]
   (assert (string? s))
