@@ -131,6 +131,14 @@
   ([ns compiler-env]
    (closure/source-for-namespace ns compiler-env)))
 
+(defn compilable->ijs
+  "Given a cljs.closure/Compilable value, return the corresponding
+  cljs.closure/IJavaScript value."
+  ([x]
+   (compilable->ijs x {}))
+  ([x opts]
+   (closure/-find-sources x opts)))
+
 (defn add-dependencies
   "DEPRECATED: Given one or more IJavaScript objects in dependency order, produce
   a new sequence of IJavaScript objects which includes the input list
