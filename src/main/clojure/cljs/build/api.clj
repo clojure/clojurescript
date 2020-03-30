@@ -23,6 +23,11 @@
             [cljs.js-deps :as js-deps])
   (:import [java.io File]))
 
+(defn- compiler-state []
+  (if-not (nil? env/*compiler*)
+    env/*compiler*
+    (env/default-compiler-env)))
+
 ;; =============================================================================
 ;; Useful Utilities
 
@@ -138,6 +143,17 @@
    (compilable->ijs x {}))
   ([x opts]
    (closure/-find-sources x opts)))
+
+(defn add-dependency-sources
+  "Given a sequence of cljs.closure/IJavaSript values, return a set that includes
+  all dependencies."
+  ([xs]
+   (add-dependency-sources xs {}))
+  ([xs opts]
+   (add-dependency-sources (compiler-state) xs opts))
+  ([state xs opts]
+   (env/with-compiler-env state
+     (closure/add-dependency-sources xs opts))))
 
 (defn add-dependencies
   "DEPRECATED: Given one or more IJavaScript objects in dependency order, produce
