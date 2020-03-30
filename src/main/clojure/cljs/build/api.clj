@@ -5,6 +5,7 @@
 ;   By using this software in any fashion, you are agreeing to be bound by
 ;   the terms of this license.
 ;   You must not remove this notice, or any other, from this software
+
 (ns cljs.build.api
   "This is intended to be a stable api for those who need programmatic access
   to ClojureScript's project building facilities.
@@ -13,14 +14,10 @@
   files so that they will be recompiled."
   (:refer-clojure :exclude [compile])
   (:require [clojure.java.io :as io]
-            [clojure.string :as string]
-            [clojure.data.json :as json]
             [cljs.util :as util]
             [cljs.env :as env]
             [cljs.analyzer :as ana]
-            [cljs.compiler :as comp]
-            [cljs.closure :as closure]
-            [cljs.js-deps :as js-deps])
+            [cljs.closure :as closure])
   (:import [java.io File]))
 
 ;; =============================================================================
@@ -283,14 +280,6 @@
      (distinct (concat (keys (:npm-deps opts)) (map str dependencies)))
      opts)))
 
-(comment
-  (node-module-deps
-    {:file (.getAbsolutePath (io/file "src/test/node/test.js"))})
-
-  (node-module-deps
-    {:file (.getAbsolutePath (io/file "src/test/node/test.js"))})
-  )
-
 (defn node-inputs
   "EXPERIMENTAL: return the foreign libs entries as computed by running
    the module-deps package on the supplied JavaScript entry points. Assumes
@@ -302,28 +291,3 @@
        (:options @env/*compiler*))))
   ([entries opts]
    (closure/node-inputs entries opts)))
-
-(comment
-  (node-inputs
-    [{:file "src/test/node/test.js"}])
-  )
-
-(comment
-  (def test-cenv (atom {}))
-  (def test-env (assoc-in (ana/empty-env) [:ns :name] 'cljs.user))
-
-  (binding [ana/*cljs-ns* 'cljs.user]
-    (env/with-compiler-env test-cenv
-      (ana/no-warn
-        (ana/analyze test-env
-         '(ns cljs.user
-            (:use [clojure.string :only [join]]))))))
-
-  (env/with-compiler-env test-cenv
-    (ns-dependents 'clojure.string))
-
-  (map
-    #(target-file-for-cljs-ns % "out-dev")
-    (env/with-compiler-env test-cenv
-     (ns-dependents 'clojure.string)))
-  )
