@@ -100,6 +100,16 @@
      (binding [ana/*cljs-warning-handlers* (:warning-handlers options ana/*cljs-warning-handlers*)]
        (closure/src-file->goog-require src options)))))
 
+(defn index-ijs
+  "Given a sequence of cljs.closure/IJavaScript values, create an index using
+  :provides. The original values will appear under each :provide."
+  [xs]
+  (reduce
+    (fn [index x]
+      (merge index
+        (zipmap (:provides x) (repeat x))))
+    {} xs))
+
 ;; =============================================================================
 ;; Main API
 
@@ -291,3 +301,9 @@
        (:options @env/*compiler*))))
   ([entries opts]
    (closure/node-inputs entries opts)))
+
+(defn node-modules
+  "Return a sequence of requirable libraries found under node_modules."
+  [state]
+  (env/with-compiler-env state
+    (filter :provides (closure/index-node-modules-dir))))
