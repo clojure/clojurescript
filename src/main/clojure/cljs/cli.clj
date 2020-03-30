@@ -546,7 +546,9 @@ present"
                                {:arg "env"
                                 :doc (str "The REPL environment to use. Built-in "
                                           "supported values: node, browser. "
-                                          "Defaults to browser")}}}
+                                          "Defaults to browser. If given a "
+                                          "non-single-segment namespace, will "
+                                          "use the repl-env fn found there.")}}}
               ::main {:desc "init options only for --main and --repl"}
               ::compile {:desc "init options only for --compile"}}
      :init
