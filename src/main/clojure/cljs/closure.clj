@@ -2876,7 +2876,7 @@
 (defn handle-js-modules
   "Given all Cljs sources (build inputs and dependencies in classpath)
 
-  - index all the node node modules
+  - index all the node modules
   - process the JS modules (preprocess + convert to Closure JS)
   - save js-dependency-index for compilation"
   [{:keys [npm-deps target] :as opts} js-sources compiler-env]
