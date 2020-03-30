@@ -155,7 +155,7 @@
   ([xs]
    (add-dependency-sources xs {}))
   ([xs opts]
-   (add-dependency-sources (compiler-state) xs opts))
+   (add-dependency-sources (compiler-state opts) xs opts))
   ([state xs opts]
    (env/with-compiler-env state
      (closure/add-dependency-sources xs opts))))
