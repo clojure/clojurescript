@@ -23,13 +23,19 @@
             [cljs.js-deps :as js-deps])
   (:import [java.io File]))
 
-(defn- compiler-state []
-  (if-not (nil? env/*compiler*)
-    env/*compiler*
-    (env/default-compiler-env)))
-
 ;; =============================================================================
 ;; Useful Utilities
+
+(defn compiler-state
+  "Return a compiler state that can be used with the api. opts is a map
+   representing the compiler configuration. See the documentation
+   for details: https://clojurescript.org/reference/compiler-options"
+  ([]
+   (compiler-state nil))
+  ([opts]
+   (if-not (nil? env/*compiler*)
+     env/*compiler*
+     (env/default-compiler-env opts))))
 
 (defn ^File target-file-for-cljs-ns
   "Given an output directory and a clojurescript namespace return the
@@ -59,9 +65,7 @@
   ('example.core 'example.util)"
   ([namespaces]
    (closure/cljs-dependents-for-macro-namespaces
-     (if-not (nil? env/*compiler*)
-       env/*compiler*
-       (env/default-compiler-env))
+     (compiler-state)
      namespaces))
   ([state namespaces]
    (closure/cljs-dependents-for-macro-namespaces state namespaces)))
@@ -79,9 +83,7 @@
   ([src] (src-file->target-file src nil))
   ([src opts]
    (src-file->target-file
-     (if-not (nil? env/*compiler*)
-       env/*compiler*
-       (env/default-compiler-env opts))
+     (compiler-state opts)
      src opts))
   ([state src opts]
    (env/with-compiler-env state
@@ -94,9 +96,7 @@
   ([src] (src-file->goog-require src nil))
   ([src options]
    (src-file->goog-require
-     (if-not (nil? env/*compiler*)
-       env/*compiler*
-       (env/default-compiler-env options))
+     (compiler-state options)
      src options))
   ([state src options]
    (env/with-compiler-env state
@@ -130,9 +130,7 @@
   :uri a URL."
   ([ns]
    (ns->location ns
-     (if-not (nil? env/*compiler*)
-       env/*compiler*
-       (env/default-compiler-env))))
+     (compiler-state)))
   ([ns compiler-env]
    (closure/source-for-namespace ns compiler-env)))
 
@@ -192,9 +190,7 @@
   "Given a Compilable, compile it and return an IJavaScript."
   ([opts compilable]
    (compile
-     (if-not (nil? env/*compiler*)
-       env/*compiler*
-       (env/default-compiler-env opts))
+     (compiler-state opts)
      opts compilable))
   ([state opts compilable]
    (env/with-compiler-env state
@@ -217,13 +213,11 @@
    (build nil opts))
   ([source opts]
    (build source opts
-     (if-not (nil? env/*compiler*)
-       env/*compiler*
-       (env/default-compiler-env
-         ;; need to dissoc :foreign-libs since we won't know what overriding
-         ;; foreign libspecs are referring to until after add-implicit-options
-         ;; - David
-         (closure/add-externs-sources (dissoc opts :foreign-libs))))))
+     (compiler-state
+       ;; need to dissoc :foreign-libs since we won't know what overriding
+       ;; foreign libspecs are referring to until after add-implicit-options
+       ;; - David
+       (closure/add-externs-sources (dissoc opts :foreign-libs)))))
   ([source opts compiler-env]
    (doseq [[unknown-opt suggested-opt] (util/unknown-opts (set (keys opts)) closure/known-opts)]
      (when suggested-opt
@@ -235,10 +229,8 @@
   "Given a source which can be compiled, watch it for changes to produce."
   ([source opts]
    (watch source opts
-     (if-not (nil? env/*compiler*)
-       env/*compiler*
-       (env/default-compiler-env
-         (closure/add-externs-sources opts)))))
+     (compiler-state
+       (closure/add-externs-sources opts))))
   ([source opts compiler-env]
    (watch source opts compiler-env nil))
   ([source opts compiler-env stop]
