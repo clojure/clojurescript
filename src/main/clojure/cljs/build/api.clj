@@ -304,6 +304,6 @@
 
 (defn node-modules
   "Return a sequence of requirable libraries found under node_modules."
-  [state]
-  (env/with-compiler-env state
-    (filter :provides (closure/index-node-modules-dir))))
+  ([opts]
+   (env/with-compiler-env (compiler-state opts)
+     (filter :provides (closure/index-node-modules-dir)))))
