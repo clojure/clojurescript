@@ -529,6 +529,13 @@
   [obj s & args]
   (.apply (unchecked-get obj s) obj (into-array args)))
 
+(defn js-symbol?
+  "Returns true if x is an instance of Symbol"
+  [x]
+  (or (identical? (goog/typeOf x) "symbol")
+      (and (exists? js/Symbol)
+           (instance? js/Symbol x))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;; core protocols ;;;;;;;;;;;;;
 
 (defprotocol Fn
@@ -1715,7 +1722,7 @@ reduces them without incurring seq initialization"
     (if (pos? i)
       (RSeq. ci (dec i) nil)
       ()))
-  
+
   INext
   (-next [coll]
     (when (pos? i)
@@ -1822,7 +1829,7 @@ reduces them without incurring seq initialization"
 
       (array? coll)
       (alength coll)
-    
+
       (string? coll)
       ^number (.-length coll)
 
@@ -2539,7 +2546,7 @@ reduces them without incurring seq initialization"
 
        (array? coll)
        (array-reduce coll f val)
-      
+
        (string? coll)
        (array-reduce coll f val)
 
@@ -3271,7 +3278,7 @@ reduces them without incurring seq initialization"
 
   ISeqable
   (-seq [coll] coll)
-  
+
   IReduce
   (-reduce [coll f] (seq-reduce f coll))
   (-reduce [coll f start] (seq-reduce f start coll)))
@@ -3306,7 +3313,7 @@ reduces them without incurring seq initialization"
   (toString [_] (str ":" fqn))
   (equiv [this other]
     (-equiv this other))
-  
+
   IEquiv
   (-equiv [_ other]
     (if (instance? Keyword other)
@@ -4920,7 +4927,7 @@ reduces them without incurring seq initialization"
 
   IPending
   (-realized? [coll] false)
-  
+
   IWithMeta
   (-with-meta [coll new-meta]
     (if (identical? new-meta meta)
@@ -4968,7 +4975,7 @@ reduces them without incurring seq initialization"
   ISequential
   ISeqable
   (-seq [coll] coll)
-  
+
   IEquiv
   (-equiv [coll other] (equiv-sequential coll other))
 
@@ -6961,13 +6968,13 @@ reduces them without incurring seq initialization"
               @init
               (recur (+ i 2) init)))
           init))))
-  
+
   IReduce
   (-reduce [coll f]
     (iter-reduce coll f))
   (-reduce [coll f start]
     (iter-reduce coll f start))
-  
+
   IFn
   (-invoke [coll k]
     (-lookup coll k))
@@ -7108,7 +7115,7 @@ reduces them without incurring seq initialization"
           (set! len (- len 2)))
         tcoll)
       (throw (js/Error. "dissoc! after persistent!"))))
-  
+
   IFn
   (-invoke [tcoll key]
     (-lookup tcoll key nil))
@@ -8974,7 +8981,7 @@ reduces them without incurring seq initialization"
 
   IHash
   (-hash [coll] (hash-ordered-coll coll))
-  
+
   ISeq
   (-first [coll]
     (let [^not-native me (-first mseq)]
@@ -9523,7 +9530,7 @@ reduces them without incurring seq initialization"
 
 (defn max-key
   "Returns the x for which (k x), a number, is greatest.
-  
+
   If there are multiple such xs, the last one is returned."
   ([k x] x)
   ([k x y] (if (> (k x) (k y)) x y))
@@ -10167,6 +10174,8 @@ reduces them without incurring seq initialization"
 
         (regexp? obj) (write-all writer "#\"" (.-source obj) "\"")
 
+        (js-symbol? obj) (write-all writer "#object[" (.toString obj) "]" )
+
         :else
         (if (some-> obj .-constructor .-cljs$lang$ctorStr)
           (write-all writer
@@ -10461,7 +10470,7 @@ reduces them without incurring seq initialization"
     (if (vector? y)
       (compare-indexed x y)
       (throw (js/Error. (str "Cannot compare " x " to " y)))))
-  
+
   PersistentVector
   (-compare [x y]
     (if (vector? y)
