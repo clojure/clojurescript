@@ -18,9 +18,22 @@
 ;; Useful Utilities
 
 (defn empty-state
-  "Creates an empty compilation state Atom<Map>."
+  "Creates an empty compilation state Atom<Map>. The optional opts arg is a map
+   representing the compiler configuration. See the documentation
+   for details: https://clojurescript.org/reference/compiler-options"
+  ([]
+   (if-not (nil? env/*compiler*)
+     env/*compiler*
+     (env/default-compiler-env)))
+  ([opts]
+   (env/default-compiler-env opts)))
+
+(defn current|empty-state
+  "Returns the currently bound compiler state or an empty one"
   []
-  (env/default-compiler-env))
+  (if-not (nil? env/*compiler*)
+    env/*compiler*
+    (empty-state)))
 
 (defmacro with-state
   "Run the body with the given compilation state Atom<Map>."
@@ -77,11 +90,7 @@
      ([env form] (analyze env form nil))
      ([env form name] (analyze env form name nil))
      ([env form name opts]
-      (analyze
-        (if-not (nil? env/*compiler*)
-          env/*compiler*
-          (env/default-compiler-env opts))
-        env form name opts))
+      (analyze (current|empty-state) env form name opts))
      ([state env form name opts]
       (env/with-compiler-env state
         (binding [ana/*cljs-warning-handlers* (:warning-handlers opts ana/*cljs-warning-handlers*)]
@@ -99,7 +108,7 @@
      "Helper for parsing only the essential namespace information from a
       ClojureScript source file and returning a cljs.closure/IJavaScript compatible
       map _not_ a namespace AST node.
-   
+
       By default does not load macros or perform any analysis of dependencies. If
       opts parameter provided :analyze-deps and :load-macros keys their values will
       be used for *analyze-deps* and *load-macros* bindings respectively. This
@@ -108,11 +117,7 @@
      ([src] (parse-ns src nil nil))
      ([src opts] (parse-ns src nil opts))
      ([src dest opts]
-      (parse-ns
-        (if-not (nil? env/*compiler*)
-          env/*compiler*
-          (env/default-compiler-env opts))
-        src dest opts))
+      (parse-ns (current|empty-state) src dest opts))
      ([state src dest opts]
       (env/with-compiler-env state
         (binding [ana/*cljs-warning-handlers* (:warning-handlers opts ana/*cljs-warning-handlers*)]
@@ -121,7 +126,7 @@
    (defn analyze-file
      "Given a java.io.File, java.net.URL or a string identifying a resource on the
       classpath attempt to analyze it.
-   
+
       This function side-effects the ambient compilation environment
       `cljs.env/*compiler*` to aggregate analysis information. opts argument is
       compiler options, if :cache-analysis true will cache analysis to
@@ -129,11 +134,7 @@
       meaningful value."
      ([f] (analyze-file f nil))
      ([f opts]
-      (analyze-file
-        (if-not (nil? env/*compiler*)
-          env/*compiler*
-          (env/default-compiler-env opts))
-        f opts))
+      (analyze-file (current|empty-state) f opts))
      ([state f opts]
       (env/with-compiler-env state
         (binding [ana/*cljs-warning-handlers* (:warning-handlers opts ana/*cljs-warning-handlers*)]

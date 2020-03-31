@@ -17,22 +17,12 @@
             [cljs.util :as util]
             [cljs.env :as env]
             [cljs.analyzer :as ana]
+            [cljs.analyzer.api :as ana-api]
             [cljs.closure :as closure])
   (:import [java.io File]))
 
 ;; =============================================================================
 ;; Useful Utilities
-
-(defn compiler-state
-  "Return a compiler state that can be used with the api. opts is a map
-   representing the compiler configuration. See the documentation
-   for details: https://clojurescript.org/reference/compiler-options"
-  ([]
-   (compiler-state nil))
-  ([opts]
-   (if-not (nil? env/*compiler*)
-     env/*compiler*
-     (env/default-compiler-env opts))))
 
 (defn ^File target-file-for-cljs-ns
   "Given an output directory and a clojurescript namespace return the
@@ -62,8 +52,7 @@
   ('example.core 'example.util)"
   ([namespaces]
    (closure/cljs-dependents-for-macro-namespaces
-     (compiler-state)
-     namespaces))
+     (ana-api/current|empty-state) namespaces))
   ([state namespaces]
    (closure/cljs-dependents-for-macro-namespaces state namespaces)))
 
@@ -79,9 +68,7 @@
   provide build options with :output-dir specified."
   ([src] (src-file->target-file src nil))
   ([src opts]
-   (src-file->target-file
-     (compiler-state opts)
-     src opts))
+   (src-file->target-file (ana-api/current|empty-state) src opts))
   ([state src opts]
    (env/with-compiler-env state
      (binding [ana/*cljs-warning-handlers* (:warning-handlers opts ana/*cljs-warning-handlers*)]
@@ -91,14 +78,12 @@
   "Given a ClojureScript or Google Closure style JavaScript source file return
   the goog.require statement for it."
   ([src] (src-file->goog-require src nil))
-  ([src options]
-   (src-file->goog-require
-     (compiler-state options)
-     src options))
-  ([state src options]
+  ([src opts]
+   (src-file->goog-require (ana-api/current|empty-state) src opts))
+  ([state src opts]
    (env/with-compiler-env state
-     (binding [ana/*cljs-warning-handlers* (:warning-handlers options ana/*cljs-warning-handlers*)]
-       (closure/src-file->goog-require src options)))))
+     (binding [ana/*cljs-warning-handlers* (:warning-handlers opts ana/*cljs-warning-handlers*)]
+       (closure/src-file->goog-require src opts)))))
 
 (defn index-ijs
   "Given a sequence of cljs.closure/IJavaScript values, create an index using
@@ -136,8 +121,7 @@
   .cljs, .cljc, .js. Returns a map containing :relative-path a string, and
   :uri a URL."
   ([ns]
-   (ns->location ns
-     (compiler-state)))
+   (ns->location ns (ana-api/current|empty-state)))
   ([ns compiler-env]
    (closure/source-for-namespace ns compiler-env)))
 
@@ -155,7 +139,7 @@
   ([xs]
    (add-dependency-sources xs {}))
   ([xs opts]
-   (add-dependency-sources (compiler-state opts) xs opts))
+   (add-dependency-sources (ana-api/current|empty-state) xs opts))
   ([state xs opts]
    (env/with-compiler-env state
      (closure/add-dependency-sources xs opts))))
@@ -196,9 +180,7 @@
 (defn compile
   "Given a Compilable, compile it and return an IJavaScript."
   ([opts compilable]
-   (compile
-     (compiler-state opts)
-     opts compilable))
+   (compile (ana-api/current|empty-state) opts compilable))
   ([state opts compilable]
    (env/with-compiler-env state
      (closure/compile compilable opts))))
@@ -220,7 +202,7 @@
    (build nil opts))
   ([source opts]
    (build source opts
-     (compiler-state
+     (ana-api/empty-state
        ;; need to dissoc :foreign-libs since we won't know what overriding
        ;; foreign libspecs are referring to until after add-implicit-options
        ;; - David
@@ -236,7 +218,7 @@
   "Given a source which can be compiled, watch it for changes to produce."
   ([source opts]
    (watch source opts
-     (compiler-state
+     (ana-api/empty-state
        (closure/add-externs-sources opts))))
   ([source opts compiler-env]
    (watch source opts compiler-env nil))
@@ -297,13 +279,12 @@
    installed."
   ([entries]
    (node-inputs entries
-     (when-not (nil? env/*compiler*)
-       (:options @env/*compiler*))))
+     (:options (ana-api/current|empty-state))))
   ([entries opts]
    (closure/node-inputs entries opts)))
 
 (defn node-modules
   "Return a sequence of requirable libraries found under node_modules."
   ([opts]
-   (env/with-compiler-env (compiler-state opts)
+   (env/with-compiler-env (ana-api/empty-state opts)
      (filter :provides (closure/index-node-modules-dir)))))
