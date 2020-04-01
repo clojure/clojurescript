@@ -205,7 +205,7 @@
     :watch :watch-error-fn :watch-fn :install-deps :process-shim :rename-prefix :rename-prefix-namespace
     :closure-variable-map-in :closure-property-map-in :closure-variable-map-out :closure-property-map-out
     :stable-names :ignore-js-module-exts :opts-cache :aot-cache :elide-strict :fingerprint :spec-skip-macros
-    :nodejs-rt})
+    :nodejs-rt :target-fn})
 
 (def string->charset
   {"iso-8859-1" StandardCharsets/ISO_8859_1
@@ -1676,77 +1676,71 @@
   (assert (or (not (contains? opts :module-name))
               (get (:modules opts) (:module-name opts)))
     (str "Module " (:module-name opts) " does not exist"))
-  (let [module (get (:modules opts) (:module-name opts))
-        asset-path (or (:asset-path opts)
-                       (util/output-directory opts))
-        closure-defines (json/write-str (:closure-defines opts))]
-    (case (:target opts)
-      :nodejs
-      (output-one-file
-        (merge opts
-          (when module
-            {:output-to (:output-to module)}))
-        (add-header opts
-          (str (when (or (not module) (= :cljs-base (:module-name opts)))
-                 (str "var path = require(\"path\");\n"
-                      "try {\n"
-                      "    require(\"source-map-support\").install();\n"
-                      "} catch(err) {\n"
-                      "}\n"
-                      "require(path.join(path.resolve(\".\"),\"" asset-path "\",\"goog\",\"bootstrap\",\"nodejs.js\"));\n"
-                      "require(path.join(path.resolve(\".\"),\"" asset-path "\",\"cljs_deps.js\"));\n"
-                      "goog.global.CLOSURE_UNCOMPILED_DEFINES = " closure-defines ";\n"
-                   (apply str (preloads (:preloads opts)))))
-            (apply str
-              (map (fn [entry]
-                     (str "goog.require(\"" (comp/munge entry) "\");\n"))
-                (if-let [entries (when module (:entries module))]
-                  entries
-                  [(:main opts)])))
-            (when (:nodejs-rt opts)
-              "goog.require(\"cljs.nodejscli\");\n"))))
+  (let [module (get (:modules opts) (:module-name opts))]
+    (output-one-file
+      (merge opts
+        (when module
+          {:output-to (:output-to module)}))
+      (if-let [target-fn (opts-fn :target-fn opts)]
+        (target-fn opts)
+        (let [asset-path (or (:asset-path opts)
+                             (util/output-directory opts))
+              closure-defines (json/write-str (:closure-defines opts))]
+          (case (:target opts)
+            :nodejs
+            (add-header opts
+              (str (when (or (not module) (= :cljs-base (:module-name opts)))
+                     (str "var path = require(\"path\");\n"
+                          "try {\n"
+                          "    require(\"source-map-support\").install();\n"
+                          "} catch(err) {\n"
+                          "}\n"
+                          "require(path.join(path.resolve(\".\"),\"" asset-path "\",\"goog\",\"bootstrap\",\"nodejs.js\"));\n"
+                          "require(path.join(path.resolve(\".\"),\"" asset-path "\",\"cljs_deps.js\"));\n"
+                          "goog.global.CLOSURE_UNCOMPILED_DEFINES = " closure-defines ";\n"
+                       (apply str (preloads (:preloads opts)))))
+                (apply str
+                  (map (fn [entry]
+                         (str "goog.require(\"" (comp/munge entry) "\");\n"))
+                    (if-let [entries (when module (:entries module))]
+                      entries
+                      [(:main opts)])))
+                (when (:nodejs-rt opts)
+                  "goog.require(\"cljs.nodejscli\");\n")))
 
-      :webworker
-      (output-one-file
-        (merge opts
-          (when module
-            {:output-to (:output-to module)}))
-        (str (when (or (not module) (= :cljs-base (:module-name opts)))
-               (str "var CLOSURE_BASE_PATH = \"" asset-path  "/goog/\";\n"
-                    "var CLOSURE_UNCOMPILED_DEFINES = " closure-defines ";\n"
-                    "var CLOSURE_IMPORT_SCRIPT = (function(global) { return function(src) {global['importScripts'](src); return true;};})(this);\n"
-                    "if(typeof goog == 'undefined') importScripts(\"" asset-path "/goog/base.js\");\n"
-                    "importScripts(\"" asset-path "/cljs_deps.js\");\n"
-                 (apply str (preloads (:preloads opts)))))
-          (apply str
-            (map (fn [entry]
-                   (when-not (= "goog" entry)
-                     (str "goog.require(\"" (comp/munge entry) "\");\n")))
-              (if-let [entries (when module (:entries module))]
-                entries
-                (when-let [main (:main opts)]
-                  [main]))))))
+            :webworker
+            (str (when (or (not module) (= :cljs-base (:module-name opts)))
+                   (str "var CLOSURE_BASE_PATH = \"" asset-path "/goog/\";\n"
+                        "var CLOSURE_UNCOMPILED_DEFINES = " closure-defines ";\n"
+                        "var CLOSURE_IMPORT_SCRIPT = (function(global) { return function(src) {global['importScripts'](src); return true;};})(this);\n"
+                        "if(typeof goog == 'undefined') importScripts(\"" asset-path "/goog/base.js\");\n"
+                        "importScripts(\"" asset-path "/cljs_deps.js\");\n"
+                     (apply str (preloads (:preloads opts)))))
+              (apply str
+                (map (fn [entry]
+                       (when-not (= "goog" entry)
+                         (str "goog.require(\"" (comp/munge entry) "\");\n")))
+                  (if-let [entries (when module (:entries module))]
+                    entries
+                    (when-let [main (:main opts)]
+                      [main])))))
 
-       (output-one-file
-        (merge opts
-          (when module
-            {:output-to (:output-to module)}))
-        (str (when (or (not module) (= :cljs-base (:module-name opts)))
-               (str "var CLOSURE_UNCOMPILED_DEFINES = " closure-defines ";\n"
-                    "var CLOSURE_NO_DEPS = true;\n"
-                    "if(typeof goog == \"undefined\") document.write('<script src=\"" asset-path "/goog/base.js\"></script>');\n"
-                    "document.write('<script src=\"" asset-path "/goog/deps.js\"></script>');\n"
-                    "document.write('<script src=\"" asset-path "/cljs_deps.js\"></script>');\n"
-                    "document.write('<script>if (typeof goog == \"undefined\") console.warn(\"ClojureScript could not load :main, did you forget to specify :asset-path?\");</script>');\n"
-                 (apply str (preloads (:preloads opts) :browser))))
-          (apply str
-            (map (fn [entry]
-                   (when-not (= "goog" entry)
-                     (str "document.write('<script>goog.require(\"" (comp/munge entry) "\");</script>');\n")))
-              (if-let [entries (when module (:entries module))]
-                entries
-                (when-let [main (:main opts)]
-                  [main])))))))))
+            (str (when (or (not module) (= :cljs-base (:module-name opts)))
+                   (str "var CLOSURE_UNCOMPILED_DEFINES = " closure-defines ";\n"
+                        "var CLOSURE_NO_DEPS = true;\n"
+                        "if(typeof goog == \"undefined\") document.write('<script src=\"" asset-path "/goog/base.js\"></script>');\n"
+                        "document.write('<script src=\"" asset-path "/goog/deps.js\"></script>');\n"
+                        "document.write('<script src=\"" asset-path "/cljs_deps.js\"></script>');\n"
+                        "document.write('<script>if (typeof goog == \"undefined\") console.warn(\"ClojureScript could not load :main, did you forget to specify :asset-path?\");</script>');\n"
+                     (apply str (preloads (:preloads opts) :browser))))
+              (apply str
+                (map (fn [entry]
+                       (when-not (= "goog" entry)
+                         (str "document.write('<script>goog.require(\"" (comp/munge entry) "\");</script>');\n")))
+                  (if-let [entries (when module (:entries module))]
+                    entries
+                    (when-let [main (:main opts)]
+                      [main])))))))))))
 
 (defn fingerprinted-modules [modules fingerprint-info]
   (into {}
