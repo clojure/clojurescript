@@ -222,7 +222,10 @@ classpath. Classpath-relative paths have prefix of @ or @/")
 (defn load-edn-opts [str]
   (reduce merge {} (map read-edn-opts (util/split-paths str))))
 
-(defn- repl-env-opts-opt
+(defn repl-env-opts-opt
+  "Handles the --repl-env-opts (-ro) option. Can be overridden via
+  ::cljs.cli/commands key on the repl-env supplied via --repl-env (-re).
+  See also default-commands."
   [cfg ropts]
   (let [ropts (string/trim ropts)
         edn   (if (string/starts-with? ropts "{")
@@ -230,7 +233,10 @@ classpath. Classpath-relative paths have prefix of @ or @/")
                 (load-edn-opts ropts))]
     (update cfg :repl-env-options merge edn)))
 
-(defn- compile-opts-opt
+(defn compile-opts-opt
+  "Handles the --compile-opts (-co) option. Can be overridden via
+  ::cljs.cli/commands key on the repl-env supplied via --repl-env (-re).
+  See also default-commands."
   [cfg copts]
   (let [copts (string/trim copts)
         edn   (if (string/starts-with? copts "{")
