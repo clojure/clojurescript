@@ -204,7 +204,8 @@
     :fn-invoke-direct :checked-arrays :closure-module-roots :rewrite-polyfills :use-only-custom-externs
     :watch :watch-error-fn :watch-fn :install-deps :process-shim :rename-prefix :rename-prefix-namespace
     :closure-variable-map-in :closure-property-map-in :closure-variable-map-out :closure-property-map-out
-    :stable-names :ignore-js-module-exts :opts-cache :aot-cache :elide-strict :fingerprint :spec-skip-macros})
+    :stable-names :ignore-js-module-exts :opts-cache :aot-cache :elide-strict :fingerprint :spec-skip-macros
+    :nodejs-rt})
 
 (def string->charset
   {"iso-8859-1" StandardCharsets/ISO_8859_1
@@ -1702,7 +1703,8 @@
                 (if-let [entries (when module (:entries module))]
                   entries
                   [(:main opts)])))
-            "goog.require(\"cljs.nodejscli\");\n")))
+            (when (:nodejs-rt opts)
+              "goog.require(\"cljs.nodejscli\");\n"))))
 
       :webworker
       (output-one-file
@@ -2469,6 +2471,11 @@
       (assoc-in [:closure-defines (str (comp/munge 'cljs.core/*target*))]
         (name (:target opts)))
 
+      (= :nodejs (:target opts))
+      (merge
+        (when (nil? (:nodejs-rt opts))
+          {:nodejs-rt true}))
+
       (= optimizations :none)
       (assoc
         :cache-analysis (:cache-analysis opts true)
@@ -3065,7 +3072,9 @@
                                 (compile-sources compiler-stats compile-opts)
                                 (#(map add-core-macros-if-cljs-js %))
                                 (add-js-sources opts)
-                                (cond-> (= :nodejs (:target opts))
+                                (cond->
+                                  (and (= :nodejs (:target opts))
+                                       (:nodejs-rt opts))
                                   (concat
                                     [(-compile (io/resource "cljs/nodejs.cljs")
                                        (assoc opts :output-file "nodejs.js"))]))
@@ -3073,7 +3082,9 @@
                                 (add-preloads opts)
                                 remove-goog-base
                                 add-goog-base
-                                (cond-> (= :nodejs (:target opts))
+                                (cond->
+                                  (and (= :nodejs (:target opts))
+                                       (:nodejs-rt opts))
                                   (concat
                                     [(-compile (io/resource "cljs/nodejscli.cljs")
                                        (assoc opts :output-file "nodejscli.js"))]))
