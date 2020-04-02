@@ -44,7 +44,8 @@ For --main and --repl:
 The init options may be repeated and mixed freely, but must appear before
 any main option.
 
-In the case of --compile you may supply --repl or --serve options afterwards.
+In the case of --compile you may supply --repl or --serve (if applicable)
+options afterwards.
 
 Paths may be absolute or relative in the filesystem or relative to
 classpath. Classpath-relative paths have prefix of @ or @/")
