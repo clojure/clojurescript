@@ -458,6 +458,11 @@ present"
                9000)
        :output-dir (:output-dir options "out")})))
 
+(defn get-main-ns [{:keys [ns options] :as cfg}]
+  (if (and ns (not (#{"-r" "--repl" "-s" "--serve"} ns)))
+    (symbol ns)
+    (:main options)))
+
 (defn default-compile
   [repl-env {:keys [ns args options] :as cfg}]
   (let [rfs      #{"-r" "--repl"}
@@ -465,9 +470,7 @@ present"
         env-opts (repl/repl-options (repl-env))
         repl?    (boolean (or (rfs ns) (rfs (first args))))
         serve?   (boolean (or (sfs ns) (sfs (first args))))
-        main-ns  (if (and ns (not ((into rfs sfs) ns)))
-                   (symbol ns)
-                   (:main options))
+        main-ns  (get-main-ns cfg)
         opts     (as->
                    (merge
                      (select-keys env-opts
@@ -479,12 +482,16 @@ present"
                      (not (:output-to opts))
                      (assoc :output-to
                        (.getPath (io/file (:output-dir opts "out") "main.js")))
+
                      (= :advanced (:optimizations opts))
                      (dissoc :browser-repl)
+
                      (not (:output-dir opts))
                      (assoc :output-dir "out")
+
                      (not (contains? opts :aot-cache))
                      (assoc :aot-cache true)
+
                      (sequential? (:watch opts))
                      (update :watch cljs.closure/compilable-input-paths)))
         convey   (into [:output-dir] repl/known-repl-opts)
