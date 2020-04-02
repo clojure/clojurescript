@@ -103,7 +103,7 @@
 
     (find-var sym)))
 
-(defn- opts-fn
+(defn opts-fn
   "Extracts a function from opts, by default expecting a function value, but
   converting from a namespaced symbol if needed."
   [kw opts]
