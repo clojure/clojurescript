@@ -15,7 +15,6 @@
   (:refer-clojure :exclude [compile])
   (:require [clojure.java.io :as io]
             [cljs.util :as util]
-            [cljs.env :as env]
             [cljs.analyzer :as ana]
             [cljs.analyzer.api :as ana-api]
             [cljs.closure :as closure])
@@ -52,7 +51,7 @@
   ('example.core 'example.util)"
   ([namespaces]
    (closure/cljs-dependents-for-macro-namespaces
-     (ana-api/current|empty-state) namespaces))
+     (ana-api/empty-state) namespaces))
   ([state namespaces]
    (closure/cljs-dependents-for-macro-namespaces state namespaces)))
 
@@ -68,9 +67,9 @@
   provide build options with :output-dir specified."
   ([src] (src-file->target-file src nil))
   ([src opts]
-   (src-file->target-file (ana-api/current|empty-state) src opts))
+   (src-file->target-file (ana-api/empty-state opts) src opts))
   ([state src opts]
-   (env/with-compiler-env state
+   (ana-api/with-state state
      (binding [ana/*cljs-warning-handlers* (:warning-handlers opts ana/*cljs-warning-handlers*)]
        (closure/src-file->target-file src opts)))))
 
@@ -79,9 +78,9 @@
   the goog.require statement for it."
   ([src] (src-file->goog-require src nil))
   ([src opts]
-   (src-file->goog-require (ana-api/current|empty-state) src opts))
+   (src-file->goog-require (ana-api/empty-state opts) src opts))
   ([state src opts]
-   (env/with-compiler-env state
+   (ana-api/with-state state
      (binding [ana/*cljs-warning-handlers* (:warning-handlers opts ana/*cljs-warning-handlers*)]
        (closure/src-file->goog-require src opts)))))
 
@@ -121,7 +120,7 @@
   .cljs, .cljc, .js. Returns a map containing :relative-path a string, and
   :uri a URL."
   ([ns]
-   (ns->location ns (ana-api/current|empty-state)))
+   (ns->location ns (ana-api/empty-state)))
   ([ns compiler-env]
    (closure/source-for-namespace ns compiler-env)))
 
@@ -139,9 +138,9 @@
   ([xs]
    (add-dependency-sources xs {}))
   ([xs opts]
-   (add-dependency-sources (ana-api/current|empty-state) xs opts))
+   (add-dependency-sources (ana-api/empty-state opts) xs opts))
   ([state xs opts]
-   (env/with-compiler-env state
+   (ana-api/with-state state
      (closure/add-dependency-sources xs opts))))
 
 (defn add-dependencies
@@ -180,9 +179,9 @@
 (defn compile
   "Given a Compilable, compile it and return an IJavaScript."
   ([opts compilable]
-   (compile (ana-api/current|empty-state) opts compilable))
+   (compile (ana-api/empty-state opts) opts compilable))
   ([state opts compilable]
-   (env/with-compiler-env state
+   (ana-api/with-state state
      (closure/compile compilable opts))))
 
 (defn output-unoptimized
@@ -245,8 +244,8 @@
    (if (compiler-opts? dependencies)
      (install-node-deps! (:npm-deps dependencies) dependencies)
      (install-node-deps! dependencies
-       (when-not (nil? env/*compiler*)
-         (:options @env/*compiler*)))))
+       (when-let [state (ana-api/current-state)]
+         (:options @state)))))
   ([dependencies opts]
    {:pre [(map? dependencies)]}
    (closure/check-npm-deps opts)
@@ -264,8 +263,8 @@
    (if (compiler-opts? dependencies)
      (get-node-deps (keys (:npm-deps dependencies)) dependencies)
      (get-node-deps dependencies
-       (when-not (nil? env/*compiler*)
-         (:options @env/*compiler*)))))
+       (when-let [state (ana-api/current-state)]
+         (:options @state)))))
   ([dependencies opts]
    {:pre [(sequential? dependencies)]}
    (closure/index-node-modules
@@ -279,12 +278,12 @@
    installed."
   ([entries]
    (node-inputs entries
-     (:options (ana-api/current|empty-state))))
+     (:options (ana-api/empty-state))))
   ([entries opts]
    (closure/node-inputs entries opts)))
 
 (defn node-modules
   "Return a sequence of requirable libraries found under node_modules."
   ([opts]
-   (env/with-compiler-env (ana-api/empty-state opts)
+   (ana-api/with-state (ana-api/empty-state opts)
      (filter :provides (closure/index-node-modules-dir)))))

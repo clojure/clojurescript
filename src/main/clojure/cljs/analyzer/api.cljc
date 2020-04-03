@@ -28,16 +28,12 @@
   ([opts]
    (env/default-compiler-env opts)))
 
-(defn current|empty-state
-  "Returns the currently bound compiler state or an empty one"
-  []
-  (if-not (nil? env/*compiler*)
-    env/*compiler*
-    (empty-state)))
+(defn current-state []
+  env/*compiler*)
 
 (defmacro with-state
   "Run the body with the given compilation state Atom<Map>."
-  [state body]
+  [state & body]
   `(env/with-compiler-env ~state
      ~@body))
 
@@ -67,14 +63,12 @@
 
 (defn get-options
   "Return the compiler options from compiler state."
-  ([] (get-options env/*compiler*))
   ([state]
    (get @state :options)))
 
 (defn get-js-index
   "Return the currently computed Google Closure js dependency index from the
   compiler state."
-  ([] (get-options env/*compiler*))
   ([state]
    (get @state :js-dependency-index)))
 
@@ -90,7 +84,7 @@
      ([env form] (analyze env form nil))
      ([env form name] (analyze env form name nil))
      ([env form name opts]
-      (analyze (current|empty-state) env form name opts))
+      (analyze (empty-state opts) env form name opts))
      ([state env form name opts]
       (env/with-compiler-env state
         (binding [ana/*cljs-warning-handlers* (:warning-handlers opts ana/*cljs-warning-handlers*)]
@@ -117,7 +111,7 @@
      ([src] (parse-ns src nil nil))
      ([src opts] (parse-ns src nil opts))
      ([src dest opts]
-      (parse-ns (current|empty-state) src dest opts))
+      (parse-ns (empty-state opts) src dest opts))
      ([state src dest opts]
       (env/with-compiler-env state
         (binding [ana/*cljs-warning-handlers* (:warning-handlers opts ana/*cljs-warning-handlers*)]
@@ -134,7 +128,7 @@
       meaningful value."
      ([f] (analyze-file f nil))
      ([f opts]
-      (analyze-file (current|empty-state) f opts))
+      (analyze-file (empty-state opts) f opts))
      ([state f opts]
       (env/with-compiler-env state
         (binding [ana/*cljs-warning-handlers* (:warning-handlers opts ana/*cljs-warning-handlers*)]
