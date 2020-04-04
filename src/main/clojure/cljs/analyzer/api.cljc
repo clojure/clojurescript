@@ -63,12 +63,14 @@
 
 (defn get-options
   "Return the compiler options from compiler state."
+  ([] (get-options (current-state)))
   ([state]
    (get @state :options)))
 
 (defn get-js-index
   "Return the currently computed Google Closure js dependency index from the
   compiler state."
+  ([] (get-options (current-state)))
   ([state]
    (get @state :js-dependency-index)))
 
