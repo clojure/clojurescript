@@ -525,6 +525,14 @@ present"
     (-> (get commands (keyword (str (name k) "-dispatch")))
       keys set)))
 
+(defn bool-init-options [commands]
+  (reduce
+    (fn [ret [flags config]]
+      (cond-> ret
+        (= "bool" (:arg config))
+        (into flags)))
+    #{} (:init commands)))
+
 (defn dispatch? [commands k opt]
   (contains? (get-options commands k) opt))
 
@@ -628,7 +636,7 @@ present"
 
 (defn normalize [commands args]
   (if (not (contains? (get-options commands :main) (first args)))
-    (let [pred (complement #{"-v" "--verbose"})
+    (let [pred (complement (bool-init-options commands))
           [pre post] ((juxt #(take-while pred %)
                             #(drop-while pred %))
                        args)]
