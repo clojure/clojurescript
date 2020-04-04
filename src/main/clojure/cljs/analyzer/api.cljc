@@ -70,7 +70,7 @@
 (defn get-js-index
   "Return the currently computed Google Closure js dependency index from the
   compiler state."
-  ([] (get-options (current-state)))
+  ([] (get-js-index (current-state)))
   ([state]
    (get @state :js-dependency-index)))
 
