@@ -2928,14 +2928,17 @@
               (map str (keys top-level)))))))
     opts))
 
-(defn output-bootstrap [{:keys [target] :as opts}]
-  (when (and (#{:nodejs} target)
-             (not= (:optimizations opts) :whitespace))
+(defn output-bootstrap [{:keys [target target-fn] :as opts}]
+  (when (or (and (#{:nodejs} target)
+                 (not= (:optimizations opts) :whitespace))
+            target-fn)
     (let [target-str (name target)
           outfile    (io/file (util/output-directory opts)
                        "goog" "bootstrap" (str target-str ".js"))]
-      (util/mkdirs outfile)
-      (spit outfile (slurp (io/resource (str "cljs/bootstrap_" target-str ".js")))))))
+      ;; not all targets using :target-fn might provide a bootstrap file to include
+      (when-let [bootstrap-file (io/resource (str "cljs/bootstrap_" target-str ".js"))]
+        (util/mkdirs outfile)
+        (spit outfile (slurp bootstrap-file))))))
 
 (defn compile-inputs
   "Compile inputs and all of their transitive dependencies including JS modules,
