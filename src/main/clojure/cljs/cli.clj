@@ -635,22 +635,27 @@ present"
                                 :doc "Print this help message and exit"}}}))
 
 (defn normalize [commands args]
-  (if (not (contains? (get-options commands :main) (first args)))
-    (let [pred (complement (bool-init-options commands))
-          [pre post] ((juxt #(take-while pred %)
-                            #(drop-while pred %))
-                       args)]
-      (cond
-        (= pre args) pre
+  (letfn [(normalize* [args*]
+            (if (not (contains? (get-options commands :main) (first args*)))
+              (let [pred (complement (bool-init-options commands))
+                    [pre post] ((juxt #(take-while pred %)
+                                  #(drop-while pred %))
+                                args*)]
+                (cond
+                  (= pre args*) pre
 
-        (not (#{"true" "false"} (fnext post)))
-        (concat pre [(first post) "true"]
-          (normalize commands (next post)))
+                  (not (#{"true" "false"} (fnext post)))
+                  (concat pre [(first post) "true"]
+                    (normalize commands (next post)))
 
-        :else
-        (concat pre [(first post) (fnext post)]
-          (normalize commands (nnext post)))))
-    args))
+                  :else
+                  (concat pre [(first post) (fnext post)]
+                    (normalize commands (nnext post)))))
+              args*))]
+    (loop [args' (normalize* args)]
+      (if (= args args')
+        args'
+        (recur (normalize* args))))))
 
 (defn merged-commands [repl-env]
   (add-commands default-commands
