@@ -652,10 +652,10 @@ present"
                   (concat pre [(first post) (fnext post)]
                     (normalize commands (nnext post)))))
               args*))]
-    (loop [args' (normalize* args)]
+    (loop [args args args' (normalize* args)]
       (if (= args args')
         args'
-        (recur (normalize* args))))))
+        (recur args' (normalize* args'))))))
 
 (defn merged-commands [repl-env]
   (add-commands default-commands
