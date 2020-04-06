@@ -42,7 +42,7 @@
 (defonce ^:dynamic *module-manager* (create-module-manager))
 
 (.setAllModuleInfo *module-manager* (to-js module-infos))
-(.setModuleUris *module-manager*
+(.setModuleTrustedUris *module-manager*
   (cond-> module-uris (map? module-uris) to-js))
 
 (defn loaded?
