@@ -1211,6 +1211,8 @@
                          (prompt)
                          (flush))
                        (recur))))))))
+         (catch Throwable t
+           (throw (ex-info "Unexpected error during REPL initialization" {} t)))
          (finally
            (reset! done? true)
            (-tear-down repl-env)))))))
