@@ -29,10 +29,10 @@
           (throw
             (ex-info (str "REPL namespace " repl-ns " does not define repl-env var")
               {:repl-ns repl-ns})))
-        (catch Throwable _
+        (catch Throwable t
           (throw
-            (ex-info (str "REPL namespace " repl-ns " does not exist")
-              {:repl-ns repl-ns})))))
+            (ex-info (str "Failed to load REPL namespace " repl-ns)
+              {:repl-ns repl-ns} t)))))
     browser/repl-env))
 
 (defn- normalize* [args]
