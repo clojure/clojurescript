@@ -2078,13 +2078,14 @@
                         :out-file (.toString out-file)}))]
     (when (and (not js-module?)
                (or (not (.exists out-file))
-                   ;; no caching yet for GCL files that need transpilation
-                   transpile?
-                   (and res (util/changed? out-file res))))
+                   (and res (util/changed? out-file res))
+                   ;; always re-emit GCL libs under optimizations higher than :none
+                   ;; :none will just use the cached transpiled result
+                   (and transpile? (not= :none optimizations))))
       (when (and res (or ana/*verbose* (:verbose opts)))
         (util/debug-prn "Copying" (str res) "to" (str out-file)))
       (util/mkdirs out-file)
-      (if (and (= :none optimizations) transpile?)
+      (if (and transpile? (= :none optimizations))
         (spit out-file (transpile opts res js))
         (spit out-file (deps/-source js)))
       (when res
