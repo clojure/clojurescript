@@ -1059,7 +1059,7 @@
   (doseq [[unknown-opt suggested-opt] (util/unknown-opts (set (keys opts)) (set/union known-repl-opts cljsc/known-opts))]
     (when suggested-opt
       (println (str "WARNING: Unknown option '" unknown-opt "'. Did you mean '" suggested-opt "'?"))))
-  (when fast-initial-prompt?
+  (when (true? fast-initial-prompt?)
     (initial-prompt quit-prompt prompt))
   (let [repl-opts (-repl-options repl-env)
         repl-requires (into repl-requires (:repl-requires repl-opts))
@@ -1125,6 +1125,8 @@
                         (if-let [merge-opts (:merge-opts (-setup repl-env opts))]
                           (merge opts merge-opts)
                           opts)))
+               _    (when (= :after-setup fast-initial-prompt?)
+                      (initial-prompt quit-prompt prompt))
                init (do
                       (evaluate-form repl-env env "<cljs repl>"
                         `(~'set! ~'cljs.core/*print-namespace-maps* true)

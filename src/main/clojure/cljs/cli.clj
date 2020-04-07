@@ -298,8 +298,9 @@ is trying load some arbitrary ns."
       (subs repl-ns (count "cljs.repl.")))))
 
 (defn- fast-initial-prompt? [repl-env inits]
-  (and (empty? inits)
-       (contains? #{"node"} (repl-name repl-env))))
+  (boolean
+    (and (empty? inits)
+         (contains? #{"node"} (repl-name repl-env)))))
 
 (defn- repl-opt
   "Start a repl with args and inits. Print greeting if no eval options were
@@ -316,7 +317,10 @@ present"
         renv   (apply repl-env (mapcat identity reopts))]
     (repl/repl* renv
       (assoc (dissoc-entry-point-opts opts)
-        ::repl/fast-initial-prompt? (fast-initial-prompt? repl-env inits)
+        ::repl/fast-initial-prompt?
+        (or (fast-initial-prompt? repl-env inits)
+            (::repl/fast-initial-prompt? (repl/repl-options renv)))
+
         :inits
         (into
           [{:type :init-forms
