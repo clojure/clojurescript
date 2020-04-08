@@ -463,6 +463,10 @@ present"
                9000)
        :output-dir (:output-dir options "out")})))
 
+(defn- install-deps-opt
+  [_ _ {:keys [options] :as cfg}]
+  (closure/maybe-install-node-deps! options))
+
 (defn get-main-ns [{:keys [ns options] :as cfg}]
   (if (and ns (not (#{"-r" "--repl" "-s" "--serve"} ns)))
     (symbol ns)
@@ -619,7 +623,9 @@ present"
                                           "system-dependent path-separated list of EDN files / classpath resources. Options "
                                           "will be merged left to right.")}}
      :main
-     {["-r" "--repl"]          {:fn repl-opt
+     {["--install-deps"]       {:fn install-deps-opt
+                                :doc "Install all :npm-deps found upstream and in supplied compiler options"}
+      ["-r" "--repl"]          {:fn repl-opt
                                 :doc "Run a repl"}
       ["-m" "--main"]          {:fn main-opt
                                 :arg "ns"
