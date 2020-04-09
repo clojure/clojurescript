@@ -346,6 +346,16 @@
                  :with-core? true}))]
     (is (empty? @ws))))
 
+(deftest test-cljs-1924
+  (let [ws  (atom [])
+        res (binding [ana/*cljs-static-fns* true]
+              (infer-test-helper
+                {:forms '[(defrecord Foo [])]
+                 :warnings ws
+                 :warn true
+                 :with-core? true}))]
+    (is (empty? @ws))))
+
 (comment
   (binding [ana/*cljs-ns* ana/*cljs-ns*]
     (ana/no-warn
