@@ -185,6 +185,10 @@ classpath. Classpath-relative paths have prefix of @ or @/")
   [cfg path]
   (assoc-in cfg [:options :output-to] path))
 
+(defn- deps-cmd-opt
+  [cfg deps-cmd]
+  (assoc-in cfg [:options :deps-cmd] deps-cmd))
+
 (defn- target-opt
   [cfg target]
   (let [target (if (= "node" target) "nodejs" target)]
@@ -600,6 +604,9 @@ present"
       ["-o" "--output-to"]     {:group ::compile :fn output-to-opt
                                 :arg "file"
                                 :doc "Set the output compiled file"}
+      ["--deps-cmd"]           {:group ::compile :fn deps-cmd-opt
+                                :arg "string"
+                                :doc "Set the node dependency manager. Only npm or yarn supported"}
       ["-O" "--optimizations"] {:group ::compile :fn optimize-opt
                                 :arg "level"
                                 :doc

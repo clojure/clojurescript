@@ -205,7 +205,7 @@
     :watch :watch-error-fn :watch-fn :install-deps :process-shim :rename-prefix :rename-prefix-namespace
     :closure-variable-map-in :closure-property-map-in :closure-variable-map-out :closure-property-map-out
     :stable-names :ignore-js-module-exts :opts-cache :aot-cache :elide-strict :fingerprint :spec-skip-macros
-    :nodejs-rt :target-fn})
+    :nodejs-rt :target-fn :deps-cmd})
 
 (def string->charset
   {"iso-8859-1" StandardCharsets/ISO_8859_1
@@ -2539,7 +2539,7 @@
         (recur buf)))))
 
 (defn maybe-install-node-deps!
-  [{:keys [npm-deps verbose] :as opts}]
+  [{:keys [deps-cmd npm-deps verbose] :or {deps-cmd "npm"} :as opts}]
   (let [npm-deps (merge npm-deps (compute-upstream-npm-deps opts))]
     (when-not (empty? npm-deps)
       (let [pkg-json (io/file "package.json")]
@@ -2548,7 +2548,10 @@
         (when-not (.exists pkg-json)
           (spit pkg-json "{}"))
         (let [proc (-> (ProcessBuilder.
-                         (into (cond->> ["npm" "install" "@cljs-oss/module-deps"]
+                         (into (cond->>
+                                 [deps-cmd
+                                  ({"npm" "install" "yarn" "add"} deps-cmd)
+                                  "@cljs-oss/module-deps"]
                                  util/windows? (into ["cmd" "/c"]))
                            (map (fn [[dep version]] (str (name dep) "@" version)))
                            npm-deps))
