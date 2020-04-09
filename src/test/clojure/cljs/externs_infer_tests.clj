@@ -350,7 +350,8 @@
   (let [ws  (atom [])
         res (binding [ana/*cljs-static-fns* true]
               (infer-test-helper
-                {:forms '[(defrecord Foo [])]
+                {:forms '[(set! *warn-on-infer* true)
+                          (defrecord Foo [])]
                  :warnings ws
                  :warn true
                  :with-core? true}))]
