@@ -377,15 +377,16 @@
               (infer-test-helper
                 {:forms '[(ns test.foo
                             (:import [goog.history Html5History]))
-
                           (set! *warn-on-infer* true)
-
                           (doto (Html5History.)
                             (.setUseFragment false))]
                  :warnings ws
                  :warn true
                  :with-core? true}))]
-    (is (empty? @ws))))
+    (is (empty? @ws))
+    ;; TODO:
+    ;; test that the ctor returns the expected type in a let
+    ))
 
 (comment
   (binding [ana/*cljs-ns* ana/*cljs-ns*]
