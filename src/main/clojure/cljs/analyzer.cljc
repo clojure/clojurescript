@@ -2514,7 +2514,13 @@
 
                       :else
                       (when (seq? target)
-                        (let [texpr (analyze-seq enve target nil)]
+                        (let [texpr (if (-> target meta :extend-type)
+                                      ;; we're setting a prototype via extend-type macro
+                                      ;; nothing to warn
+                                      (binding [*cljs-warnings*
+                                                (assoc *cljs-warnings* :infer-warning false)]
+                                        (analyze-seq enve target nil))
+                                      (analyze-seq enve target nil))]
                           (when (:field texpr)
                             texpr))))
               vexpr (analyze enve val)]

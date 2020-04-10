@@ -9,7 +9,7 @@
     [cljs.test-util :refer [unsplit-lines]]
     [cljs.util :as util]
     [clojure.string :as string]
-    [clojure.test :refer [is are deftest testing]]))
+    [clojure.test :as test :refer [is are deftest testing]]))
 
 (def externs-cenv
   (atom

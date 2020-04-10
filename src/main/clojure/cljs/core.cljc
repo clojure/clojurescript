@@ -1461,7 +1461,8 @@
   [tsym sym] `(.. ~tsym ~(to-property sym)))
 
 (core/defmethod extend-prefix :default
-  [tsym sym] `(.. ~tsym ~'-prototype ~(to-property sym)))
+  [tsym sym]
+  (with-meta `(.. ~tsym ~'-prototype ~(to-property sym)) {:extend-type true}))
 
 (core/defn- adapt-obj-params [type [[this & args :as sig] & body]]
   (core/list (vec args)
