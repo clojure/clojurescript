@@ -355,3 +355,11 @@
              (:tag (analyze test-env '(bit-count n)))))
         'number))
   )
+
+(deftest test-ctor-infer
+  (is (= (env/with-compiler-env test-cenv
+           (ana/no-warn
+             (:tag (analyze test-cenv
+                     '(let [g (Foo.)]
+                        q)))))
+         'cljs.core/Foo)))
