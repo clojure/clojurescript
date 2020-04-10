@@ -357,6 +357,20 @@
                  :with-core? true}))]
     (is (empty? @ws))))
 
+(deftest test-cljs-2862
+  (let [ws  (atom [])
+        res (binding [ana/*cljs-static-fns* true]
+              (infer-test-helper
+                {:forms '[(ns demo.app)
+                          (set! *warn-on-infer* true)
+                          (deftype Foo []
+                            Object
+                            (bar [this] :bar))]
+                 :warnings ws
+                 :warn true
+                 :with-core? true}))]
+    (is (empty? @ws))))
+
 (comment
   (binding [ana/*cljs-ns* ana/*cljs-ns*]
     (ana/no-warn
