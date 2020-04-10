@@ -1456,3 +1456,22 @@
         '[(ns test.foo
            (:import [goog.history Html5History]))]))
     (is (some? (get-in @cenv [::ana/namespaces 'goog.history.Html5History :defs])))))
+
+(deftest test-analyze-goog-ns-ctor
+  (let [cenv (env/default-compiler-env)]
+    (env/with-compiler-env cenv
+      (ana/analyze-form-seq
+        '[(ns test.foo
+            (:import [goog.history Html5History]))]))
+    (is (some? (get-in @cenv [::ana/namespaces 'goog.history.Html5History :defs 'Html5History])))))
+
+(comment
+
+  (let [cenv (env/default-compiler-env)]
+    (env/with-compiler-env cenv
+      (ana/analyze-form-seq
+        '[(ns test.foo
+            (:import [goog.history Html5History]))]))
+    (get-in @cenv [::ana/namespaces 'goog.history.Html5History :defs]))
+
+  )

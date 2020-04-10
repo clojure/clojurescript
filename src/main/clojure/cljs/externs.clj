@@ -205,9 +205,12 @@
        defaults sources))))
 
 (defn ns-match? [ns-segs var-segs]
-  (and
-    (= (inc (count ns-segs)) (count var-segs))
-    (= ns-segs (take (count ns-segs) var-segs))))
+  (or
+    ;; exact match (i.e. ctors)
+    (= ns-segs var-segs)
+    (and
+      (= (inc (count ns-segs)) (count var-segs))
+      (= ns-segs (take (count ns-segs) var-segs)))))
 
 (defn parsed->defs [externs]
   (let [ns-segs (into [] (map symbol (string/split (str *goog-ns*) #"\.")))]
