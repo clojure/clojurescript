@@ -371,6 +371,22 @@
                  :with-core? true}))]
     (is (empty? @ws))))
 
+(deftest test-cljs-2957
+  (let [ws  (atom [])
+        res (binding [ana/*cljs-static-fns* true]
+              (infer-test-helper
+                {:forms '[(ns test.foo
+                            (:import [goog.history Html5History]))
+
+                          (set! *warn-on-infer* true)
+
+                          (doto (Html5History.)
+                            (.setUseFragment false))]
+                 :warnings ws
+                 :warn true
+                 :with-core? true}))]
+    (is (empty? @ws))))
+
 (comment
   (binding [ana/*cljs-ns* ana/*cljs-ns*]
     (ana/no-warn
