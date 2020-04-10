@@ -2040,7 +2040,7 @@
                      (recur (assoc opts :doc head) methods tail)
                      (core/keyword? head)
                      (recur (assoc opts head (first tail)) methods (rest tail))
-                     (core/list? head)
+                     (core/seq? head)
                      (recur opts (conj methods head) tail)
                      :else
                      (throw #?(:clj  (Exception.
