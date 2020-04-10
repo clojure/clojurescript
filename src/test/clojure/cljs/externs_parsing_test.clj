@@ -27,7 +27,7 @@
         v  (get-in ns [:defs 'getWeekNumber])]
     (is (= 3 (-> v :method-params first count))))
   (let [ns (externs/analyze-goog-file "goog/date/date.js" 'goog.date.month)]
-    (is (= 12 (-> ns :defs count)))))
+    (is (= 13 (-> ns :defs count)))))
 
 (deftest cljs-3170&3189
   (let [ns (externs/analyze-goog-file "goog/object/object.js")]
