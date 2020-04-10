@@ -36,7 +36,11 @@
         'cljs.core/IList))
   (is (= (env/with-compiler-env test-cenv
            (:tag (analyze test-env '(fn [x] x))))
-        'function)))
+        'function))
+  (is (= (env/with-compiler-env test-cenv
+           (ana/no-warn
+             (:tag (analyze test-env '(Foo.)))))
+        'cljs.core/Foo)))
 
 (deftest if-inference
   (is (= (ana/no-warn
