@@ -1156,8 +1156,11 @@
 (defn resolve-var
   "Resolve a var. Accepts a side-effecting confirm fn for producing
    warnings about unresolved vars."
-  ([env sym] (resolve-var env sym nil))
+  ([env sym]
+   (resolve-var env sym nil))
   ([env sym confirm]
+   (resolve-var env sym confirm true))
+  ([env sym confirm default?]
    (let [locals (:locals env)]
      (if #?(:clj  (= "js" (namespace sym))
             :cljs (identical? "js" (namespace sym)))
@@ -1209,21 +1212,15 @@
            (let [idx    (.indexOf s ".")
                  prefix (symbol (subs s 0 idx))
                  suffix (subs s (inc idx))]
-             (if-some [lb (handle-symbol-local prefix (get locals prefix))]
-               {:op :local
-                :name (symbol (str (:name lb) "." suffix))}
-               (if-some [full-ns (gets @env/*compiler* ::namespaces current-ns :imports prefix)]
-                 {:op :js-var
-                  :name (symbol (str full-ns) suffix)}
-                 (if-some [info (gets @env/*compiler* ::namespaces current-ns :defs prefix)]
-                   (merge info
-                     {:name (symbol (str current-ns) (str sym))
-                      :op :var
-                      :ns current-ns})
-                   (merge (gets @env/*compiler* ::namespaces prefix :defs (symbol suffix))
-                     {:name (if (= "" prefix) (symbol suffix) (symbol (str prefix) suffix))
-                      :op :var
-                      :ns prefix})))))
+             ;; check if prefix is some existing def
+             (if-let [resolved (resolve-var env prefix nil false)]
+               (update resolved :name #(symbol (str % "." suffix)))
+               (let [idx (.lastIndexOf s ".")
+                     pre (subs s 0 idx)
+                     suf (subs s (inc idx))]
+                 {:op   :var
+                  :name (symbol pre suf)
+                  :ns   (symbol pre)})))
 
            (some? (gets @env/*compiler* ::namespaces current-ns :uses sym))
            (let [full-ns (gets @env/*compiler* ::namespaces current-ns :uses sym)]
@@ -1236,7 +1233,7 @@
              (resolve* env sym full-ns current-ns))
 
            (some? (gets @env/*compiler* ::namespaces current-ns :imports sym))
-           (recur env (gets @env/*compiler* ::namespaces current-ns :imports sym) confirm)
+           (recur env (gets @env/*compiler* ::namespaces current-ns :imports sym) confirm default?)
 
            (some? (gets @env/*compiler* ::namespaces current-ns :defs sym))
            (do
@@ -1260,7 +1257,7 @@
            (resolve-invokeable-ns s current-ns env)
 
            :else
-           (do
+           (when default?
              (when (some? confirm)
                (confirm env current-ns sym))
              (merge (gets @env/*compiler* ::namespaces current-ns :defs sym)

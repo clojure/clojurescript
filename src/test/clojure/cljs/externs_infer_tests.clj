@@ -383,10 +383,7 @@
                  :warnings ws
                  :warn true
                  :with-core? true}))]
-    (is (empty? @ws))
-    ;; TODO:
-    ;; test that the ctor returns the expected type in a let
-    ))
+    (is (empty? @ws))))
 
 (comment
   (binding [ana/*cljs-ns* ana/*cljs-ns*]

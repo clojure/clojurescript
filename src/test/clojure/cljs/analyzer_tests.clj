@@ -12,7 +12,6 @@
     [cljs.analyzer.api :as ana-api]
     [cljs.compiler :as comp]
     [cljs.env :as env]
-    [cljs.js-deps :as deps]
     [cljs.test-util :refer [unsplit-lines]]
     [cljs.util :as util]
     [clojure.java.io :as io]

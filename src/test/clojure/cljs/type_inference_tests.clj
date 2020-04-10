@@ -357,9 +357,20 @@
   )
 
 (deftest test-ctor-infer
-  (is (= (env/with-compiler-env test-cenv
-           (ana/no-warn
-             (:tag (analyze test-cenv
-                     '(let [g (Foo.)]
-                        q)))))
-         'cljs.core/Foo)))
+  (is (= 'cljs.core/Foo
+         (:tag
+           (env/with-compiler-env test-cenv
+             (ana/no-warn
+               (analyze test-env
+                 '(let [g (Foo.)]
+                    g))))))))
+
+(deftest test-goog-import-ctor-infer
+  (is (= 'goog.history/Html5History
+         (:tag
+           (env/with-compiler-env (env/default-compiler-env)
+             (ana/analyze-form-seq
+               '[(ns test.foo
+                   (:import [goog.history Html5History]))
+                 (Html5History.)]
+               {} true))))))

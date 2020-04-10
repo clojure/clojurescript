@@ -32,6 +32,17 @@
 (def aenv (assoc-in (ana/empty-env) [:ns :name] 'cljs.user))
 (def cenv (env/default-compiler-env))
 
+(defn compile-form-seq
+  ([forms]
+   (compile-form-seq forms
+     (when env/*compiler*
+       (:options @env/*compiler*))))
+  ([forms opts]
+   (with-out-str
+     (binding [ana/*cljs-ns* 'cljs.user]
+       (doseq [form forms]
+         (comp/emit (ana/analyze (ana/empty-env) form)))))))
+
 #_(deftest should-recompile
   (let [src (File. "test/hello.cljs")
         dst (File/createTempFile "compilertest" ".cljs")
@@ -330,6 +341,22 @@
     (is (not (str/includes? snippet3 "(function (foo){")))
     (is (not (str/includes? snippet3 "(function (x){")))
     ))
+
+(deftest test-goog-ctor-import-gen
+  (is (true? (str/includes?
+               (env/with-compiler-env (env/default-compiler-env)
+                 (compile-form-seq
+                   '[(ns test.foo
+                       (:import [goog.history Html5History]))
+                     (defn bar [] Html5History)]))
+               "return goog.history.Html5History;")))
+  (is (true? (str/includes?
+               (env/with-compiler-env (env/default-compiler-env)
+                 (compile-form-seq
+                   '[(ns test.foo
+                       (:import [goog.history Html5History]))
+                     (def hist (Html5History.))]))
+               "(new goog.history.Html5History());"))))
 
 ;; CLJS-1225
 
