@@ -1,16 +1,9 @@
 (ns cljs.type-inference-tests
   (:require
     [cljs.analyzer :as ana]
-    [cljs.analyzer.api :as ana-api]
     [cljs.analyzer-tests :refer [analyze test-env test-cenv]]
-    [cljs.compiler :as comp]
     [cljs.env :as env]
-    [cljs.js-deps :as deps]
     [cljs.test-util :refer [unsplit-lines]]
-    [cljs.util :as util]
-    [clojure.java.io :as io]
-    [clojure.set :as set]
-    [clojure.string :as string]
     [clojure.test :refer [is are deftest testing]]))
 
 (deftest basic-inference
