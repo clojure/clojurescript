@@ -325,6 +325,11 @@ present"
         (or (fast-initial-prompt? repl-env inits)
             (::repl/fast-initial-prompt? (repl/repl-options renv)))
 
+        :quit-prompt
+        (if (empty? inits)
+          repl/repl-title
+          (constantly nil))
+
         :inits
         (into
           [{:type :init-forms
