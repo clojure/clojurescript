@@ -2497,15 +2497,13 @@
         (when (nil? (:nodejs-rt opts))
           {:nodejs-rt true}))
 
-      ;; :bundle is just sugar for
-      ;; :target :nodejs + :nodejs-rt false
+      ;; :bundle is just sugar
       (= :bundle (:target opts))
-      (->>
-        (merge
-          {:infer-externs true
-           :nodejs-rt     false
-           :npm-deps      true
-           :target        :nodejs}))
+      (merge
+        {:infer-externs true
+         :nodejs-rt     false
+         :npm-deps      true
+         :target        :nodejs})
 
       (= optimizations :none)
       (assoc
