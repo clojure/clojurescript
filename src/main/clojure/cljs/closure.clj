@@ -1744,7 +1744,7 @@
 
             (str (when (or (not module) (= :cljs-base (:module-name opts)))
                    (str (when (bundle? opts)
-                          "import {npmDeps} from \"./deps-rt.js\";")
+                          "import {npmDeps} from \"./deps_rt.js\";")
                         "var CLOSURE_UNCOMPILED_DEFINES = " closure-defines ";\n"
                         "var CLOSURE_NO_DEPS = true;\n"
                         "if(typeof goog == \"undefined\") document.write('<script src=\"" asset-path "/goog/base.js\"></script>');\n"
@@ -2188,6 +2188,9 @@
     (when (:debug-inputs opts)
       (util/debug-prn "DEBUG: all compiler inputs")
       (util/debug-prn (pr-str sources)))
+    (when (bundle? opts)
+      (spit (io/file (util/output-directory opts) "deps_rt.js")
+        (deps-rt-js (keys (get @env/*compiler* :node-module-index)))))
     (cond
       modules
       (let [modules' (module-graph/expand-modules modules sources)]
