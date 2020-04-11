@@ -1676,7 +1676,7 @@
 (defn export-dep [dep]
   (str "\""dep "\": require('" dep "')" ))
 
-(defn deps-rt-js
+(defn npm-deps-js
   "Returns the JavaScript code to support runtime require of bundled modules."
   [node-requires]
   (str
@@ -1744,7 +1744,7 @@
 
             (str (when (or (not module) (= :cljs-base (:module-name opts)))
                    (str (when (bundle? opts)
-                          "import {npmDeps} from \"./deps_rt.js\";")
+                          "import {npmDeps} from \"./npm_deps.js\";")
                         "var CLOSURE_UNCOMPILED_DEFINES = " closure-defines ";\n"
                         "var CLOSURE_NO_DEPS = true;\n"
                         "if(typeof goog == \"undefined\") document.write('<script src=\"" asset-path "/goog/base.js\"></script>');\n"
@@ -2189,8 +2189,8 @@
       (util/debug-prn "DEBUG: all compiler inputs")
       (util/debug-prn (pr-str sources)))
     (when (bundle? opts)
-      (spit (io/file (util/output-directory opts) "deps_rt.js")
-        (deps-rt-js (keys (get @env/*compiler* :node-module-index)))))
+      (spit (io/file (util/output-directory opts) "npm_deps.js")
+        (npm-deps-js (keys (get @env/*compiler* :node-module-index)))))
     (cond
       modules
       (let [modules' (module-graph/expand-modules modules sources)]
