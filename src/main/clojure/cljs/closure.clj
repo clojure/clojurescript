@@ -16,6 +16,7 @@
             [cljs.env :as env]
             [cljs.js-deps :as deps]
             [clojure.java.io :as io]
+            [clojure.java.shell :as sh]
             [clojure.reflect]
             [clojure.set :as set]
             [clojure.string :as string]
@@ -205,7 +206,7 @@
     :watch :watch-error-fn :watch-fn :install-deps :process-shim :rename-prefix :rename-prefix-namespace
     :closure-variable-map-in :closure-property-map-in :closure-variable-map-out :closure-property-map-out
     :stable-names :ignore-js-module-exts :opts-cache :aot-cache :elide-strict :fingerprint :spec-skip-macros
-    :nodejs-rt :target-fn :deps-cmd})
+    :nodejs-rt :target-fn :deps-cmd :bundle-cmd})
 
 (def string->charset
   {"iso-8859-1" StandardCharsets/ISO_8859_1
@@ -3169,6 +3170,32 @@
                                (output-one-file opts)))))
                        (apply output-unoptimized opts js-sources))]
              (output-bootstrap opts)
+             (when (bundle? opts)
+               (when-let [cmd (and (= :none optim)
+                                   (get-in opts [:bundle-cmd :none]))]
+                 (let [{:keys [exit out]}
+                       (try
+                         (apply sh/sh cmd)
+                         (catch Throwable t
+                           (throw
+                             (ex-info ":build-cmd :none failed"
+                               {:cmd cmd} t))))]
+                   (when-not (== 0 exit)
+                     (throw
+                       (ex-info ":bundle-cmd :none failed"
+                         {:cmd cmd :exit-code exit :std-out out})))))
+               (when-let [cmd (and (not= :none optim)
+                                   (get-in opts [:bundle-cmd :default]))]
+                 (let [{:keys [exit out]}
+                       (try
+                         (apply sh/sh cmd)
+                         (catch Throwable t
+                           (ex-info ":build-cmd :default failed"
+                             {:cmd cmd} t)))]
+                   (when-not (== 0 exit)
+                     (throw
+                       (ex-info ":bundle-cmd :default failed"
+                         {:cmd cmd :exit-code exit :std-out out}))))))
              ret))))))
 
 (comment
