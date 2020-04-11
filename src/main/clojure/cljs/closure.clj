@@ -1669,6 +1669,10 @@
                   (if (= :browser mode) "</script>');\n" "\n")))]
      (map preload-str syms))))
 
+(defn bundle? [opts]
+  (and (= :nodejs (:target opts))
+       (false? (:nodejs-rt opts))))
+
 (defn output-main-file
   "Output an entry point. In the non-modules case, opts is simply compiler
   options. When emitting a module entry point, opts must contain :module-name."
@@ -1726,12 +1730,18 @@
                       [main])))))
 
             (str (when (or (not module) (= :cljs-base (:module-name opts)))
-                   (str "var CLOSURE_UNCOMPILED_DEFINES = " closure-defines ";\n"
+                   (str (when (bundle? opts)
+                          "import {npmDeps} from \"./deps-rt.js\";")
+                        "var CLOSURE_UNCOMPILED_DEFINES = " closure-defines ";\n"
                         "var CLOSURE_NO_DEPS = true;\n"
                         "if(typeof goog == \"undefined\") document.write('<script src=\"" asset-path "/goog/base.js\"></script>');\n"
                         "document.write('<script src=\"" asset-path "/goog/deps.js\"></script>');\n"
                         "document.write('<script src=\"" asset-path "/cljs_deps.js\"></script>');\n"
                         "document.write('<script>if (typeof goog == \"undefined\") console.warn(\"ClojureScript could not load :main, did you forget to specify :asset-path?\");</script>');\n"
+                        (when (bundle? opts)
+                          "window.require = function(lib) {\n"
+                          "   return npmDeps[lib];\n"
+                          "}")
                      (apply str (preloads (:preloads opts) :browser))))
               (apply str
                 (map (fn [entry]
@@ -2470,6 +2480,13 @@
       (merge
         (when (nil? (:nodejs-rt opts))
           {:nodejs-rt true}))
+
+      ;; :bundle is just sugar for
+      ;; :target :nodejs + :nodejs-rt false
+      (= :bundle (:target opts))
+      (merge
+        {:target :nodejs
+         :nodejs-rt false})
 
       (= optimizations :none)
       (assoc
