@@ -2065,8 +2065,13 @@
                         result (.compile cc (url->nio-path rsc) source)]
                     (.source result))
                   source)]
-    (cond-> source'
-      (= :goog module) add-goog-load)))
+    (str "/*TRANSPILED*/"
+      (cond-> source'
+        (= :goog module) add-goog-load))))
+
+(defn requires-transpile? [out-file]
+  (let [line (first (line-seq (io/reader out-file)))]
+    (not (string/starts-with? line "/*TRANSPILED*/"))))
 
 (comment
   (println (slurp (io/resource "goog/math/long.js")))
@@ -2107,7 +2112,9 @@
                    (and res (util/changed? out-file res))
                    ;; always re-emit GCL libs under optimizations higher than :none
                    ;; :none will just use the cached transpiled result
-                   (and transpile? (not= :none optimizations))))
+                   (and transpile?
+                        (or (not= :none optimizations)
+                            (requires-transpile? out-file)))))
       (when (and res (or ana/*verbose* (:verbose opts)))
         (util/debug-prn "Copying" (str res) "to" (str out-file)))
       (util/mkdirs out-file)
