@@ -165,11 +165,14 @@
 (defn unchecked-arrays? []
   *unchecked-arrays*)
 
+(defn compiler-options []
+  (get @env/*compiler* :options))
+
 (defn checked-arrays
   "Returns false-y, :warn, or :error based on configuration and the
    current value of *unchecked-arrays*."
   []
-  (when (and (not (-> @env/*compiler* :options :advanced))
+  (when (and (not (:advanced (compiler-options)))
              (not *unchecked-arrays*))
     *checked-arrays*))
 
@@ -1070,19 +1073,38 @@
    :op :js-var
    :ns full-ns})
 
-(defmethod resolve* :node
-  [env sym full-ns current-ns]
-  {:ns current-ns
-   :name (symbol (str current-ns) (str (munge-node-lib full-ns) "." (name sym)))
-   :op :js-var
-   :foreign true})
-
-(defmethod resolve* :global
-  [env sym full-ns current-ns]
+(defn extern-pre [sym current-ns]
   (let [pre (into '[Object] (->> (string/split (name sym) #"\.") (map symbol) vec))]
     (when-not (has-extern? pre)
       (swap! env/*compiler* update-in
         (into [::namespaces current-ns :externs] pre) merge {}))
+    pre))
+
+(defn node-like?
+  ([]
+   (node-like? (compiler-options)))
+  ([opts]
+   (and (= :nodejs (:target opts))
+        (false? (:nodejs-rt opts)))))
+
+(defmethod resolve* :node
+  [env sym full-ns current-ns]
+  ;; not actually targeting Node.js, we need to generate externs
+  (if (node-like?)
+    (let [pre (extern-pre sym current-ns)]
+      {:ns      current-ns
+       :name    (symbol (str current-ns) (str (munge-node-lib full-ns) "." (name sym)))
+       :op      :js-var
+       :tag     (with-meta 'js {:prefix pre})
+       :foreign true})
+    {:ns      current-ns
+     :name    (symbol (str current-ns) (str (munge-node-lib full-ns) "." (name sym)))
+     :op      :js-var
+     :foreign true}))
+
+(defmethod resolve* :global
+  [env sym full-ns current-ns]
+  (let [pre (extern-pre sym current-ns)]
     {:ns current-ns
      :name (symbol (str current-ns) (str (munge-global-export full-ns) "." (name sym)))
      :op :js-var
