@@ -2502,7 +2502,8 @@
       ;; :bundle is just sugar
       (= :bundle (:target opts))
       (merge
-        {:infer-externs true
+        {:hashbang      false
+         :infer-externs true
          :nodejs-rt     false
          :npm-deps      true
          :target        :nodejs})
