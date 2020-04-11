@@ -1703,7 +1703,7 @@
         (let [asset-path (or (:asset-path opts)
                              (util/output-directory opts))
               closure-defines (json/write-str (:closure-defines opts))]
-          (case (:target opts)
+          (case (:target (cond-> opts (bundle? opts) (dissoc :target)))
             :nodejs
             (add-header opts
               (str (when (or (not module) (= :cljs-base (:module-name opts)))
