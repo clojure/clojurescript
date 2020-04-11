@@ -1762,9 +1762,10 @@
                     (when-let [main (:main opts)]
                       [main]))))
               (when (bundle? opts)
-                "window.require = function(lib) {\n"
-                "   return npmDeps[lib];\n"
-                "}\n"))))))))
+                (str
+                  "window.require = function(lib) {\n"
+                  "   return npmDeps[lib];\n"
+                  "}\n")))))))))
 
 (defn fingerprinted-modules [modules fingerprint-info]
   (into {}
