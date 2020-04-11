@@ -2500,9 +2500,12 @@
       ;; :bundle is just sugar for
       ;; :target :nodejs + :nodejs-rt false
       (= :bundle (:target opts))
-      (merge
-        {:target :nodejs
-         :nodejs-rt false})
+      (->>
+        (merge
+          {:infer-externs true
+           :nodejs-rt     false
+           :npm-deps      true
+           :target        :nodejs}))
 
       (= optimizations :none)
       (assoc
