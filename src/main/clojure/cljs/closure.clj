@@ -1673,6 +1673,19 @@
   (and (= :nodejs (:target opts))
        (false? (:nodejs-rt opts))))
 
+(defn export-dep [dep]
+  (str "\""dep "\": require('" dep "')" ))
+
+(defn deps-rt-js
+  "Returns the JavaScript code to support runtime require of bundled modules."
+  [node-requires]
+  (str
+    "module.exports = {\n"
+    "  npmDeps: {\n"
+    (string/join ",\n" (map (comp #(str "    " %) export-dep) node-requires))
+    "  }\n"
+    "};\n"))
+
 (defn output-main-file
   "Output an entry point. In the non-modules case, opts is simply compiler
   options. When emitting a module entry point, opts must contain :module-name."
