@@ -2190,7 +2190,7 @@
       (util/debug-prn (pr-str sources)))
     (when (bundle? opts)
       (spit (io/file (util/output-directory opts) "npm_deps.js")
-        (npm-deps-js (keys (get @env/*compiler* :node-module-index)))))
+        (npm-deps-js (:node-module-index @env/*compiler*))))
     (cond
       modules
       (let [modules' (module-graph/expand-modules modules sources)]
