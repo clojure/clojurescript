@@ -1,3 +1,52 @@
+## Next
+
+### Changes
+* Removed REPL/target support for Rhino, Nashorn, Graaljs
+* Update Closure Compiler and Google Closure Compiler dependencies
+* CLJS-1628: Make instances of js/Symbol printable
+
+### Enhancements
+* Add :target :bundle for integration with JavaScript bunders (webpack, metro, etc.)
+* Add cljs.main --install-deps flag
+* Add :bundle-cmd compiler option for triggering JS bundler at end of build
+* Add :nodejs-rt compiler option to diable Node.js runtime support (for bundles)
+* Add :target-fn compiler option to allow users to support other targets outside of ClojureScript
+* Add :npm-cmd to allow users to choose `npm` or `yarn` for their dep tool
+* Make fast REPL prompt availble to 3rd party REPLs
+* Transpile GCL libraries that need it
+* Enhance cljs.main to be properly extensible
+* repl-env providing namespaces can now be arbitrary not limited to cljs.repl.*
+* CLJS-3185: Facilitate protocol static dispatch inlining
+* CLJS-3199: Interop with JavaScript's iterable objects via Iterator protocol
+
+### Fixes
+* CLJS-2908: Don't show quick prompt if :verbose or :repl-verbose
+* CLJS-2898: cljs.main: ClojureScript version should not be displayed if there are inits
+* CLJS-2863: Need to reject incorrect fn with fixed arity of more params than variadic
+* CLJS-3086: Switch clj-nil to not be considered a numeric type
+* CLJS-3211: Widen cljs.core/defprotocol sig arguments from list to seq (to include Cons)
+* CLJS-712 & CLJS-2957: resolve-var for dot still wrong, externs inference regression
+* CLJS-2862: Externs inference warning when extending Object
+* CLJS-3161: Include :property for :warning-type :target
+* CLJS-3181: Externs inference fails, even when manual type hint is provided
+* CLJS-3224: Fix cljs.loader due to usage of removed setModuleUris API
+* CLJS-3223: get-js-index 0-arity should call get-js-index 1-arity
+* CLJS-3220: Self-host test-import failing on asserts.assert
+* CLJS-3218: NPE during Closure transpilation in self-host tests
+* CLJS-3217: script/test-self-parity compilation failure stale reference to goog.text.LoremIpsum
+* CLJS-3215: Travis has remnant CLI test involving GraalJS
+* CLJS-3219: Problem with asserts namespace inside goog.math.Long
+* CLJS-3119: get with negative ndx on string inconsistent with Clojure
+* CLJS-3214: script/uberjar fails with GraalJS
+* CLJS-3210: Single arity arithmetic ops don't warn on bad arguments
+* CLJS-3213: Browser REPL server hang when receive unknown POST
+* CLJS-3209: With clojurescript 1.10.597 HelloWorld compiled with to 94K of JS with advanced optimizations turned on
+* CLJS-3191: Optimize cljs.core/re-find
+* CLJS-3192: Optimize cljs.core/re-matches
+* CLJS-3193: Optimize cljs.core/re-pattern
+* CLJS-3202: Make :/ keyword hash consistent with =
+* CLJS-3203: Overriding root path in s/cat using s/gen gives an error
+
 ## 1.10.597
 
 ### Changes
