@@ -317,7 +317,7 @@ present"
                  (assoc :output-dir (temp-out-dir) :temp-output-dir? true)
                  (not (contains? options :aot-cache))
                  (assoc :aot-cache true))
-        reopts (merge repl-env-options (select-keys opts [:output-to :output-dir]))
+        reopts (merge repl-env-options (select-keys opts [:output-dir]))
         _      (when (or ana/*verbose* (:verbose opts))
                  (util/debug-prn "REPL env options:" (pr-str reopts)))
         renv   (apply repl-env (mapcat identity reopts))]

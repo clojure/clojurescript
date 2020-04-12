@@ -177,11 +177,7 @@
 
 (defn send-static
   [{path :path :as request} conn
-   ;; NOTE: :output-to and :output-dir are available here because cljs.cli
-   ;; does this - should maybe rethink that, we need a better way to supply
-   ;; the main JS file to load because it might not be compiler options :output-to
-   ;; i.e. bundler step
-   {:keys [static-dir output-to output-dir host port gzip?] :or {output-dir "out"} :as opts}]
+   {:keys [static-dir output-dir host port gzip?] :or {output-dir "out"} :as opts}]
   (let [output-dir (when-not (.isAbsolute (io/file output-dir)) output-dir)]
     (if (and static-dir (not= "/favicon.ico" path))
       (let [path (if (= "/" path) "/index.html" path)
@@ -208,11 +204,14 @@
                 encoding (mime-type->encoding mime-type "UTF-8")]
             (server/send-and-close conn 200 (slurp local-path :encoding encoding)
                                    mime-type encoding (and gzip? (= "text/javascript" mime-type))))
+
           ;; "/index.html" doesn't exist, provide our own
           (= path "/index.html")
           (server/send-and-close conn 200
-            (default-index (or output-to (str output-dir "/main.js")))
+            (default-index (str output-dir "/main.js"))
             "text/html" "UTF-8")
+
+          ;; "/main.js" doesn't exist, provide our own
           (= path (cond->> "/main.js" output-dir (str "/" output-dir )))
           (let [closure-defines (-> `{"goog.json.USE_NATIVE_JSON" true
                                       clojure.browser.repl/HOST ~host
@@ -230,6 +229,7 @@
                    "document.write('<script src=\"" output-dir "/brepl_deps.js\"></script>');\n"
                    "document.write('<script>goog.require(\"clojure.browser.repl.preload\");</script>');\n")
               "text/javascript" "UTF-8"))
+
           :else (server/send-404 conn path)))
       (server/send-404 conn path))))
 
