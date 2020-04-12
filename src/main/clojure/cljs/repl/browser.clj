@@ -177,6 +177,10 @@
 
 (defn send-static
   [{path :path :as request} conn
+   ;; NOTE: :output-to and :output-dir are available here because cljs.cli
+   ;; does this - should maybe rethink that, we need a better way to supply
+   ;; the main JS file to load because it might not be compiler options :output-to
+   ;; i.e. bundler step
    {:keys [static-dir output-to output-dir host port gzip?] :or {output-dir "out"} :as opts}]
   (let [output-dir (when-not (.isAbsolute (io/file output-dir)) output-dir)]
     (if (and static-dir (not= "/favicon.ico" path))
