@@ -11738,9 +11738,5 @@ reduces them without incurring seq initialization"
   (*eval* form))
 
 (when ^boolean js/COMPILED
-  (cond
-    (identical? "bundle" *target*)
-    (set! goog/global js/window)
-
-    (identical? "nodejs" *target*)
+  (when (identical? "nodejs" *target*)
     (set! goog/global js/global)))
