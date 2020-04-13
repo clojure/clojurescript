@@ -116,17 +116,20 @@
   (slurp (:client-js @browser-state)))
 
 (defn send-repl-client-page
-  [request conn opts]
-  (server/send-and-close conn 200
-    (str "<html><head><meta charset=\"UTF-8\"></head><body>
-          <script type=\"text/javascript\">"
-         (repl-client-js)
-         "</script>"
-         "<script type=\"text/javascript\">
-          clojure.browser.repl.client.start(\"http://" (-> request :headers :host) "\");
+  [{:keys [path] :as request} conn opts]
+  (if-not browser-state
+    (server/send-404 conn path)
+    (server/send-and-close conn 200
+      (str
+        "<html><head><meta charset=\"UTF-8\"></head><body>"
+        "<script type=\"text/javascript\">"
+        (repl-client-js)
+        "</script>"
+        "<script type=\"text/javascript\">
+        clojure.browser.repl.client.start(\"http://" (-> request :headers :host) "\");
           </script>"
-         "</body></html>")
-    "text/html"))
+        "</body></html>")
+     "text/html")))
 
 (defn default-index [output-to]
   (str
