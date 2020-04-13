@@ -47,6 +47,12 @@
   :closure-defines option."}
   *target* "default")
 
+(goog-define
+  ^{:dynamic true
+    :doc "Manually set the JavaScript global context. Only \"window\", \"self\"
+  , and \"global\" supported. "}
+  *global* "default")
+
 (def
   ^{:dynamic true
     :doc "Var bound to the current namespace. Only used for bootstrapping."
@@ -11739,4 +11745,8 @@ reduces them without incurring seq initialization"
 
 (when ^boolean js/COMPILED
   (when (identical? "nodejs" *target*)
-    (set! goog/global js/global)))
+    (set! goog/global js/global))
+  (cond
+    (identical? "window" *global*) (set! goog/global js/window)
+    (identical? "self" *global*) (set! goog/global js/self)
+    (identical? "global" *global*) (set! goog/global js/global)))
