@@ -51,7 +51,8 @@ state that is accessed/maintained by many different components."}
      :cljs.analyzer/externs        #?(:clj  (externs/externs-map (:externs-sources options))
                                       :cljs nil)
      :options                      options}
-    #?@(:clj [(when (= (:target options) :nodejs)
+    #?@(:clj [(when (and (= :nodejs (:target options))
+                         (not (false? (:nodejs-rt options))))
                 {:node-module-index deps/native-node-modules})
               {:js-dependency-index (deps/js-dependency-index options)}])))
 
