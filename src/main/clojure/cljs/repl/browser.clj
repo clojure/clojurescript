@@ -414,6 +414,7 @@
     {:browser-repl true
      :repl-requires
      '[[clojure.browser.repl] [clojure.browser.repl.preload]]
+     ::repl/fast-initial-prompt? :after-setup
      :cljs.cli/commands
      {:groups {::repl {:desc "browser REPL options"}}
       :init
