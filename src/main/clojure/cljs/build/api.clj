@@ -17,7 +17,8 @@
             [cljs.util :as util]
             [cljs.analyzer :as ana]
             [cljs.analyzer.api :as ana-api]
-            [cljs.closure :as closure])
+            [cljs.closure :as closure]
+            [cljs.js-deps :as deps])
   (:import [java.io File]))
 
 ;; =============================================================================
@@ -149,6 +150,18 @@
   plus all dependencies in dependency order."
   [opts & ijss]
   (closure/add-dependencies opts ijss))
+
+(defn handle-js-modules
+  "Given a collection of IJavaScript values representing a build, index all
+  node modules, convert all JS modules (ES6 etc), and store the updated
+  js-dependency-index (likely changed due to modules) in compiler state."
+  [state xs opts]
+  (closure/handle-js-modules opts xs state))
+
+(defn dependency-order
+  "Topologically sort a collection of IJavaScript values."
+  [xs]
+  (deps/dependency-order xs))
 
 (defn add-implicit-options
   "Given a valid map of build options add any standard implicit options. For
