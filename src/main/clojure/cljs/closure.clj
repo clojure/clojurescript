@@ -2198,9 +2198,6 @@
     (when (:debug-inputs opts)
       (util/debug-prn "DEBUG: all compiler inputs")
       (util/debug-prn (pr-str sources)))
-    (when (bundle? opts)
-      (spit (io/file (util/output-directory opts) "npm_deps.js")
-        (npm-deps-js (:node-module-index @env/*compiler*))))
     (cond
       modules
       (let [modules' (module-graph/expand-modules modules sources)]
@@ -3175,7 +3172,11 @@
                                (str fdeps-str)
                                (add-header opts)
                                (output-one-file opts)))))
-                       (apply output-unoptimized opts js-sources))]
+                       (do
+                         (when (bundle? opts)
+                           (spit (io/file (util/output-directory opts) "npm_deps.js")
+                             (npm-deps-js (:node-module-index @env/*compiler*))))
+                         (apply output-unoptimized opts js-sources)))]
              (output-bootstrap opts)
              (when (bundle? opts)
                (when-let [cmd (and (= :none optim)
