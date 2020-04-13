@@ -45,13 +45,12 @@ state that is accessed/maintained by many different components."}
 
 (defn default-compiler-env* [options]
   (merge
-    {:cljs.analyzer/namespaces {'cljs.user {:name 'cljs.user}}
+    {:cljs.analyzer/namespaces     {'cljs.user {:name 'cljs.user}}
      :cljs.analyzer/constant-table {}
-     :cljs.analyzer/data-readers {}
-     :cljs.analyzer/externs #?(:clj  (when (:infer-externs options)
-                                       (externs/externs-map (:externs-sources options)))
-                               :cljs nil)
-     :options options}
+     :cljs.analyzer/data-readers   {}
+     :cljs.analyzer/externs        #?(:clj  (externs/externs-map (:externs-sources options))
+                                      :cljs nil)
+     :options                      options}
     #?@(:clj [(when (= (:target options) :nodejs)
                 {:node-module-index deps/native-node-modules})
               {:js-dependency-index (deps/js-dependency-index options)}])))

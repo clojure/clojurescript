@@ -168,6 +168,9 @@
 (defn compiler-options []
   (get @env/*compiler* :options))
 
+(defn get-externs []
+  (::externs @env/*compiler*))
+
 (defn checked-arrays
   "Returns false-y, :warn, or :error based on configuration and the
    current value of *unchecked-arrays*."
@@ -1005,7 +1008,7 @@
 
 (defn has-extern?
   ([pre]
-    (has-extern? pre (get @env/*compiler* ::externs)))
+   (has-extern? pre (get-externs)))
   ([pre externs]
    (or (has-extern?* pre externs)
        (when (= 1 (count pre))
@@ -1018,7 +1021,7 @@
   ([pre]
    (js-tag pre :tag))
   ([pre tag-type]
-   (js-tag pre tag-type (get @env/*compiler* ::externs)))
+   (js-tag pre tag-type (get-externs)))
   ([pre tag-type externs]
    (js-tag pre tag-type externs externs))
   ([pre tag-type externs top]

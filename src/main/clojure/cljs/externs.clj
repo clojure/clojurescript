@@ -182,11 +182,11 @@
         (seq xs) (update-in xs merge {})))
     {} externs))
 
-(defn externs-map
+(defn externs-map*
   ([]
-   (externs-map (CommandLineRunner/getDefaultExterns)))
+   (externs-map* (CommandLineRunner/getDefaultExterns)))
   ([sources]
-   (externs-map sources
+   (externs-map* sources
      '{eval {}
        global {}
        goog {nodeGlobalRequire {}}
@@ -203,6 +203,8 @@
          (util/map-merge
            externs (index-externs (parse-externs externs-file))))
        defaults sources))))
+
+(def externs-map (memoize externs-map*))
 
 (defn ns-match? [ns-segs var-segs]
   (or

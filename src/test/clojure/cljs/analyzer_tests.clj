@@ -179,9 +179,9 @@
             (.getMessage (.getCause e))))
         "Only one ")))
 
-(def test-cenv (atom {}))
+(def test-cenv (env/default-compiler-env))
 (def test-env (assoc-in (ana/empty-env) [:ns :name] 'cljs.core))
-(def test-core-env (atom {}))
+(def test-core-env (env/default-compiler-env))
 
 (binding [ana/*unchecked-if* false
           ana/*analyze-deps* false]

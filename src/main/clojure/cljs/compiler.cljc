@@ -201,7 +201,7 @@
                     (sorted-map))))))))))
   (emit* ast))
 
-(defn emits 
+(defn emits
   ([])
   ([^Object a]
    (cond
@@ -587,12 +587,12 @@
 (defn emit-js-array [items comma-sep]
   (emits "[" (comma-sep items) "]"))
 
-(defmethod emit* :js-object 
+(defmethod emit* :js-object
   [{:keys [keys vals env]}]
   (emit-wrap env
     (emit-js-object (map vector keys vals) identity)))
 
-(defmethod emit* :js-array 
+(defmethod emit* :js-array
   [{:keys [items env]}]
   (emit-wrap env
     (emit-js-array items comma-sep)))
@@ -1133,7 +1133,7 @@
         protocol (:protocol info)
         tag      (ana/infer-tag env (first (:args expr)))
         proto? (and protocol tag
-                 (or (and ana/*cljs-static-fns* protocol (= tag 'not-native)) 
+                 (or (and ana/*cljs-static-fns* protocol (= tag 'not-native))
                      (and
                        (or ana/*cljs-static-fns*
                            (:protocol-inline env))
@@ -1817,8 +1817,7 @@
 (defn emit-externs
   ([externs]
    (emit-externs [] externs (atom #{})
-     (when env/*compiler*
-       (::ana/externs @env/*compiler*))))
+     (when env/*compiler* (ana/get-externs))))
   ([prefix externs top-level known-externs]
    (loop [ks (seq (keys externs))]
      (when ks
