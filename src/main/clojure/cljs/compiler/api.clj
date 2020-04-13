@@ -9,6 +9,7 @@
 (ns cljs.compiler.api
   "This is intended to be a stable api for those who need programmatic access
   to the compiler."
+  (:refer-clojure :exclude [munge])
   (:require [cljs.analyzer :as ana]
             [cljs.analyzer.api :as ana-api]
             [cljs.compiler :as comp]
