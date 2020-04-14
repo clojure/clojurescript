@@ -71,6 +71,12 @@
   `(ana/with-warning-handlers ~handlers
      ~@body))
 
+(defn warning-message
+  "Helper for generating the standard analyzer messages for warnings. Should be
+  passed warn-type and warn-info. See with-warning-handlers."
+  [warn-type warn-info]
+  (ana/error-message warn-type warn-info))
+
 (defn get-options
   "Return the compiler options from compiler state."
   ([] (get-options (current-state)))
