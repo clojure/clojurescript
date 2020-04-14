@@ -61,6 +61,16 @@
   [warning-type env extra]
   (ana/default-warning-handler warning-type env extra))
 
+(defmacro with-warning-handlers
+  "Helper macro for custom handling of emitted warnings. Handlers should be
+   a vector of functions. The signature of these functions is
+   [warn-type env warn-info]. warn-type is a keyword describing the warning,
+   env is the analysis environment, and warn-info is a map of extra useful
+   information for a particular warning type."
+  [handlers & body]
+  `(ana/with-warning-handlers ~handlers
+     ~@body))
+
 (defn get-options
   "Return the compiler options from compiler state."
   ([] (get-options (current-state)))
