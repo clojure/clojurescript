@@ -1330,7 +1330,7 @@
   [iter]
   (let [v (.next iter)]
     (if (.-done v)
-      ()
+      nil
       (ES6IteratorSeq. (.-value v) iter nil))))
 
 ;;;;;;;;;;;;;;;;;;; Murmur3 Helpers ;;;;;;;;;;;;;;;;

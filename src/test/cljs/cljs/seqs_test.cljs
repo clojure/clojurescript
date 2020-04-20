@@ -224,3 +224,10 @@
 (deftest test-cljs-2911
   (testing "partition-by works correclty with infinite seqs"
     (is (= (first (second (partition-by zero? (range)))) 1))))
+
+(deftest test-cljs-3230
+  (testing "sequence ops on ES6 collections"
+    (let [s (js/Set.)]
+      (is (= () (rest s)))
+      (is (nil? (next s)))
+      (is (empty? s)))))
