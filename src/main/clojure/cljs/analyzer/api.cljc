@@ -92,7 +92,7 @@
 
 (def default-passes ana/default-passes)
 
-(defn with-passes [passes & body]
+(defmacro with-passes [passes & body]
   `(binding [ana/*passes* ~passes]
      ~@body))
 
