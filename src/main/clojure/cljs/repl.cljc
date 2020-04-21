@@ -804,8 +804,7 @@
         (ana/analyze-file (str "file://" (.getAbsolutePath file)) opts)))))
 
 (defn repl-title []
-  (when-not (util/synthetic-version?)
-    (println "ClojureScript" (util/clojurescript-version))))
+  (println "ClojureScript" (util/clojurescript-version)))
 
 (defn repl-quit-prompt []
   (println "To quit, type:" :cljs/quit))
