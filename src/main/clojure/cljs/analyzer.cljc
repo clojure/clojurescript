@@ -4220,11 +4220,14 @@
          (cond-> {:op :const :val form :env env :form form}
            tag (assoc :tag tag))))))
 
+(def default-passes
+  #?(:clj  [infer-type check-invoke-arg-types ns-side-effects]
+     :cljs [infer-type check-invoke-arg-types]))
+
 (defn analyze* [env form name opts]
   (let [passes *passes*
         passes (if (nil? passes)
-                 #?(:clj  [infer-type check-invoke-arg-types ns-side-effects]
-                    :cljs [infer-type check-invoke-arg-types])
+                 default-passes
                  passes)
         form   (if (instance? LazySeq form)
                  (if (seq form) form ())

@@ -90,6 +90,12 @@
   ([state]
    (get @state :js-dependency-index)))
 
+(def default-passes ana/default-passes)
+
+(defn with-passes [passes & body]
+  `(binding [ana/*passes* ~passes]
+     ~@body))
+
 #?(:clj
    (defn analyze
      "Given an environment, a map containing {:locals (mapping of names to bindings), :context
