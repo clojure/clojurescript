@@ -484,7 +484,7 @@ present"
     (:main options)))
 
 (defn default-compile
-  [repl-env {:keys [ns args options] :as cfg}]
+  [repl-env {:keys [ns args options post-compile-fn] :as cfg}]
   (let [rfs      #{"-r" "--repl"}
         sfs      #{"-s" "--serve"}
         env-opts (repl/repl-options (repl-env))
@@ -528,6 +528,8 @@ present"
           (build/build source opts cenv)
           (build/watch path opts cenv))
         (build/build source opts cenv))
+      (when (fn? post-compile-fn)
+        (post-compile-fn))
       (when repl?
         (repl-opt repl-env args cfg))
       (when serve?
