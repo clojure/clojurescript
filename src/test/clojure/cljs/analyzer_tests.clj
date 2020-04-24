@@ -1367,16 +1367,6 @@
          (env/with-compiler-env test-cenv
                               (:tag (analyze test-env '(demunge-str "")))))))
 
-(deftest test-cljs-3086
-  (let [ws (atom [])]
-    (try
-      (ana/with-warning-handlers [(collecting-warning-handler ws)]
-        (cljs.env/with-compiler-env test-cenv
-          (analyze (ana/empty-env)
-            '(+ nil 1))))
-      (catch Exception _))
-    (is (= ["cljs.core/+, all arguments must be numbers, got [clj-nil number] instead"] @ws))))
-
 (deftest test-cljs-3120
   (let [cenv (core-env)
         _ (analyze-forms cenv

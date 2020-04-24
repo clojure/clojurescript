@@ -3502,6 +3502,7 @@
   ;; warning without this - David
   (cond
     (nil? t) true
+    (= 'clj-nil t) true
     (js-tag? t) true ;; TODO: revisit
     :else
     (if (and (symbol? t) (some? (get NUMERIC_SET t)))
