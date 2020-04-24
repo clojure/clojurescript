@@ -1,4 +1,4 @@
-## 1.10.740
+## 1.10.741
 
 ### Changes
 * Removed REPL/target support for Rhino, Nashorn, Graaljs
