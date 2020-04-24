@@ -1,4 +1,4 @@
-## Next
+## 1.10.738
 
 ### Changes
 * Removed REPL/target support for Rhino, Nashorn, Graaljs
@@ -20,6 +20,7 @@
 * CLJS-3199: Interop with JavaScript's iterable objects via Iterator protocol
 
 ### Fixes
+* CLJS-3230: seq on empty Iterable produces an empty seq
 * CLJS-2908: Don't show quick prompt if :verbose or :repl-verbose
 * CLJS-2898: cljs.main: ClojureScript version should not be displayed if there are inits
 * CLJS-2863: Need to reject incorrect fn with fixed arity of more params than variadic
