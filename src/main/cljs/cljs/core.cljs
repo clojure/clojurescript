@@ -1208,7 +1208,7 @@
 (defn js-iterable?
   "Return true if x has a JavaScript iterator property"
   [x]
-  (gobject/containsKey x ITER_SYMBOL))
+  (not (nil? (js* "~{}[~{}]" x ITER_SYMBOL))))
 
 (defn clone
   "Clone the supplied value which must implement ICloneable."

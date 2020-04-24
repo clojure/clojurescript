@@ -231,3 +231,8 @@
       (is (= () (rest s)))
       (is (nil? (next s)))
       (is (empty? s)))))
+
+(deftest test-js-iterable?
+  (testing "test that js-iterable? works on ES6 collections and normal values"
+    (is (true? (js-iterable? (js/Set.))))
+    (is (false? (js-iterable? 1)))))
