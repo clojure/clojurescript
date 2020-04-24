@@ -77,6 +77,11 @@
   [warn-type warn-info]
   (ana/error-message warn-type warn-info))
 
+(defn enabled-warnings
+  "Get the enabled warning types."
+  []
+  ana/*cljs-warnings*)
+
 (defn get-options
   "Return the compiler options from compiler state."
   ([] (get-options (current-state)))
