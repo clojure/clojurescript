@@ -32,7 +32,7 @@
            (when reload?
              ;; check for new-ish private goog/debugLoader
              (if (some? goog/debugLoader_)
-               (let [path (.getPathFromDeps_ goog/debugLoader_ name)]
+               (let [path (.getPathFromDeps_ goog/debugLoader_ src)]
                  (goog.object/remove (.-written_ goog/debugLoader_) path)
                  (goog.object/remove (.-written_ goog/debugLoader_)
                    (str js/goog.basePath path)))

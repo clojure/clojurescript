@@ -209,7 +209,7 @@
         (let [reload? (or reload (.-cljsReloadAll__ js/goog))]
           (when reload?
             (if (some? goog/debugLoader_)
-              (let [path (.getPathFromDeps_ goog/debugLoader_ name)]
+              (let [path (.getPathFromDeps_ goog/debugLoader_ src)]
                 (gobj/remove (.-written_ goog/debugLoader_) path)
                 (gobj/remove (.-written_ goog/debugLoader_)
                   (str js/goog.basePath path)))
