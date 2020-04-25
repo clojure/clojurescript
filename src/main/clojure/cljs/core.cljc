@@ -2109,7 +2109,8 @@
                                      ;; check protocol property on object (first check executed)
                                      check
                                      `(if (and (not (nil? ~fsig))
-                                               (not (nil? (. ~fsig ~(symbol (core/str "-" slot)))))) ;; Property access needed here.
+                                               ;; Property access needed here.
+                                               (not (nil? (. ~fsig ~(with-meta (symbol (core/str "-" slot)) {:protocol-method true})))))
                                         (. ~fsig ~slot ~@sig)
                                         (~dyn-name ~@sig))]
                             `(~sig ~check)))
@@ -2160,7 +2161,8 @@
                            (defn ~fname
                              ~@(map (core/fn [sig]
                                       (expand-sig dyn-name
-                                        (symbol (core/str slot "$arity$" (count sig)))
+                                        (with-meta (symbol (core/str slot "$arity$" (count sig)))
+                                          {:protocol-method true})
                                         sig))
                                  sigs)))))]
     `(do

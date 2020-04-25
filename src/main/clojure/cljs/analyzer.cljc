@@ -3351,7 +3351,8 @@
 ;; (. (...) -p)
 (defmethod build-dot-form [::expr ::property ()]
   [[target prop _]]
-  {:dot-action ::access :target target :field (-> prop name (.substring 1) symbol)})
+  {:dot-action ::access :target target
+   :field (with-meta (-> prop name (.substring 1) symbol) (meta prop))})
 
 ;; (. o -p <args>)
 (defmethod build-dot-form [::expr ::property ::list]
@@ -3410,7 +3411,8 @@
                               update-in [:prefix] (fnil conj '[Object]) prop))
                        nil)]
     (when (and (not= 'constructor prop)
-               (not (string/starts-with? (str prop) "cljs$")))
+               (not (string/starts-with? (str prop) "cljs$"))
+               (not (-> prop meta :protocol-method)))
       ;; Adding to Object
       (when (= 'Object (first (-> tag meta :prefix)))
         (warning :infer-warning env
