@@ -2915,11 +2915,16 @@
                      (every? symbol? spec))
                 (and (symbol? spec) (nil? (namespace spec))))
     (throw (error env (parse-ns-error-msg spec "Only lib.ns.Ctor or [lib.ns Ctor*] spec supported in :import"))))
-  (let [import-map (if (sequential? spec)
+  (let [import-map (cond
+                     (sequential? spec)
                      (->> (rest spec)
                        (map #(vector % (symbol (str (first spec) "." %))))
                        (into {}))
-                     {(symbol (last (string/split (str spec) #"\."))) spec})]
+
+                     (not (== -1 (.indexOf (str spec) ".")))
+                     {(symbol (last (string/split (str spec) #"\."))) spec}
+
+                     :else {})]
     (doseq [[_ spec] import-map]
       (swap! deps conj spec))
     {:import  import-map

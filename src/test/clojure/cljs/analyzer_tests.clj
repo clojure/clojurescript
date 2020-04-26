@@ -1485,13 +1485,10 @@
             (:import [goog.history Html5History]))]))
     (is (some? (get-in @cenv [::ana/namespaces 'goog.history.Html5History :defs 'Html5History])))))
 
-(comment
-
+(deftest test-cljs-3239
   (let [cenv (env/default-compiler-env)]
     (env/with-compiler-env cenv
       (ana/analyze-form-seq
         '[(ns test.foo
-            (:import [goog.history Html5History]))]))
-    (get-in @cenv [::ana/namespaces 'goog.history.Html5History :defs]))
-
-  )
+            (:import goog))]))
+    (is (= {} (get-in @cenv [::ana/namespaces 'test.foo :imports])))))
