@@ -1263,7 +1263,7 @@
 (defn load-libs
   [libs seen reloads deps ns-name]
   (let [{:keys [options js-dependency-index]} @env/*compiler*
-        {:keys [target optimizations]} options
+        {:keys [target nodejs-rt optimizations]} options
         loaded-libs (munge 'cljs.core.*loaded-libs*)
         loaded-libs-temp (munge (gensym 'cljs.core.*loaded-libs*))
         [node-libs libs-to-load] (let [libs (remove (set (vals seen)) (filter (set (vals libs)) deps))]
@@ -1284,7 +1284,7 @@
              ;; have handled it - David
              (when (and (= :none optimizations)
                         (not (contains? options :modules)))
-               (if (= :nodejs target)
+               (if nodejs-rt
                  ;; under node.js we load foreign libs globally
                  (let [ijs (get js-dependency-index (name lib))]
                    (emitln "cljs.core.load_file("
