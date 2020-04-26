@@ -308,6 +308,13 @@ is trying load some arbitrary ns."
          (not (:repl-verbose options))
          (contains? #{"node"} (repl-name repl-env)))))
 
+(defn target->repl-env [target default]
+  (if (= :nodejs target)
+    (do
+      (require 'cljs.repl.node)
+      (resolve 'cljs.repl.node/repl-env))
+    default))
+
 (defn- repl-opt
   "Start a repl with args and inits. Print greeting if no eval options were
 present"
@@ -320,7 +327,7 @@ present"
         reopts (merge repl-env-options (select-keys opts [:output-dir]))
         _      (when (or ana/*verbose* (:verbose opts))
                  (util/debug-prn "REPL env options:" (pr-str reopts)))
-        renv   (apply repl-env (mapcat identity reopts))]
+        renv   (apply (target->repl-env (:target options) repl-env) (mapcat identity reopts))]
     (repl/repl* renv
       (assoc (dissoc-entry-point-opts opts)
         ::repl/fast-initial-prompt?
@@ -350,7 +357,7 @@ present"
                  (select-keys opts [:output-to :output-dir]))
         _      (when (or ana/*verbose* (:verbose opts))
                  (util/debug-prn "REPL env options:" (pr-str reopts)))
-        renv   (apply repl-env (mapcat identity reopts))
+        renv   (apply (target->repl-env (:target options) repl-env) (mapcat identity reopts))
         coptsf (when-let [od (:output-dir opts)]
                  (io/file od "cljsc_opts.edn"))
         copts  (when (and coptsf (.exists coptsf))
@@ -487,7 +494,7 @@ present"
   [repl-env {:keys [ns args options post-compile-fn] :as cfg}]
   (let [rfs      #{"-r" "--repl"}
         sfs      #{"-s" "--serve"}
-        env-opts (repl/repl-options (repl-env))
+        env-opts (repl/repl-options ((target->repl-env (:target options) repl-env)))
         repl?    (boolean (or (rfs ns) (rfs (first args))))
         serve?   (boolean (or (sfs ns) (sfs (first args))))
         main-ns  (get-main-ns cfg)
