@@ -2346,10 +2346,10 @@
   (assert (not (and output-wrapper (= :whitespace optimizations)))
           ":output-wrapper cannot be combined with :optimizations :whitespace"))
 
-(defn check-node-target [{:keys [target optimizations] :as opts}]
-  (assert (not (and (= target :nodejs) (= optimizations :whitespace)))
+(defn check-node-target [{:keys [nodejs-rt optimizations] :as opts}]
+  (assert (not (and nodejs-rt (= optimizations :whitespace)))
     (format ":nodejs target not compatible with :whitespace optimizations"))
-  (assert (not (and (= target :nodejs) (= optimizations :none) (not (contains? opts :main))))
+  (assert (not (and nodejs-rt (= optimizations :none) (not (contains? opts :main))))
     (format ":nodejs target with :none optimizations requires a :main entry")))
 
 (defn check-main [{:keys [main] :as opts}]
@@ -3020,6 +3020,21 @@
   (check-main opts)
   opts)
 
+(defn run-bundle-cmd [opts]
+  (let [cmd-type (or (#{:none} (:optimizations opts)) :default)]
+    (when-let [cmd (get-in opts [:bundle-cmd cmd-type])]
+      (let [{:keys [exit out err]}
+            (try
+              (apply sh/sh cmd)
+              (catch Throwable t
+                (throw
+                  (ex-info (str ":build-cmd " cmd-type " failed")
+                    {:cmd cmd} t))))]
+        (when-not (== 0 exit)
+          (throw
+            (ex-info (str ":bundle-cmd " cmd-type " failed")
+              {:cmd cmd :exit-code exit :stdout out :stderr err})))))))
+
 (defn build
   "Given compiler options, produce runnable JavaScript. An optional source
    parameter may be provided."
@@ -3178,32 +3193,7 @@
                              (npm-deps-js (:node-module-index @env/*compiler*))))
                          (apply output-unoptimized opts js-sources)))]
              (output-bootstrap opts)
-             (when (bundle? opts)
-               (when-let [cmd (and (= :none optim)
-                                   (get-in opts [:bundle-cmd :none]))]
-                 (let [{:keys [exit out]}
-                       (try
-                         (apply sh/sh cmd)
-                         (catch Throwable t
-                           (throw
-                             (ex-info ":build-cmd :none failed"
-                               {:cmd cmd} t))))]
-                   (when-not (== 0 exit)
-                     (throw
-                       (ex-info ":bundle-cmd :none failed"
-                         {:cmd cmd :exit-code exit :std-out out})))))
-               (when-let [cmd (and (not= :none optim)
-                                   (get-in opts [:bundle-cmd :default]))]
-                 (let [{:keys [exit out]}
-                       (try
-                         (apply sh/sh cmd)
-                         (catch Throwable t
-                           (ex-info ":build-cmd :default failed"
-                             {:cmd cmd} t)))]
-                   (when-not (== 0 exit)
-                     (throw
-                       (ex-info ":bundle-cmd :default failed"
-                         {:cmd cmd :exit-code exit :std-out out}))))))
+             (when (bundle? opts) (run-bundle-cmd opts))
              ret))))))
 
 (comment
