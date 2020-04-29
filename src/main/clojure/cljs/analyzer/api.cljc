@@ -28,8 +28,20 @@
   ([opts]
    (env/default-compiler-env opts)))
 
-(defn current-state []
+(defn current-state
+  "Return the current compiler state atom."
+  []
   env/*compiler*)
+
+(defn current-file
+  "Return the current file under analysis or compilation."
+  []
+  ana/*cljs-file*)
+
+(defn current-ns
+  "Return the current ns under analysis or compilation."
+  []
+  ana/*cljs-ns*)
 
 (defmacro with-state
   "Run the body with the given compilation state Atom<Map>."
@@ -95,9 +107,13 @@
   ([state]
    (get @state :js-dependency-index)))
 
-(def default-passes ana/default-passes)
+(def
+  ^{:doc "ClojureScript's default analysis passes."}
+  default-passes ana/default-passes)
 
-(defmacro with-passes [passes & body]
+(defmacro with-passes
+  "Evaluate the body with the provided sequence of compiler passes."
+  [passes & body]
   `(binding [ana/*passes* ~passes]
      ~@body))
 
