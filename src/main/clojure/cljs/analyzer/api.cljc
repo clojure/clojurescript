@@ -11,8 +11,11 @@
   to the analyzer."
   (:refer-clojure :exclude [all-ns ns-interns ns-resolve resolve find-ns
                             ns-publics remove-ns])
-  (:require [cljs.env :as env]
-            [cljs.analyzer :as ana]))
+  (:require [cljs.analyzer :as ana]
+            [cljs.env :as env]
+            [cljs.util :as util]
+            [clojure.edn :as edn]
+            [clojure.java.io :as io]))
 
 ;; =============================================================================
 ;; Useful Utilities
@@ -178,6 +181,15 @@
       (env/with-compiler-env state
         (binding [ana/*cljs-warning-handlers* (:warning-handlers opts ana/*cljs-warning-handlers*)]
           (ana/analyze-file f opts))))))
+
+(defn read-analysis-cache
+  "Read an analysis cache."
+  [cache-file]
+  (case (util/ext cache-file)
+    "edn"  (edn/read-string (slurp cache-file))
+    "json" (let [{:keys [reader read]} @ana/transit]
+             (with-open [is (io/input-stream cache-file)]
+               (read (reader is :json ana/transit-read-opts))))))
 
 ;; =============================================================================
 ;; Main API
