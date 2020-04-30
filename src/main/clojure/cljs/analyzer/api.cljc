@@ -182,14 +182,15 @@
         (binding [ana/*cljs-warning-handlers* (:warning-handlers opts ana/*cljs-warning-handlers*)]
           (ana/analyze-file f opts))))))
 
-(defn read-analysis-cache
-  "Read an analysis cache."
-  [cache-file]
-  (case (util/ext cache-file)
-    "edn"  (edn/read-string (slurp cache-file))
-    "json" (let [{:keys [reader read]} @ana/transit]
-             (with-open [is (io/input-stream cache-file)]
-               (read (reader is :json ana/transit-read-opts))))))
+#?(:clj
+   (defn read-analysis-cache
+     "Read an analysis cache."
+     [cache-file]
+     (case (util/ext cache-file)
+       "edn" (edn/read-string (slurp cache-file))
+       "json" (let [{:keys [reader read]} @ana/transit]
+                (with-open [is (io/input-stream cache-file)]
+                  (read (reader is :json ana/transit-read-opts)))))))
 
 ;; =============================================================================
 ;; Main API
