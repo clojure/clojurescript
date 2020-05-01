@@ -1,3 +1,16 @@
+## 1.10.753
+
+### Changes
+* More useful functions added to cljs.analyzer.api
+
+### Fixes
+* Fix foreign-lib loading, was checking for `:nodejs` instead of `:nodejs-rt`
+* CLJS-3239: Infinite analysis with dotted symbols
+* CLJS-3238: Watch incompatible with :bundle, throws :nodejs-related exception
+* CLJS-3237: compiling with --target node errors at runtime with document undefined
+* CLJS-3236: defprotocol externs inference warnings
+* Fix (require ... :reload) REPL pattern
+
 ## 1.10.741
 
 ### Changes
