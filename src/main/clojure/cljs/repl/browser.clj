@@ -228,7 +228,7 @@
                    "document.write('<script src=\"" output-dir "/goog/base.js\"></script>');\n"
                    "document.write('<script src=\"" output-dir "/goog/deps.js\"></script>');\n"
                    (when (.exists (io/file output-dir "cljs_deps.js"))
-                     "document.write('<script src=\"" output-dir "/cljs_deps.js\"></script>');\n")
+                     (str "document.write('<script src=\"" output-dir "/cljs_deps.js\"></script>');\n"))
                    "document.write('<script src=\"" output-dir "/brepl_deps.js\"></script>');\n"
                    "document.write('<script>goog.require(\"clojure.browser.repl.preload\");</script>');\n")
               "text/javascript" "UTF-8"))
