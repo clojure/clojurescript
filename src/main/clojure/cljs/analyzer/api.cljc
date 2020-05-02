@@ -11,11 +11,13 @@
   to the analyzer."
   (:refer-clojure :exclude [all-ns ns-interns ns-resolve resolve find-ns
                             ns-publics remove-ns])
-  (:require [cljs.analyzer :as ana]
-            [cljs.env :as env]
-            [cljs.util :as util]
-            [clojure.edn :as edn]
-            [clojure.java.io :as io]))
+  #?(:clj  (:require [cljs.analyzer :as ana]
+                     [cljs.env :as env]
+                     [cljs.util :as util]
+                     [clojure.edn :as edn]
+                     [clojure.java.io :as io])
+     :cljs (:require [cljs.analyzer :as ana]
+                     [cljs.env :as env])))
 
 ;; =============================================================================
 ;; Useful Utilities
