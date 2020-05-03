@@ -7,7 +7,8 @@
 ;   You must not remove this notice, or any other, from this software
 
 (ns cljs.loader
-  (:require [goog.object :as gobj])
+  (:require [goog.object :as gobj]
+            [goog.html.legacyconversions :as legacy])
   (:import [goog.module ModuleLoader]
            [goog.module ModuleManager]))
 
@@ -26,10 +27,14 @@
   (cond-> x
     (keyword? x) (-> name munge)))
 
+(defn to-tr-url [x]
+  (cond-> x
+    (not (keyword? x)) legacy/trustedResourceUrlFromString))
+
 (defn to-js [m]
   (reduce-kv
     (fn [ret k xs]
-      (let [arr (into-array (map munge-kw xs))]
+      (let [arr (into-array (map (comp munge-kw to-tr-url) xs))]
         (doto ret (gobj/set (-> k name munge) arr))))
     #js {} m))
 
@@ -78,8 +83,8 @@
     (str "Module " module-name " does not exist"))
   (let [xs (deps-for module-name module-infos)]
     (doseq [x xs]
-      (.setLoaded *module-manager* (munge-kw x)))
-    (.setLoaded *module-manager* (munge-kw module-name))))
+      (.setLoaded (.getModuleInfo *module-manager* (munge-kw x))))
+    (.setLoaded (.getModuleInfo *module-manager* (munge-kw module-name)))))
 
 (defn prefetch
   "Prefetch a module. module-name should be a keyword matching a :modules
