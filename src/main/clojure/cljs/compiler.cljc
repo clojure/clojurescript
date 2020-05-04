@@ -1141,7 +1141,11 @@
                            ;; ignore new type hints for now - David
                            (and (not (set? tag))
                                 (not ('#{any clj clj-or-nil clj-nil number string boolean function object array js} tag))
-                                (when-let [ps (:protocols (ana/resolve-existing-var env tag))]
+                                (when-let [ps (:protocols
+                                                (ana/resolve-existing-var env
+                                                  ;; we're just checking for protocol methods,
+                                                  ;; an internal optimization, don't emit warnings
+                                                  (vary-meta tag assoc ::ana/no-resolve true)))]
                                   (ps protocol)))))))
         first-arg-tag (ana/infer-tag env (first (:args expr)))
         opt-not? (and (= (:name info) 'cljs.core/not)
