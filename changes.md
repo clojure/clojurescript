@@ -1,9 +1,11 @@
-## 1.10.753
+## 1.10.756
 
 ### Changes
 * More useful functions added to cljs.analyzer.api
 
 ### Fixes
+* CLJS-3242: Code Splitting Breakage
+* CLJS-3244: Warnings for clojure.browser.net with :static-fns true
 * Fix foreign-lib loading, was checking for `:nodejs` instead of `:nodejs-rt`
 * CLJS-3239: Infinite analysis with dotted symbols
 * CLJS-3238: Watch incompatible with :bundle, throws :nodejs-related exception
