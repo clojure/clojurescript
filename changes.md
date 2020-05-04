@@ -1,4 +1,4 @@
-## 1.10.756
+## 1.10.758
 
 ### Changes
 * More useful functions added to cljs.analyzer.api
