@@ -21,7 +21,7 @@
 * CLJS-1628: Make instances of js/Symbol printable
 
 ### Enhancements
-* Add :target :bundle for integration with JavaScript bunders (webpack, metro, etc.)
+* Add :target :bundle for integration with JavaScript bundlers (webpack, metro, etc.)
 * Add cljs.main --install-deps flag
 * Add :bundle-cmd compiler option for triggering JS bundler at end of build
 * Add :nodejs-rt compiler option to diable Node.js runtime support (for bundles)
