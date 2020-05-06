@@ -167,10 +167,10 @@
                                      (closure/src-file->target-file
                                        core (dissoc opts :output-dir))))
                deps    (closure/add-dependencies opts core-js)]
-           ;; output unoptimized code and the deps file
-           ;; for all compiled namespaces
+           ;; output unoptimized code and only the deps file for all compiled
+           ;; namespaces, we don't need the bootstrap target file
            (apply closure/output-unoptimized
-             (assoc opts
+             (assoc (assoc opts :target :none)
                :output-to (.getPath (io/file output-dir "node_repl_deps.js")))
              deps))
          ;; bootstrap, replace __dirname as __dirname won't be set

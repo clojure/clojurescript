@@ -284,12 +284,6 @@ classpath. Classpath-relative paths have prefix of @ or @/")
       ((get-dispatch commands :init opt) ret arg))
     {} inits))
 
-(defn dissoc-entry-point-opts
-  "Dissoc the entry point options from the input. Necessary when the user
-is trying load some arbitrary ns."
-  [opts]
-  (dissoc opts :main :output-to))
-
 (defn temp-out-dir []
   (let [f (File/createTempFile "out" (Long/toString (System/nanoTime)))]
     (.delete f)
@@ -329,7 +323,7 @@ present"
                  (util/debug-prn "REPL env options:" (pr-str reopts)))
         renv   (apply (target->repl-env (:target options) repl-env) (mapcat identity reopts))]
     (repl/repl* renv
-      (assoc (dissoc-entry-point-opts opts)
+      (assoc opts
         ::repl/fast-initial-prompt?
         (or (fast-initial-prompt? repl-env options inits)
             (::repl/fast-initial-prompt? (repl/repl-options renv)))
@@ -361,8 +355,7 @@ present"
         coptsf (when-let [od (:output-dir opts)]
                  (io/file od "cljsc_opts.edn"))
         copts  (when (and coptsf (.exists coptsf))
-                 (-> (edn/read-string (slurp coptsf))
-                   (dissoc-entry-point-opts)))
+                 (edn/read-string (slurp coptsf)))
         opts   (merge copts
                  (build/add-implicit-options
                    (merge (repl/repl-options renv) opts)))]
