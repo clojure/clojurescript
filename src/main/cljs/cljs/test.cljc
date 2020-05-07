@@ -30,31 +30,37 @@
   be wrapped in (not...)."
   [msg form]
   (let [args (rest form)
-        pred (first form)]
+        pred (first form)
+        {:keys [file line end-line column end-column]} (meta form)]
     `(let [values# (list ~@args)
            result# (apply ~pred values#)]
        (if result#
-         (do-report
-           {:type :pass, :message ~msg,
-            :expected '~form, :actual (cons ~pred values#)})
-         (do-report
-           {:type :fail, :message ~msg,
-            :expected '~form, :actual (list '~'not (cons '~pred values#))}))
+         (report
+          {:type :pass, :message ~msg,
+           :file ~file :line ~line :end-line ~end-line :column ~column :end-column ~end-column
+           :expected '~form, :actual (cons '~pred values#)})
+         (report
+          {:type :fail, :message ~msg,
+           :file ~file :line ~line :end-line ~end-line :column ~column :end-column ~end-column
+           :expected '~form, :actual (list '~'not (cons '~pred values#))}))
        result#)))
 
 (defn assert-any
   "Returns generic assertion code for any test, including macros, Java
   method calls, or isolated symbols."
   [msg form]
-  `(let [value# ~form]
-     (if value#
-       (do-report
-         {:type :pass, :message ~msg,
-          :expected '~form, :actual value#})
-       (do-report
-         {:type :fail, :message ~msg,
-          :expected '~form, :actual value#}))
-     value#))
+  (let [{:keys [file line end-line column end-column]} (meta form)]
+    `(let [value# ~form]
+       (if value#
+         (report
+          {:type :pass, :message ~msg,
+           :file ~file :line ~line :end-line ~end-line :column ~column :end-column ~end-column
+           :expected '~form, :actual value#})
+         (report
+          {:type :fail, :message ~msg,
+           :file ~file :line ~line :end-line ~end-line :column ~column :end-column ~end-column
+           :expected '~form, :actual value#}))
+       value#)))
 
 (defmacro ^:private cljs-output-dir []
   (let [{:keys [output-dir]} (ana-api/get-options)]
@@ -76,7 +82,9 @@
 
 (defmethod assert-expr :always-fail [menv msg form]
   ;; nil test: always fail
-  `(do-report {:type :fail, :message ~msg}))
+  (let [{:keys [file line end-line column end-column]} (meta form)]
+    `(report {:type :fail, :message ~msg
+              :file ~file :line ~line :end-line ~end-line :column ~column :end-column ~end-column})))
 
 (defmethod assert-expr :default [menv msg form]
   (if (and (sequential? form)
@@ -86,33 +94,39 @@
 
 (defmethod assert-expr 'instance? [menv msg form]
   ;; Test if x is an instance of y.
-  `(let [klass# ~(nth form 1)
-         object# ~(nth form 2)]
-     (let [result# (instance? klass# object#)]
-       (if result#
-         (do-report
-           {:type :pass, :message ~msg,
-            :expected '~form, :actual (type object#)})
-         (do-report
-           {:type :fail, :message ~msg,
-            :expected '~form, :actual (type object#)}))
-       result#)))
+  (let [{:keys [file line end-line column end-column]} (meta form)]
+    `(let [klass# ~(nth form 1)
+           object# ~(nth form 2)]
+       (let [result# (instance? klass# object#)]
+         (if result#
+           (report
+            {:type :pass, :message ~msg,
+             :file ~file :line ~line :end-line ~end-line :column ~column :end-column ~end-column
+             :expected '~form, :actual (type object#)})
+           (report
+            {:type :fail, :message ~msg,
+             :file ~file :line ~line :end-line ~end-line :column ~column :end-column ~end-column
+             :expected '~form, :actual (type object#)}))
+         result#))))
 
 (defmethod assert-expr 'thrown? [menv msg form]
   ;; (is (thrown? c expr))
   ;; Asserts that evaluating expr throws an exception of class c.
   ;; Returns the exception thrown.
-  (let [klass (second form)
+  (let [{:keys [file line end-line column end-column]} (meta form)
+        klass (second form)
         body (nthnext form 2)]
     `(try
        ~@body
-       (do-report
-         {:type :fail, :message ~msg,
-          :expected '~form, :actual nil})
+       (report
+        {:type :fail, :message ~msg,
+         :file ~file :line ~line :end-line ~end-line :column ~column :end-column ~end-column
+         :expected '~form, :actual nil})
        (catch ~klass e#
-         (do-report
-           {:type :pass, :message ~msg,
-            :expected '~form, :actual e#})
+         (report
+          {:type :pass, :message ~msg,
+           :file ~file :line ~line :end-line ~end-line :column ~column :end-column ~end-column
+           :expected '~form, :actual e#})
          e#))))
 
 (defmethod assert-expr 'thrown-with-msg? [menv msg form]
@@ -120,33 +134,39 @@
   ;; Asserts that evaluating expr throws an exception of class c.
   ;; Also asserts that the message string of the exception matches
   ;; (with re-find) the regular expression re.
-  (let [klass (nth form 1)
+  (let [{:keys [file line end-line column end-column]} (meta form)
+        klass (nth form 1)
         re (nth form 2)
         body (nthnext form 3)]
     `(try
        ~@body
-       (do-report {:type :fail, :message ~msg, :expected '~form, :actual nil})
+       (report {:type :fail, :message ~msg, :expected '~form, :actual nil
+                :file ~file :line ~line :end-line ~end-line :column ~column :end-column ~end-column})
        (catch ~klass e#
          (let [m# (.-message e#)]
            (if (re-find ~re m#)
-             (do-report
-               {:type :pass, :message ~msg,
-                :expected '~form, :actual e#})
-             (do-report
-               {:type :fail, :message ~msg,
-                :expected '~form, :actual e#}))
+             (report
+              {:type :pass, :message ~msg,
+               :file ~file :line ~line :end-line ~end-line :column ~column :end-column ~end-column
+               :expected '~form, :actual e#})
+             (report
+              {:type :fail, :message ~msg,
+               :file ~file :line ~line :end-line ~end-line :column ~column :end-column ~end-column
+               :expected '~form, :actual e#}))
            e#)))))
 
 (defmacro try-expr
   "Used by the 'is' macro to catch unexpected exceptions.
   You don't call this."
   [msg form]
-  `(try
-     ~(assert-expr &env msg form)
-     (catch :default t#
-       (do-report
-         {:type :error, :message ~msg,
-          :expected '~form, :actual t#}))))
+  (let [{:keys [file line end-line column end-column]} (meta form)]
+    `(try
+       ~(assert-expr &env msg form)
+       (catch :default t#
+         (report
+          {:type :error, :message ~msg,
+           :file ~file :line ~line :end-line ~end-line :column ~column :end-column ~end-column
+           :expected '~form, :actual t#})))))
 
 ;; =============================================================================
 ;; Assertion Macros
