@@ -531,7 +531,8 @@ present"
       (when (fn? post-compile-fn)
         (post-compile-fn))
       (when repl?
-        (repl-opt repl-env args cfg))
+        (repl-opt repl-env args
+          (cond-> cfg main-ns (update :options merge {:main main-ns}))))
       (when serve?
         (serve-opt repl-env args cfg)))))
 
