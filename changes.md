@@ -1,3 +1,10 @@
+## 1.10.764
+
+### Fixes
+* Export Google Closure Library config directly to window in brwoser
+* CLI: If :main supplied to -c pass it along to -r
+* Revert CLJS-2582
+
 ## 1.10.758
 
 ### Changes
