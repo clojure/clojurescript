@@ -1747,8 +1747,8 @@
                 "import {npmDeps} from \"./npm_deps.js\";\n")
               (when (or (not module) (= :cljs-base (:module-name opts)))
                 (str
-                  "var CLOSURE_UNCOMPILED_DEFINES = " closure-defines ";\n"
-                  "var CLOSURE_NO_DEPS = true;\n"
+                  "window.CLOSURE_UNCOMPILED_DEFINES = " closure-defines ";\n"
+                  "window.CLOSURE_NO_DEPS = true;\n"
                   "if(typeof goog == \"undefined\") document.write('<script src=\"" asset-path "/goog/base.js\"></script>');\n"
                   "document.write('<script src=\"" asset-path "/goog/deps.js\"></script>');\n"
                   "document.write('<script src=\"" asset-path "/cljs_deps.js\"></script>');\n"
