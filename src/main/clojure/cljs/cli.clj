@@ -532,7 +532,8 @@ present"
         (post-compile-fn))
       (when repl?
         (repl-opt repl-env args
-          (cond-> cfg main-ns (update :options merge {:main main-ns}))))
+          (cond-> (assoc-in cfg [:options :compiler-env] cenv)
+            main-ns (update :options merge {:main main-ns}))))
       (when serve?
         (serve-opt repl-env args cfg)))))
 
