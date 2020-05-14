@@ -99,7 +99,8 @@
      :order (swap! order inc)}))
 
 (defn start-evaluator
-  "Start the REPL server connection."
+  "Start the REPL server connection process. This process runs inside the
+  embedded iframe."
   [url]
   (if-let [repl-connection (net/xpc-connection)]
     (let [connection (net/xhr-connection)
