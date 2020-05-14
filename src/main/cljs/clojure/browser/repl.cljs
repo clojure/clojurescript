@@ -32,8 +32,12 @@
 (goog-define PORT 9000)
 
 (def ^:dynamic *repl* nil)
+
+;; these two defs are top-level so we can use them for printing
 (def xpc-connection (atom nil))
 (def parent-connected? (atom false))
+
+;; captures any printing that occurs *before* we actually have a connection
 (def print-queue (array))
 
 (defn flush-print-queue! [conn]
