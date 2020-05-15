@@ -1174,6 +1174,10 @@
                      (if (vector? analyze-path)
                        (run! #(analyze-source % opts) analyze-path)
                        (analyze-source analyze-path opts)))
+                   (when-let [main-ns (:main opts)]
+                     (.start
+                       (Thread.
+                         (bound-fn [] (ana/analyze-file (util/ns->source main-ns))))))
                    (init)
                    (run-inits repl-env inits)
                    (maybe-load-user-file)
