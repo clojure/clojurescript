@@ -111,13 +111,7 @@
           repl-connected? (atom false)
           try-handshake (fn try-handshake []
                           (when-not @repl-connected?
-                            (net/transmit repl-connection
-                                          :start-handshake
-                                          nil)
-                            ;; In case we miss, try again. Parent will only
-                            ;; ack once.
-                            (js/setTimeout try-handshake
-                                           10)))]
+                            (net/transmit repl-connection :start-handshake nil)))]
       (net/connect repl-connection try-handshake)
 
       (net/register-service repl-connection
@@ -129,6 +123,13 @@
             ;; the server.
             (send-result connection
               url (wrap-message nil :ready "ready")))))
+
+      (event/listen connection
+        :error
+        (fn [e]
+          (reset! repl-connected? false)
+          (net/transmit repl-connection :reconnect nil)
+          (js/setTimeout try-handshake 1000)))
 
       (event/listen connection
         :success
@@ -234,9 +235,7 @@
   the document that called this function."
   [repl-server-url]
   (let [connected? (atom false)
-        repl-connection
-        (net/xpc-connection
-          {:peer_uri repl-server-url})]
+        repl-connection (net/xpc-connection {:peer_uri repl-server-url})]
     (swap! xpc-connection (constantly repl-connection))
     (net/register-service repl-connection
       :start-handshake
@@ -246,10 +245,13 @@
         (when-not @connected?
           (reset! connected? true)
           (reset! parent-connected? true)
-          (net/transmit repl-connection
-                        :ack-handshake
-                        nil)
+          (net/transmit repl-connection :ack-handshake nil)
           (flush-print-queue! repl-connection))))
+    (net/register-service repl-connection
+      :reconnect
+      (fn [_]
+        (reset! connected? false)
+        (reset! parent-connected? false)))
     (net/register-service repl-connection
       :evaluate-javascript
       (fn [json]
