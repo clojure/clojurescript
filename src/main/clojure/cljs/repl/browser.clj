@@ -422,11 +422,18 @@
      {:groups {::repl {:desc "browser REPL options"}}
       :init
       {["-H" "--host"]
-       {:group ::repl :fn #(assoc-in %1 [:repl-env-options :host] %2)
+       {:group ::repl
+        :fn #(-> %1
+               (assoc-in [:repl-env-options :host] %2)
+               (assoc-in [:options :closure-defines 'clojure.browser.repl/HOST] %2))
         :arg "address"
         :doc "Address to bind"}
        ["-p" "--port"]
-       {:group ::repl :fn #(assoc-in %1 [:repl-env-options :port] (Integer/parseInt %2))
+       {:group ::repl
+        :fn #(let [port (Integer/parseInt %2)]
+               (-> %1
+                 (assoc-in [:repl-env-options :port] port)
+                 (assoc-in [:options :closure-defines 'clojure.browser.repl/PORT] port)))
         :arg "number"
         :doc "Port to bind"}}}})
   repl/IParseStacktrace
