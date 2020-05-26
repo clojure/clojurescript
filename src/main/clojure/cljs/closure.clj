@@ -2375,7 +2375,8 @@
       (pr-str cache-analysis-format))))
 
 (defn check-npm-deps [{:keys [npm-deps]}]
-  (let [{ups-npm-deps :npm-deps} (get-upstream-deps)
+  (let [npm-deps (if (true? npm-deps) {} npm-deps)
+        {ups-npm-deps :npm-deps} (get-upstream-deps)
         conflicts (filter (fn [[dep v]]
                             (and (coll? v) (not (contains? npm-deps dep))))
                     ups-npm-deps)]
