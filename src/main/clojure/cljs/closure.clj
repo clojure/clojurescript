@@ -2511,8 +2511,9 @@
         {:hashbang      false
          :infer-externs true
          :nodejs-rt     false
-         :npm-deps      true
-         :target        :nodejs})
+         :target        :nodejs}
+        (when-not (:npm-deps opts)
+          {:npm-deps true}))
 
       (= optimizations :none)
       (assoc
