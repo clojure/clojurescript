@@ -4479,7 +4479,7 @@
 #?(:clj
    (defn build-affecting-options [opts]
      (select-keys opts
-       [:static-fns :fn-invoke-direct :optimize-constants :elide-asserts :target
+       [:static-fns :fn-invoke-direct :optimize-constants :elide-asserts :target :nodejs-rt
         :cache-key :checked-arrays :language-out])))
 
 #?(:clj
