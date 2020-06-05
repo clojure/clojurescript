@@ -2212,7 +2212,8 @@
       `(let [~xsym ~x]
          (if-not (nil? ~xsym)
            (if (or ~(if bit `(unsafe-bit-and (. ~xsym ~msym) ~bit) false)
-                    (identical? cljs.core/PROTOCOL_SENTINEL (. ~xsym ~(symbol (core/str "-" prefix)))))
+                    (identical? cljs.core/PROTOCOL_SENTINEL
+                      (. ~xsym ~(with-meta (symbol (core/str "-" prefix)) {:protocol-method true}))))
              true
              (if (coercive-not (. ~xsym ~msym))
                (cljs.core/native-satisfies? ~psym ~xsym)
@@ -2220,7 +2221,8 @@
            (cljs.core/native-satisfies? ~psym ~xsym)))
       `(if-not (nil? ~x)
          (if (or ~(if bit `(unsafe-bit-and (. ~x ~msym) ~bit) false)
-                  (identical? cljs.core/PROTOCOL_SENTINEL (. ~x ~(symbol (core/str "-" prefix)))))
+                  (identical? cljs.core/PROTOCOL_SENTINEL
+                    (. ~x ~(with-meta (symbol (core/str "-" prefix)) {:protocol-method true}))))
            true
            (if (coercive-not (. ~x ~msym))
              (cljs.core/native-satisfies? ~psym ~x)
