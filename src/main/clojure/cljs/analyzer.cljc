@@ -3417,7 +3417,7 @@
                        nil)]
     (when (and (not= 'constructor prop)
                (not (string/starts-with? (str prop) "cljs$"))
-               (not (-> prop meta :protocol-method)))
+               (not (-> prop meta :protocol-prop)))
       ;; Adding to Object
       (when (= 'Object (first (-> tag meta :prefix)))
         (warning :infer-warning env

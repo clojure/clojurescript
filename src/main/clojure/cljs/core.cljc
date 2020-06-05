@@ -2110,7 +2110,7 @@
                                      check
                                      `(if (and (not (nil? ~fsig))
                                                ;; Property access needed here.
-                                               (not (nil? (. ~fsig ~(with-meta (symbol (core/str "-" slot)) {:protocol-method true})))))
+                                               (not (nil? (. ~fsig ~(with-meta (symbol (core/str "-" slot)) {:protocol-prop true})))))
                                         (. ~fsig ~slot ~@sig)
                                         (~dyn-name ~@sig))]
                             `(~sig ~check)))
@@ -2162,7 +2162,7 @@
                              ~@(map (core/fn [sig]
                                       (expand-sig dyn-name
                                         (with-meta (symbol (core/str slot "$arity$" (count sig)))
-                                          {:protocol-method true})
+                                          {:protocol-prop true})
                                         sig))
                                  sigs)))))]
     `(do
@@ -2213,7 +2213,7 @@
          (if-not (nil? ~xsym)
            (if (or ~(if bit `(unsafe-bit-and (. ~xsym ~msym) ~bit) false)
                     (identical? cljs.core/PROTOCOL_SENTINEL
-                      (. ~xsym ~(with-meta (symbol (core/str "-" prefix)) {:protocol-method true}))))
+                      (. ~xsym ~(with-meta (symbol (core/str "-" prefix)) {:protocol-prop true}))))
              true
              (if (coercive-not (. ~xsym ~msym))
                (cljs.core/native-satisfies? ~psym ~xsym)
@@ -2222,7 +2222,7 @@
       `(if-not (nil? ~x)
          (if (or ~(if bit `(unsafe-bit-and (. ~x ~msym) ~bit) false)
                   (identical? cljs.core/PROTOCOL_SENTINEL
-                    (. ~x ~(with-meta (symbol (core/str "-" prefix)) {:protocol-method true}))))
+                    (. ~x ~(with-meta (symbol (core/str "-" prefix)) {:protocol-prop true}))))
            true
            (if (coercive-not (. ~x ~msym))
              (cljs.core/native-satisfies? ~psym ~x)
