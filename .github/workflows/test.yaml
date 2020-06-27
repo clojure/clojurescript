@@ -53,7 +53,7 @@ jobs:
         run: clojure -A:runtime.test.build
 
       - name: Install V8
-        run: sudo apt-get install v8
+        run: sudo apt-get install libv8
 
       - name: Run tests
-        run: v8-v8.0.426.8-linux/bin/d8 builds/out-adv/core-advanced-test.js 
+        run: d8 builds/out-adv/core-advanced-test.js 
