@@ -1,0 +1,59 @@
+name: Tests
+on: [push]
+
+jobs:
+  # runtime tests
+  runtime-test:
+    name: Runtime Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        
+      - uses: DeLaGuardo/setup-clojure@2.0
+        with:
+          tools-deps: '1.10.1.536'
+
+      - name: Cache maven
+        uses: actions/cache@v1
+        env:
+          cache-name: cache-maven
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/deps.edn') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+
+      - name: Cache gitlibs
+        uses: actions/cache@v1
+        env:
+          cache-name: cache-gitlibs
+        with:
+          path: ~/.gitlibs
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/deps.edn') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+
+      - name: Cache node modules
+        uses: actions/cache@v1
+        env:
+          cache-name: cache-nodemodules
+        with:
+          path: ~/node_modules
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+      
+      - name: Build tests
+        run: clj -A:runtime.test.build
+
+      - name: Install V8
+        run: wget https://github.com/blazerod/v8-prebuilt/releases/download/v8.0.426.8/v8-v8.0.426.8-linux.tar.gz; tar -xvzf v8-v8.0.426.8-linux.tar.gz v8
+
+      - name: Run tests
+        run: v8/bin/d8 builds/out-adv/core-advanced-test.js 
