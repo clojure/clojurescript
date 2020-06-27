@@ -84,4 +84,4 @@ jobs:
             ${{ runner.os }}-${{ env.cache-name }}-
 
       - name: Run tests
-        run: clj -A:compiler.test:compiler.test.run
+        run: clojure -A:compiler.test:compiler.test.run
