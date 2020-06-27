@@ -50,7 +50,7 @@ jobs:
             ${{ runner.os }}-
       
       - name: Build tests
-        run: clj -A:runtime.test.build
+        run: clojure -A:runtime.test.build
 
       - name: Install V8
         run: wget https://github.com/blazerod/v8-prebuilt/releases/download/v8.0.426.8/v8-v8.0.426.8-linux.tar.gz; tar -xvzf v8-v8.0.426.8-linux.tar.gz v8
