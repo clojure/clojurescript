@@ -10,8 +10,10 @@
   com.google.javascript/closure-compiler-unshaded {:mvn/version "v20200315"}
   org.clojure/google-closure-library {:mvn/version "0.0-20191016-6ae1f72f"}}
  :aliases
- {:compiler-test {:extra-paths ["src/test/cljs" "src/test/cljs_build" "src/test/cljs_cp"
+ {:runtime.test.build {:extra-paths ["src/test/cljs"]
+                       :main-opts ["-m" "cljs.main" "-co" "resources/test.edn" "-c"]}
+  :compiler.test {:extra-paths ["src/test/cljs" "src/test/cljs_build" "src/test/cljs_cp"
                                 "src/test/clojure" "src/test/self"]
                   :extra-deps {com.cognitect/test-runner {:git/url "https://github.com/cognitect-labs/test-runner.git"
                                                           :sha "f7ef16dc3b8332b0d77bc0274578ad5270fbfedd"}}}
-  :run-compiler-tests {:main-opts ["-m" "cognitect.test-runner" "-d" "src/test/clojure" "-r" ".*-tests$"]}}}
+  :compiler.test.run {:main-opts ["-m" "cognitect.test-runner" "-d" "src/test/clojure" "-r" ".*-tests$"]}}}

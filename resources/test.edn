@@ -1,10 +1,11 @@
 {:optimizations :advanced
  :main test-runner
+ :output-to "builds/out-adv/core-advanced-test.js"
+ :output-dir "builds/out-adv"
  :output-wrapper true
  :verbose true
  :compiler-stats true
  :parallel-build true
- :output-dir "builds/out-adv"
  :npm-deps {:lodash "4.17.4"}
  :closure-warnings {:non-standard-jsdoc :off :global-this :off}
  :install-deps true
