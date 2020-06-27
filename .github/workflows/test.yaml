@@ -2,7 +2,7 @@ name: Tests
 on: [push]
 
 jobs:
-  # runtime tests
+  # Runtime Tests
   runtime-test:
     name: Runtime Tests
     runs-on: ubuntu-latest
@@ -51,3 +51,37 @@ jobs:
 
       - name: Run tests
         run: WebKit/WebKitBuild/Release/bin/jsc builds/out-adv/core-advanced-test.js 
+
+  # Compiler Tests
+  compiler-test:
+    name: Compiler Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        
+      - uses: DeLaGuardo/setup-clojure@2.0
+        with:
+          tools-deps: '1.10.1.536'
+
+      - name: Cache maven
+        uses: actions/cache@v2
+        env:
+          cache-name: cache-maven
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/deps.edn') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ env.cache-name }}-
+
+      - name: Cache gitlibs
+        uses: actions/cache@v2
+        env:
+          cache-name: cache-gitlibs
+        with:
+          path: ~/.gitlibs
+          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/deps.edn') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ env.cache-name }}-
+
+      - name: Run tests
+        run: clj -A:compiler.test:compiler.test.run
