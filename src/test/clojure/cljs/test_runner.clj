@@ -1,6 +1,5 @@
 (ns cljs.test-runner
-  (:require [cljs.source-map.base64-tests]
-            [cljs.analyzer-api-tests]
+  (:require [cljs.analyzer-api-tests]
             [cljs.analyzer-tests]
             [cljs.build-api-tests]
             [cljs.closure-tests]
@@ -9,10 +8,27 @@
             [cljs.externs-parsing-tests]
             [cljs.module-graph-tests]
             [cljs.module-processing-tests]
-            [cljs.module-graph-tests]
-            [cljs.module-processing-tests]
+            [cljs.source-map.base64-tests]
             [cljs.type-inference-tests]
             [cljs.util-tests]
-            [clojure.test :refer [run-all-tests]]))
+            [clojure.test :refer [run-tests]]))
 
-(run-all-tests)
+(defn -main []
+  (let [{:keys [fail error]}
+        (run-tests
+          'cljs.analyzer-api-tests
+          'cljs.analyzer-tests
+          'cljs.build-api-tests
+          'cljs.closure-tests
+          'cljs.compiler-tests
+          'cljs.externs-infer-tests
+          'cljs.externs-parsing-tests
+          'cljs.module-graph-tests
+          'cljs.module-processing-tests
+          'cljs.source-map.base64-tests
+          'cljs.type-inference-tests
+          'cljs.util-tests)]
+    (if (or (not (zero? fail))
+            (not (zero? error)))
+      (System/exit 1)
+      (System/exit 0))))

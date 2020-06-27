@@ -16,4 +16,4 @@
                                 "src/test/clojure" "src/test/self"]
                   :extra-deps {com.cognitect/test-runner {:git/url "https://github.com/cognitect-labs/test-runner.git"
                                                           :sha "f7ef16dc3b8332b0d77bc0274578ad5270fbfedd"}}}
-  :compiler.test.run {:main-opts ["-m" "cognitect.test-runner" "-d" "src/test/clojure" "-r" ".*-tests$"]}}}
+  :compiler.test.run {:main-opts ["-m" "cljs.test-runner"]}}}
