@@ -14,41 +14,35 @@ jobs:
           tools-deps: '1.10.1.536'
 
       - name: Cache maven
-        uses: actions/cache@v1
+        uses: actions/cache@v2
         env:
           cache-name: cache-maven
         with:
           path: ~/.m2
-          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/deps.edn') }}
+          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/deps.edn') }}
           restore-keys: |
-            ${{ runner.os }}-build-${{ env.cache-name }}-
-            ${{ runner.os }}-build-
-            ${{ runner.os }}-
+            ${{ runner.os }}-${{ env.cache-name }}-
 
       - name: Cache gitlibs
-        uses: actions/cache@v1
+        uses: actions/cache@v2
         env:
           cache-name: cache-gitlibs
         with:
           path: ~/.gitlibs
-          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/deps.edn') }}
+          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/deps.edn') }}
           restore-keys: |
-            ${{ runner.os }}-build-${{ env.cache-name }}-
-            ${{ runner.os }}-build-
-            ${{ runner.os }}-
-
-      - name: Cache node modules
-        uses: actions/cache@v1
+            ${{ runner.os }}-${{ env.cache-name }}-
+                  
+      - name: Cache JSC
+        uses: actions/cache@v2
         env:
-          cache-name: cache-nodemodules
+          cache-name: cache-jsc
         with:
-          path: ~/node_modules
-          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package.json') }}
+          path: WebKit
+          key: ${{ runner.os }}-jsc
           restore-keys: |
-            ${{ runner.os }}-build-${{ env.cache-name }}-
-            ${{ runner.os }}-build-
-            ${{ runner.os }}-
-      
+            ${{ runner.os }}-jsc
+
       - name: Build tests
         run: clojure -A:runtime.test.build
 
