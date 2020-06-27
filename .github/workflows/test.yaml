@@ -52,8 +52,8 @@ jobs:
       - name: Build tests
         run: clojure -A:runtime.test.build
 
-      - name: Install V8
-        run: sudo apt-get install -y libv8-dev
+      - name: Install JSC
+        run: git clone --depth=1 git://git.webkit.org/WebKit.git WebKit; cd WebKit; Tools/Scripts/build-jsc --jsc-only; cd ..
 
       - name: Run tests
-        run: d8 builds/out-adv/core-advanced-test.js 
+        run: WebKit/WebKitBuild/Release/bin/jsc builds/out-adv/core-advanced-test.js 
