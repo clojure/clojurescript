@@ -47,7 +47,7 @@ jobs:
         run: clojure -A:runtime.test.build
 
       - name: Install JSC
-        run: [[ -d WebKit ]] || { git clone --depth=1 git://git.webkit.org/WebKit.git WebKit; cd WebKit; Tools/Scripts/build-jsc --jsc-only; cd .. }
+        run: ./ci/install_jsc.sh
 
       - name: Run tests
         run: WebKit/WebKitBuild/Release/bin/jsc builds/out-adv/core-advanced-test.js
