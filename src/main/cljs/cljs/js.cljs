@@ -759,7 +759,7 @@
                           false.
       :context          - optional, sets the context for the source. Possible values
                           are `:expr`, `:statement` and `:return`. Defaults to
-                          `:expr`.
+                          `:statement`.
 
    cb (function)
      callback, will be invoked with a map. If successful the map will contain
@@ -875,7 +875,7 @@
                           false.
       :context          - optional, sets the context for the source. Possible values
                           are `:expr`, `:statement` and `:return`. Defaults to
-                          `:expr`.
+                          `:statement`.
 
    cb (function)
      callback, will be invoked with a map. If successful the map will contain
@@ -1002,7 +1002,7 @@
                           false.
       :context          - optional, sets the context for the source. Possible values
                           are `:expr`, `:statement` and `:return`. Defaults to
-                          `:expr`.
+                          `:statement`.
 
    cb (function)
      callback, will be invoked with a map. If successful the map will contain
@@ -1174,7 +1174,7 @@
                         false.
     :context          - optional, sets the context for the source. Possible values
                      are `:expr`, `:statement` and `:return`. Defaults to
-                      `:expr`.
+                      `:statement`.
 
   cb (function)
     callback, will be invoked with a map. If succesful the map will contain
