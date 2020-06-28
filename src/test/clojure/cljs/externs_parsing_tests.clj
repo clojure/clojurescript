@@ -6,7 +6,7 @@
 ;; the terms of this license.
 ;; You must not remove this notice, or any other, from this software.
 
-(ns cljs.externs-parsing-test
+(ns cljs.externs-parsing-tests
   (:require [cljs.closure :as closure]
             [cljs.externs :as externs]
             [clojure.java.io :as io]
