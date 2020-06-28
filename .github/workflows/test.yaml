@@ -155,7 +155,7 @@ jobs:
             ${{ runner.os }}-${{ env.cache-name }}-
 
       - name: Build Uberjar
-      - run: ./script/uberjar
+        run: ./script/uberjar
 
       - name: Run tests
         run: clojure -A:cli.test.run
