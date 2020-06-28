@@ -122,3 +122,40 @@ jobs:
 
       - name: Run tests
         run: clojure -A:compiler.test:compiler.test.run
+
+  # CLI Tests
+  cli-test:
+    name: CLI Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: DeLaGuardo/setup-clojure@2.0
+        with:
+          tools-deps: '1.10.1.536'
+
+      - name: Cache maven
+        uses: actions/cache@v2
+        env:
+          cache-name: cache-maven
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/deps.edn') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ env.cache-name }}-
+
+      - name: Cache gitlibs
+        uses: actions/cache@v2
+        env:
+          cache-name: cache-gitlibs
+        with:
+          path: ~/.gitlibs
+          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/deps.edn') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ env.cache-name }}-
+
+      - name: Build Uberjar
+      - run: ./script/uberjar
+
+      - name: Run tests
+        run: clojure -A:cli.test.run

@@ -10,7 +10,10 @@
   org.clojure/tools.reader {:mvn/version "1.3.2"}
   org.clojure/test.check {:mvn/version "0.10.0-alpha3"}}
  :aliases
- {:compiler.test         {:extra-paths ["src/test/cljs" "src/test/cljs_build" "src/test/cljs_cp"
+ {:cli.test.run          {:extra-paths ["src/test/cljs_cli"]
+                          :main-opts ["-i" "src/test/cljs_cli/cljs_cli/test_runner.clj"
+                                      "-e" "(cljs-cli.test-runner/-main)"]}
+  :compiler.test         {:extra-paths ["src/test/cljs" "src/test/cljs_build" "src/test/cljs_cp"
                                         "src/test/clojure" "src/test/self"]}
   :compiler.test.run     {:main-opts ["-i" "src/test/clojure/cljs/test_runner.clj"
                                       "-e" "(cljs.test-runner/-main)"]}
