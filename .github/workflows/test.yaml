@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-        
+
       - uses: DeLaGuardo/setup-clojure@2.0
         with:
           tools-deps: '1.10.1.536'
@@ -32,7 +32,7 @@ jobs:
           key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/deps.edn') }}
           restore-keys: |
             ${{ runner.os }}-${{ env.cache-name }}-
-                  
+
       - name: Cache JSC
         uses: actions/cache@v2
         env:
@@ -47,10 +47,10 @@ jobs:
         run: clojure -A:runtime.test.build
 
       - name: Install JSC
-        run: git clone --depth=1 git://git.webkit.org/WebKit.git WebKit; cd WebKit; Tools/Scripts/build-jsc --jsc-only; cd ..
+        run: [[ -d WebKit ]] || { git clone --depth=1 git://git.webkit.org/WebKit.git WebKit; cd WebKit; Tools/Scripts/build-jsc --jsc-only; cd .. }
 
       - name: Run tests
-        run: WebKit/WebKitBuild/Release/bin/jsc builds/out-adv/core-advanced-test.js 
+        run: WebKit/WebKitBuild/Release/bin/jsc builds/out-adv/core-advanced-test.js
 
   # Compiler Tests
   compiler-test:
@@ -58,7 +58,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-        
+
       - uses: DeLaGuardo/setup-clojure@2.0
         with:
           tools-deps: '1.10.1.536'
