@@ -10,7 +10,9 @@
   com.google.javascript/closure-compiler-unshaded {:mvn/version "v20200315"}
   org.clojure/google-closure-library {:mvn/version "0.0-20191016-6ae1f72f"}}
  :aliases
- {:runtime.test.build {:extra-paths ["src/test/cljs"]
+ {:selfhost.test.build {:extra-paths ["src/test/self"]
+                        :main-opts ["-m" "cljs.main" "-co" "resources/self_host_test.edn" "-c"]}
+  :runtime.test.build {:extra-paths ["src/test/cljs"]
                        :main-opts ["-m" "cljs.main" "-co" "resources/test.edn" "-c"]}
   :compiler.test {:extra-paths ["src/test/cljs" "src/test/cljs_build" "src/test/cljs_cp"
                                 "src/test/clojure" "src/test/self"]}

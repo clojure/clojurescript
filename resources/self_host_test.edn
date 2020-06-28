@@ -1,0 +1,10 @@
+{:optimizations :simple
+ :main self-host.test
+ :static-fns true
+ :output-to "builds/out-self/core-self-test.js"
+ :output-dir "builds/out-self"
+ :optimize-constants true
+ :verbose true
+ :compiler-stats true
+ :parallel-build true
+ :target :nodejs}
