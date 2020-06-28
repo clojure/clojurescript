@@ -1,6 +1,6 @@
 {:paths ["src/main/clojure" "src/main/cljs" "resources"]
  :deps
- {org.clojure/clojure {:mvn/version "1.9.0"}
+ {org.clojure/clojure {:mvn/version "1.10.0"}
   org.clojure/tools.reader {:mvn/version "1.3.2"}
   org.clojure/test.check {:mvn/version "0.10.0-alpha3"}
   org.clojure/spec.alpha {:mvn/version "0.1.143"}
@@ -13,7 +13,6 @@
  {:runtime.test.build {:extra-paths ["src/test/cljs"]
                        :main-opts ["-m" "cljs.main" "-co" "resources/test.edn" "-c"]}
   :compiler.test {:extra-paths ["src/test/cljs" "src/test/cljs_build" "src/test/cljs_cp"
-                                "src/test/clojure" "src/test/self"]
-                  :extra-deps {com.cognitect/test-runner {:git/url "https://github.com/cognitect-labs/test-runner.git"
-                                                          :sha "f7ef16dc3b8332b0d77bc0274578ad5270fbfedd"}}}
-  :compiler.test.run {:main-opts ["-m" "cljs.test-runner"]}}}
+                                "src/test/clojure" "src/test/self"]}
+  :compiler.test.run {:main-opts ["-i" "src/test/clojure/cljs/test_runner.clj"
+                                  "-e" "(cljs.test-runner/-main)"]}}}
