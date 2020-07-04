@@ -6,8 +6,7 @@
 ;; the terms of this license.
 ;; You must not remove this notice, or any other, from this software.
 
-(ns ^{:doc "This auxiliary namespace is not actually loaded.
-  Its mere presence cause it to be compiled and thus causes
+(ns ^{:doc "This auxiliary namespace only exists to cause
   the libs listed here to be dumped into the compiler output
   directory where they can be loaded on demand when running
   the compiler tests in bootstrap mode."}

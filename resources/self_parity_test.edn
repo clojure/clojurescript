@@ -1,0 +1,6 @@
+{:optimizations :none
+ :main self-parity.test
+ :output-to "builds/out-self-parity/main.js"
+ :output-dir "builds/out-self-parity"
+ :cache-analysis-format :edn
+ :target :nodejs}

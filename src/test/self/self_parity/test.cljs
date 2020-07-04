@@ -21,7 +21,8 @@
             [cljs.js :as cljs]
             [cljs.tools.reader :as reader]
             [cljs.stacktrace :as st]
-            [goog.object :as gobj]))
+            [goog.object :as gobj]
+            [self-parity.auxiliary]))
 
 (def out-dir "builds/out-self-parity")
 
