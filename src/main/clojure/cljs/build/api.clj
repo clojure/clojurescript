@@ -52,7 +52,7 @@
   ('example.core 'example.util)"
   ([namespaces]
    (closure/cljs-dependents-for-macro-namespaces
-     (ana-api/empty-state) namespaces))
+     (or (ana-api/current-state) (ana-api/empty-state)) namespaces))
   ([state namespaces]
    (closure/cljs-dependents-for-macro-namespaces state namespaces)))
 
@@ -68,7 +68,8 @@
   provide build options with :output-dir specified."
   ([src] (src-file->target-file src nil))
   ([src opts]
-   (src-file->target-file (ana-api/empty-state opts) src opts))
+   (src-file->target-file
+     (or (ana-api/current-state) (ana-api/empty-state opts)) src opts))
   ([state src opts]
    (ana-api/with-state state
      (binding [ana/*cljs-warning-handlers* (:warning-handlers opts ana/*cljs-warning-handlers*)]
@@ -79,7 +80,8 @@
   the goog.require statement for it."
   ([src] (src-file->goog-require src nil))
   ([src opts]
-   (src-file->goog-require (ana-api/empty-state opts) src opts))
+   (src-file->goog-require
+     (or (ana-api/current-state) (ana-api/empty-state opts)) src opts))
   ([state src opts]
    (ana-api/with-state state
      (binding [ana/*cljs-warning-handlers* (:warning-handlers opts ana/*cljs-warning-handlers*)]
@@ -121,7 +123,7 @@
   .cljs, .cljc, .js. Returns a map containing :relative-path a string, and
   :uri a URL."
   ([ns]
-   (ns->location ns (ana-api/empty-state)))
+   (ns->location ns (or (ana-api/current-state) (ana-api/empty-state))))
   ([ns compiler-env]
    (closure/source-for-namespace ns compiler-env)))
 
@@ -139,7 +141,7 @@
   ([xs]
    (add-dependency-sources xs {}))
   ([xs opts]
-   (add-dependency-sources (ana-api/empty-state opts) xs opts))
+   (add-dependency-sources (or (ana-api/current-state) (ana-api/empty-state opts)) xs opts))
   ([state xs opts]
    (ana-api/with-state state
      (closure/add-dependency-sources xs opts))))
@@ -192,7 +194,7 @@
 (defn compile
   "Given a Compilable, compile it and return an IJavaScript."
   ([opts compilable]
-   (compile (ana-api/empty-state opts) opts compilable))
+   (compile (or (ana-api/current-state) (ana-api/empty-state opts)) opts compilable))
   ([state opts compilable]
    (ana-api/with-state state
      (closure/compile compilable opts))))
@@ -214,11 +216,13 @@
    (build nil opts))
   ([source opts]
    (build source opts
-     (ana-api/empty-state
-       ;; need to dissoc :foreign-libs since we won't know what overriding
-       ;; foreign libspecs are referring to until after add-implicit-options
-       ;; - David
-       (closure/add-externs-sources (dissoc opts :foreign-libs)))))
+     (or
+       (ana-api/current-state)
+       (ana-api/empty-state
+         ;; need to dissoc :foreign-libs since we won't know what overriding
+         ;; foreign libspecs are referring to until after add-implicit-options
+         ;; - David
+         (closure/add-externs-sources (dissoc opts :foreign-libs))))))
   ([source opts compiler-env]
    (doseq [[unknown-opt suggested-opt] (util/unknown-opts (set (keys opts)) closure/known-opts)]
      (when suggested-opt
@@ -230,8 +234,9 @@
   "Given a source which can be compiled, watch it for changes to produce."
   ([source opts]
    (watch source opts
-     (ana-api/empty-state
-       (closure/add-externs-sources opts))))
+     (or (ana-api/current-state)
+         (ana-api/empty-state
+           (closure/add-externs-sources opts)))))
   ([source opts compiler-env]
    (watch source opts compiler-env nil))
   ([source opts compiler-env stop]
@@ -291,12 +296,14 @@
    installed."
   ([entries]
    (node-inputs entries
-     (:options (ana-api/empty-state))))
+     (:options (or (ana-api/current-state) (ana-api/empty-state)))))
   ([entries opts]
    (closure/node-inputs entries opts)))
 
 (defn node-modules
   "Return a sequence of requirable libraries found under node_modules."
+  ([]
+   (node-modules {}))
   ([opts]
-   (ana-api/with-state (ana-api/empty-state opts)
+   (ana-api/with-state (or (ana-api/current-state) (ana-api/empty-state opts))
      (filter :provides (closure/index-node-modules-dir)))))
