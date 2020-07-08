@@ -3109,11 +3109,15 @@
              (util/debug-prn "Options passed to ClojureScript compiler:" (pr-str opts)))
            (let [one-file? (and (:main opts)
                                 (#{:advanced :simple :whitespace} (:optimizations opts)))
-                 source (if one-file?
+                 source (if (or one-file?
+                                ;; if source is nil, :main is supplied, :optimizations :none,
+                                ;; fix up source for the user, see CLJS-3255
+                                (and (nil? source) (:main opts) (= :none (:optimizations opts))))
                           (let [main (:main opts)
                                 uri  (:uri (cljs-source-for-namespace main))]
                             (assert uri (str "No file for namespace " main " exists"))
                             uri)
+                          ;; old compile directory behavior, or code-splitting
                           source)
                  compile-opts (if one-file?
                                 (assoc opts :output-file (:output-to opts))

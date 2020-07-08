@@ -719,3 +719,15 @@
     (test/delete-out-files out)
     (build/build (build/inputs (io/file inputs "trivial/core.cljs")) opts cenv)
     (is (< (.length out-file) 10000))))
+
+(deftest cljs-3255-nil-inputs-build
+  (let [out (.getPath (io/file (test/tmp-dir) "3255-test-out"))
+        out-file (io/file out "main.js")
+        opts {:main 'trivial.core
+              :output-to (.getPath out-file)
+              :output-dir out
+              :language-in :es6
+              :optimizations :none}
+        cenv (env/default-compiler-env)]
+    (test/delete-out-files out)
+    (build/build nil opts cenv)))
