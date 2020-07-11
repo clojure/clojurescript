@@ -50,7 +50,9 @@ jobs:
         run: ./ci/install_jsc.sh
 
       - name: Run tests
-        run: WebKit/WebKitBuild/Release/bin/jsc builds/out-adv/core-advanced-test.js
+        run: |
+          WebKit/WebKitBuild/Release/bin/jsc builds/out-adv/core-advanced-test.js | tee test-out.txt
+          grep -qxF '0 failures, 0 errors.' test-out.txt
 
   # Self-host Tests
   self-host-test:
@@ -87,7 +89,9 @@ jobs:
         run: clojure -A:selfhost.test.build
 
       - name: Run tests
-        run: node builds/out-self/core-self-test.js
+        run: |
+          node builds/out-self/core-self-test.js | tee test-out.txt
+          grep -qxF '0 failures, 0 errors.' test-out.txt
 
   # Self-parity Tests
   self-parity-test:
@@ -124,7 +128,9 @@ jobs:
         run: clojure -A:selfparity.test.build
 
       - name: Run tests
-        run: node builds/out-self-parity/main.js
+        run: |
+          node builds/out-self-parity/main.js | tee test-out.txt
+          grep -qxF '0 failures, 0 errors.' test-out.txt
 
   # Compiler Tests
   compiler-test:
@@ -197,4 +203,6 @@ jobs:
         run: ./script/uberjar
 
       - name: Run tests
-        run: clojure -A:cli.test.run
+        run: |
+          clojure -A:cli.test.run | tee test-out.txt
+          grep -qxF '0 failures, 0 errors.' test-out.txt
