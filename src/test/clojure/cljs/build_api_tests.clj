@@ -731,3 +731,40 @@
         cenv (env/default-compiler-env)]
     (test/delete-out-files out)
     (build/build nil opts cenv)))
+
+(deftest test-cljs-3235
+  (test/delete-node-modules)
+  (spit (io/file "package.json") "{}")
+  (testing "Test various require patterns for Node and foreign libraries"
+    (let [ws (atom [])
+          out (.getPath (io/file (test/tmp-dir) "cljs-3235-out"))
+          {:keys [inputs opts]} {:inputs (str (io/file "src" "test" "cljs_build"))
+                                 :opts   {:main             'cljs-3235.core
+                                          :output-dir       out
+                                          :optimizations    :none
+                                          :target           :nodejs
+                                          :install-deps     true
+                                          :npm-deps         {:react        "15.6.1"
+                                                             :react-dom    "15.6.1"
+                                                             :react-select "3.1.0"}
+                                          :foreign-libs     [{:file (.getPath (io/file "src" "test" "cljs_build" "cljs_3235" "foreign.js"))
+                                                              :provides ["some-foreign"]
+                                                              :global-exports '{some-foreign globalLib}}]
+                                          :closure-warnings {:check-types        :off
+                                                             :non-standard-jsdoc :off}}}
+          cenv (env/default-compiler-env opts)]
+      (test/delete-out-files out)
+      (ana/with-warning-handlers [(collecting-warning-handler ws)]
+        (build/build (build/inputs (io/file inputs "cljs_3235/core.cljs")) opts cenv))
+      (is (.exists (io/file out "cljs_3235/core.js")))
+      (is (true? (boolean (re-find #"cljs_3235\.core\.node\$module\$react_select\$default = require\('react-select'\)\['default'\];"
+                            (slurp (io/file out "cljs_3235/core.js"))))))
+      (is (true? (boolean (re-find #"cljs_3235\.core\.node\$module\$react_select\$default\$baz = require\('react-select'\)\['default'\]\['baz'\];"
+                            (slurp (io/file out "cljs_3235/core.js"))))))
+      (is (true? (boolean (re-find #"cljs_3235\.core\.global\$module\$some_foreign\$woz = goog.global\[\"globalLib\"\]\['woz'\];"
+                            (slurp (io/file out "cljs_3235/core.js"))))))
+      (is (true? (boolean (re-find #"cljs_3235\.core\.global\$module\$some_foreign\$foz\$boz = goog.global\[\"globalLib\"\]\['foz'\]\['boz'\];"
+                            (slurp (io/file out "cljs_3235/core.js"))))))
+      (is (empty? @ws))))
+  (.delete (io/file "package.json"))
+  (test/delete-node-modules))

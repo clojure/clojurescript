@@ -2937,7 +2937,10 @@
                     ;; if :npm-deps option is false, node_modules/ dir shouldn't be indexed
                     (if (not (false? npm-deps))
                       (index-node-modules-dir)))
-        requires (set (mapcat deps/-requires js-sources))
+        requires (->> (mapcat deps/-requires js-sources)
+                   ;; fixup foo$default cases, foo is the lib, default is a property
+                   (map #(-> % ana/lib&sublib first))
+                   set)
         ;; Select Node files that are required by Cljs code,
         ;; and create list of all their dependencies
         node-required (set/intersection (set (keys top-level)) requires)

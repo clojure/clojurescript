@@ -1251,18 +1251,28 @@
   [{:keys [target val env]}]
   (emit-wrap env (emits "(" target " = " val ")")))
 
+(defn sublib-select
+  [sublib]
+  (when sublib
+    (let [xs (string/split sublib #"\.")]
+      (apply str
+        (map #(str "['" % "']") xs)))))
+
 (defn emit-global-export [ns-name global-exports lib]
-  (emitln (munge ns-name) "."
-          (ana/munge-global-export lib)
-          " = goog.global"
-          ;; Convert object dot access to bracket access
-          (->> (string/split (name (or (get global-exports (symbol lib))
-                                       (get global-exports (name lib))))
-                             #"\.")
-               (map (fn [prop]
-                      (str "[\"" prop "\"]")))
-               (apply str))
-          ";"))
+  (let [[lib' sublib] (ana/lib&sublib lib)]
+    (emitln
+      (munge ns-name) "."
+      (ana/munge-global-export lib)
+      " = goog.global"
+      ;; Convert object dot access to bracket access
+      (->> (string/split (name (or (get global-exports (symbol lib'))
+                                   (get global-exports (name lib'))))
+             #"\.")
+        (map (fn [prop]
+               (str "[\"" prop "\"]")))
+        (apply str))
+      (sublib-select sublib)
+      ";")))
 
 (defn load-libs
   [libs seen reloads deps ns-name]
@@ -1288,18 +1298,19 @@
              ;; have handled it - David
              (when (and (= :none optimizations)
                         (not (contains? options :modules)))
-               (if nodejs-rt
-                 ;; under node.js we load foreign libs globally
-                 (let [ijs (get js-dependency-index (name lib))]
-                   (emitln "cljs.core.load_file("
-                     (-> (io/file (util/output-directory options)
-                                  (or (deps/-relative-path ijs)
-                                      (util/relative-name (:url ijs))))
+               (let [[lib _] (ana/lib&sublib lib)]
+                 (if nodejs-rt
+                   ;; under node.js we load foreign libs globally
+                   (let [ijs (get js-dependency-index (name lib))]
+                     (emitln "cljs.core.load_file("
+                       (-> (io/file (util/output-directory options)
+                             (or (deps/-relative-path ijs)
+                                 (util/relative-name (:url ijs))))
                          str
                          escape-string
                          wrap-in-double-quotes)
-                     ");"))
-                 (emitln "goog.require('" (munge lib) "');")))]
+                       ");"))
+                   (emitln "goog.require('" (munge lib) "');"))))]
             :cljs
             [(and (ana/foreign-dep? lib)
                   (not (keyword-identical? optimizations :none)))
@@ -1317,11 +1328,12 @@
         (when-not (= lib 'goog)
           (emitln "goog.require('" (munge lib) "');"))))
     (doseq [lib node-libs]
-      (emitln (munge ns-name) "."
-        (ana/munge-node-lib lib)
-        " = require('" lib "');"))
+      (let [[lib' sublib] (ana/lib&sublib lib)]
+        (emitln (munge ns-name) "."
+          (ana/munge-node-lib lib)
+          " = require('" lib' "')" (sublib-select sublib) ";")))
     (doseq [lib global-exports-libs]
-      (let [{:keys [global-exports]} (get js-dependency-index (name lib))]
+      (let [{:keys [global-exports]} (get js-dependency-index (name (-> lib ana/lib&sublib first)))]
         (emit-global-export ns-name global-exports lib)))
     (when (-> libs meta :reload-all)
       (emitln "if(!COMPILED) " loaded-libs " = cljs.core.into(" loaded-libs-temp ", " loaded-libs ");"))))
