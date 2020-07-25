@@ -621,16 +621,6 @@
   (is (= (meta (with-meta (reify IFoo (foo [this] :foo)) {:foo :bar}))
             {:foo :bar})))
 
-
-(defprotocol Slashy (/ [_]))
-
-(extend-type string
-       Slashy
-       (/ [_] "result"))
-
-(deftest test-protocol-with-slash
-  (is (=  "result" (/ ""))))
-
 (let [x "original"]
   (defn original-closure-stmt [] x))
 
@@ -1819,3 +1809,9 @@
 (deftest test-cljs-3202
   (is (= :/ (keyword "/")))
   (is (= (hash :/) (hash (keyword "/")))))
+
+(deftest test-cljs-3270
+  (is (== 10 (count (range 0 (+ 1 (/ 9)) (/ 9))))))
+
+(deftest test-cljs-3271
+  (is (== 0.6 (nth (range 0 1 0.1) 6))))

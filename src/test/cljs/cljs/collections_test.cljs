@@ -9,6 +9,10 @@
 (ns cljs.collections-test
   (:refer-clojure :exclude [iter])
   (:require [cljs.test :refer-macros [deftest testing is are run-tests]]
+            [clojure.test.check :as tc]
+            [clojure.test.check.clojure-test :refer-macros [defspec]]
+            [clojure.test.check.generators :as gen]
+            [clojure.test.check.properties :as prop :include-macros true]
             [clojure.string :as s]
             [clojure.set :as set]))
 
@@ -141,10 +145,18 @@
     (is (= #{1} (disj #{1 2 3} 2 3)))
     (is (nil? (disj nil :foo)))))
 
+(defspec integerrange-equals-range 100
+         (prop/for-all [start gen/int
+                        end gen/int
+                        step gen/s-pos-int]
+                       (= (Range. nil start end step nil nil nil)
+                          (IntegerRange. nil start end step nil nil nil))))
+
 (deftest test-range
   (testing "Testing Range"
     ;; Range
     (is (= (range 0 10 3) (list 0 3 6 9)))
+    (is (= (range 2.5) '(0 1 2)))
     (is (= (count (range 0 10 3)) 4))
     (is (= (range 0 -10 -3) (list 0 -3 -6 -9)))
     (is (= (count (range 0 -10 -3)) 4))
@@ -163,6 +175,45 @@
     (is (= (count (range 0 0 0)) 0))
     (is (= (take 3 (range 1 0 0)) (list 1 1 1)))
     (is (= (take 3 (range 3 1 0)) (list 3 3 3)))
+    (is (not (counted? (range))))
+    (is (counted? (range 0 10 1)))
+    (is (not (counted? (range 0.1 10 1))))
+    (is (chunked-seq? (range 0 10 1)))
+    (is (chunked-seq? (range 0.1 10 1)))
+    (is (= (range 0.5 8 1.2) '(0.5 1.7 2.9 4.1 5.3 6.5 7.7)))
+    (is (= (range 0.5 -4 -2) '(0.5 -1.5 -3.5)))
+    (is (= (reduce + (range 0 100)) 4950))
+    (is (= (reduce + 0 (range 0 100)) 4950))
+    (is (= (reduce + (range 0.1 100)) 4960))
+    (is (= (reduce + 0 (range 0.1 100)) 4960))
+    (is (= (reduce + (map inc (range 0 100 1))) 5050))
+    (is (= (reduce + 0 (map inc (range 0 100 1))) 5050))
+    (is (= (reduce + (map inc (range 0 100 0.1))) 51051))
+    (is (= (reduce + 0 (map inc (range 0 100 0.1))) 51051))
+    (is (= (reduce + (range 0 3.1 0.1)) 46.500000000000014))
+    (is (= (reduce + 0 (range 0 3.1 0.1)) 46.500000000000014))
+    (is (= (reduce + (range 0 3.2 0.1)) 49.600000000000016))
+    (is (= (reduce + 0 (range 0 3.2 0.1)) 49.600000000000016))
+    (is (= (reduce + (range 0 3.3 0.1)) 52.80000000000002))
+    (is (= (reduce + 0 (range 0 3.3 0.1)) 52.80000000000002))
+    (is (= (reduce + (range 0 -3.1 -0.1)) -46.500000000000014))
+    (is (= (reduce + 0 (range 0 -3.1 -0.1)) -46.500000000000014))
+    (is (= (reduce + (range 0 -3.2 -0.1)) -49.600000000000016))
+    (is (= (reduce + 0 (range 0 -3.2 -0.1)) -49.600000000000016))
+    (is (= (reduce + (range 0 -3.3 -0.1)) -52.80000000000002))
+    (is (= (reduce + 0 (range 0 -3.3 -0.1)) -52.80000000000002))
+    (is (= (reduce + (map inc (range 0 3.1 0.1))) 77.50000000000001))
+    (is (= (reduce + 0 (map inc (range 0 3.1 0.1))) 77.50000000000001))
+    (is (= (reduce + (map inc (range 0 3.2 0.1))) 81.60000000000002))
+    (is (= (reduce + 0 (map inc (range 0 3.2 0.1))) 81.60000000000002))
+    (is (= (reduce + (map inc (range 0 3.3 0.1))) 85.80000000000003))
+    (is (= (reduce + 0 (map inc (range 0 3.3 0.1))) 85.80000000000003))
+    (is (= (reduce + (map inc (range 0 -3.1 -0.1))) -15.500000000000012))
+    (is (= (reduce + 0 (map inc (range 0 -3.1 -0.1))) -15.500000000000012))
+    (is (= (reduce + (map inc (range 0 -3.2 -0.1))) -17.600000000000016))
+    (is (= (reduce + 0 (map inc (range 0 -3.2 -0.1))) -17.600000000000016))
+    (is (= (reduce + (map inc (range 0 -3.3 -0.1))) -19.80000000000002))
+    (is (= (reduce + 0 (map inc (range 0 -3.3 -0.1))) -19.80000000000002))
     ))
 
 (deftest test-cycle

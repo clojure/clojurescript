@@ -135,3 +135,12 @@
   (is (= :p (test-seqable 1)))
   (extend-type string IReduce (-reduce [_ _] :q))
   (is (= :q (test-reduceable "a"))))
+
+(defprotocol Slashy (/ [_]))
+
+(extend-type string
+  Slashy
+  (/ [_] "result"))
+
+(deftest test-protocol-with-slash
+  (is (=  "result" (/ ""))))
