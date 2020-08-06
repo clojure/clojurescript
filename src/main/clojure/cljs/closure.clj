@@ -2437,7 +2437,8 @@
      (reduce
        (fn [m [dep v]]
          (cond-> m
-           (and (map? npm-deps) (not (contains? npm-deps dep)))
+           (and (or (nil? npm-deps) (map? npm-deps))
+                (not (contains? npm-deps dep)))
            (assoc dep (if (coll? v)
                         (last (sort v))
                         v))))
