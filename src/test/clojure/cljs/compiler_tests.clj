@@ -358,6 +358,14 @@
                      (def hist (Html5History.))]))
                "(new goog.history.Html5History());"))))
 
+(deftest emit-source-ns*-retains-ns-name ;; CLJS-3273
+  (let [input   (java.io.File/createTempFile "foo" ".cljs")
+        output  (java.io.File/createTempFile "foo" ".js")
+        _       (spit input "(ns foo.foo) (require 'clojure.string)")
+        ns-info (env/ensure (comp/emit-source input output "cljs" {}))]
+    (is (= 'foo.foo (:ns ns-info)))))
+
+
 ;; CLJS-1225
 
 (comment

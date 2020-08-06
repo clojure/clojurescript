@@ -1564,7 +1564,9 @@
 
                      (= :ns* (:op ast))
                      (let [ns-emitted? (some? ns-name)
-                           ns-name (ana/gen-user-ns src)]
+                           ns-name (if-not ns-emitted?
+                                     (ana/gen-user-ns src)
+                                     ns-name)]
                        (if-not ns-emitted?
                          (emit (assoc ast :name ns-name :op :ns))
                          (emit ast))
