@@ -74,14 +74,16 @@
   Strings which should be printed." :dynamic true}
   *print-fn* nil)
 
+(declare boolean)
+
 (defn ^{:doc "Arranges to have tap functions executed via the supplied f, a
   function of no arguments. Returns true if successful, false otherwise." :dynamic true}
   *exec-tap-fn*
   [f]
   (and
-   (exists? js/setTimeout)
-   (js/setTimeout f 0)
-   true))
+    (exists? js/setTimeout)
+    ;; See CLJS-3274 - workaround for recent WebKit releases
+    (boolean (js/setTimeout f 0))))
 
 (defonce
   ^{:doc "Each runtime environment provides a different way to print error output.
