@@ -236,3 +236,6 @@
 ;(deftest test-error-messages
 ;  (testing "Leading numbers in keywords"
 ;    (is (thrown-with-msg? js/Error #"Invalid keyword :0s" (reader/read-string ":0s")))))
+
+(deftest testing-cljs-3278
+  (is (nil? (reader/read-string {:readers {'foo (constantly nil)}} "#foo 1"))))

@@ -7,7 +7,7 @@
   org.clojure/data.json {:mvn/version "0.2.6"}
   org.clojure/google-closure-library {:mvn/version "0.0-20191016-6ae1f72f"}
   org.clojure/spec.alpha {:mvn/version "0.1.143"}
-  org.clojure/tools.reader {:mvn/version "1.3.2"}
+  org.clojure/tools.reader {:mvn/version "1.3.3"}
   org.clojure/test.check {:mvn/version "0.10.0-alpha3"}}
  :aliases
  {:cli.test.run          {:extra-paths ["src/test/cljs_cli"]
