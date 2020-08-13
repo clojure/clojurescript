@@ -2585,7 +2585,10 @@
 
 (defn maybe-install-node-deps!
   [{:keys [deps-cmd npm-deps verbose] :or {deps-cmd "npm"} :as opts}]
-  (let [npm-deps (merge npm-deps (compute-upstream-npm-deps opts))]
+  (let [npm-deps (merge (if (map? npm-deps)
+                          npm-deps
+                          {})
+                        (compute-upstream-npm-deps opts))]
     (when-not (empty? npm-deps)
       (let [pkg-json (io/file "package.json")]
         (when (or ana/*verbose* verbose)
