@@ -7,33 +7,34 @@
 ;   You must not remove this notice, or any other, from this software.
 
 (ns cljs.compiler
-  #?(:clj (:refer-clojure :exclude [munge macroexpand-1 ensure])
-     :cljs (:refer-clojure :exclude [munge macroexpand-1 ensure js-reserved]))
+  #?(:clj (:refer-clojure :exclude [ensure macroexpand-1 munge])
+     :cljs (:refer-clojure :exclude [ensure js-reserved macroexpand-1 munge]))
   #?(:cljs (:require-macros [cljs.compiler.macros :refer [emit-wrap]]
                             [cljs.env.macros :refer [ensure]]))
-  #?(:clj (:require [cljs.util :as util]
-                    [clojure.java.io :as io]
-                    [clojure.string :as string]
-                    [clojure.set :as set]
-                    [clojure.tools.reader :as reader]
+  #?(:clj (:require [cljs.analyzer :as ana]
                     [cljs.env :as env :refer [ensure]]
-                    [cljs.tagged-literals :as tags]
-                    [cljs.analyzer :as ana]
+                    [cljs.js-deps :as deps]
                     [cljs.source-map :as sm]
+                    [cljs.tagged-literals :as tags]
+                    [cljs.util :as util]
                     [clojure.data.json :as json]
-                    [cljs.js-deps :as deps])
-     :cljs (:require [goog.string :as gstring]
-                     [clojure.string :as string]
-                     [clojure.set :as set]
-                     [cljs.tools.reader :as reader]
+                    [clojure.java.io :as io]
+                    [clojure.set :as set]
+                    [clojure.string :as string]
+                    [clojure.tools.reader :as reader])
+     :cljs (:require [cljs.analyzer :as ana]
+                     [cljs.analyzer.impl :as ana.impl]
                      [cljs.env :as env]
-                     [cljs.analyzer :as ana]
-                     [cljs.source-map :as sm]))
-  #?(:clj (:import java.lang.StringBuilder
+                     [cljs.source-map :as sm]
+                     [cljs.tools.reader :as reader]
+                     [clojure.set :as set]
+                     [clojure.string :as string]
+                     [goog.string :as gstring]))
+  #?(:clj (:import [cljs.tagged_literals JSValue]
+                   java.lang.StringBuilder
                    [java.io File Writer]
                    [java.util.concurrent Executors ExecutorService TimeUnit]
-                   [java.util.concurrent.atomic AtomicLong]
-                   [cljs.tagged_literals JSValue])
+                   [java.util.concurrent.atomic AtomicLong])
      :cljs (:import [goog.string StringBuffer])))
 
 #?(:clj (set! *warn-on-reflection* true))
@@ -112,7 +113,7 @@
   ([s] (munge s js-reserved))
   ([s reserved]
    (if #?(:clj  (map? s)
-          :cljs (ana/cljs-map? s))
+          :cljs (ana.impl/cljs-map? s))
      (let [name-var s
            name     (:name name-var)
            field    (:field name-var)
@@ -206,8 +207,8 @@
   ([^Object a]
    (cond
      (nil? a) nil
-     #?(:clj (map? a) :cljs (ana/cljs-map? a)) (emit a)
-     #?(:clj (seq? a) :cljs (ana/cljs-seq? a)) (apply emits a)
+     #?(:clj (map? a) :cljs (ana.impl/cljs-map? a)) (emit a)
+     #?(:clj (seq? a) :cljs (ana.impl/cljs-seq? a)) (apply emits a)
      #?(:clj (fn? a) :cljs ^boolean (goog/isFunction a)) (a)
      :else (let [^String s (cond-> a (not (string? a)) .toString)]
              #?(:clj  (when-some [^AtomicLong gen-col *source-map-data-gen-col*]
@@ -284,12 +285,12 @@
    :cljs
    (defn emit-constant-no-meta [x]
      (cond
-       (ana/cljs-seq? x) (emit-list x emit-constants-comma-sep)
+       (ana.impl/cljs-seq? x) (emit-list x emit-constants-comma-sep)
        (record? x) (let [[ns name] (ana/record-ns+name x)]
                      (emit-record-value ns name #(emit-constant (into {} x))))
-       (ana/cljs-map? x) (emit-map (keys x) (vals x) emit-constants-comma-sep all-distinct?)
-       (ana/cljs-vector? x) (emit-vector x emit-constants-comma-sep)
-       (ana/cljs-set? x) (emit-set x emit-constants-comma-sep all-distinct?)
+       (ana.impl/cljs-map? x) (emit-map (keys x) (vals x) emit-constants-comma-sep all-distinct?)
+       (ana.impl/cljs-vector? x) (emit-vector x emit-constants-comma-sep)
+       (ana.impl/cljs-set? x) (emit-set x emit-constants-comma-sep all-distinct?)
        :else (emit-constant* x))))
 
 (defn emit-constant [v]

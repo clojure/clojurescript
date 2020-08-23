@@ -204,5 +204,6 @@ jobs:
 
       - name: Run tests
         run: |
+          unset JAVA_TOOL_OPTIONS
           clojure -A:cli.test.run | tee test-out.txt
           grep -qxF '0 failures, 0 errors.' test-out.txt
