@@ -628,7 +628,7 @@ present"
                                 :arg "name"
                                 :doc
                                 (str "The JavaScript target. Configures environment bootstrap and "
-                                     "defaults to browser. Supported values: node or nodejs "
+                                     "defaults to browser. Supported values: node or nodejs, "
                                      "webworker, none") }
       ["-ro" "--repl-opts"]    {:group ::main&compile :fn repl-env-opts-opt
                                 :arg "edn"
