@@ -2360,8 +2360,14 @@ reduces them without incurring seq initialization"
   range of indexes. 'contains?' operates constant or logarithmic time;
   it will not perform a linear search for a value.  See also 'some'."
   [coll v]
-  (if (identical? (get coll v lookup-sentinel) lookup-sentinel)
+  (cond
+    (implements? IAssociative coll)
+    (-contains-key? coll v)
+
+    (identical? (get coll v lookup-sentinel) lookup-sentinel)
     false
+
+    :else
     true))
 
 (defn find

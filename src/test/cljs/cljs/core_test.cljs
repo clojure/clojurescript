@@ -84,7 +84,14 @@
     (is (not (contains? (to-array [5 6 7]) 3)))
     (is (not (contains? nil 42)))
     (is (contains? "f" 0))
-    (is (not (contains? "f" 55)))))
+    (is (not (contains? "f" 55))))
+
+  (testing "Testing contains? with IAssociative protocol"
+    (let [ds (reify
+               IAssociative
+               (-contains-key? [_ k] (= k :valid)))]
+     (is (contains? ds :valid))
+     (is (not (contains? ds :invalid))))))
 
 (deftest test-run!
   (testing "Testing run!"
