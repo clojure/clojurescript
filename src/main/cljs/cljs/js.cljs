@@ -838,12 +838,12 @@
                         ns-name
                         (:def-emits-var opts))
                       (cb (try
-                            {:ns ns-name :value (*eval-fn* {:source (.toString sb)})}
+                            {:ns ns-name :value ((:*eval-fn* bound-vars) {:source (.toString sb)})}
                             (catch :default cause
                               (wrap-error (ana/error aenv "ERROR" cause)))))))))
               (let [src (with-out-str (comp/emit ast))]
                 (cb (try
-                      {:value (*eval-fn* {:source src})}
+                      {:value ((:*eval-fn* bound-vars) {:source src})}
                       (catch :default cause
                         (wrap-error (ana/error aenv "ERROR" cause)))))))))))))
 
