@@ -7,7 +7,7 @@
 ;; You must not remove this notice, or any other, from this software.
 
 (ns cljs.tagged-literals
-  #?(:clj  (:require [clojure.instant :as inst])
+  #?(:clj  (:require [cljs.instant :as inst])
      :cljs (:require [cljs.reader :as reader])))
 
 (defn read-queue
@@ -46,7 +46,7 @@
      (when-not (string? form)
        (throw (RuntimeException. "Instance literal expects a string for its timestamp.")))
      (try
-       (inst/read-instant-date form)
+       (inst/read-instant-instant form)
        (catch Throwable e
          (throw (RuntimeException. (.getMessage e)))))))
 

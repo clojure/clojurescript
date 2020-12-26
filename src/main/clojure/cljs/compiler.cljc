@@ -33,6 +33,7 @@
   #?(:clj (:import [cljs.tagged_literals JSValue]
                    java.lang.StringBuilder
                    [java.io File Writer]
+                   [java.time Instant]
                    [java.util.concurrent Executors ExecutorService TimeUnit]
                    [java.util.concurrent.atomic AtomicLong])
      :cljs (:import [goog.string StringBuffer])))
@@ -418,8 +419,15 @@
 
 ;; tagged literal support
 
+(defn- emit-inst [inst-ms]
+  (emits "new Date(" inst-ms ")"))
+
 (defmethod emit-constant* #?(:clj java.util.Date :cljs js/Date) [^java.util.Date date]
-  (emits "new Date(" (.getTime date) ")"))
+  (emit-inst (.getTime date)))
+
+#?(:clj
+   (defmethod emit-constant* java.time.Instant [^java.time.Instant inst]
+     (emit-inst (.toEpochMilli inst))))
 
 (defmethod emit-constant* #?(:clj java.util.UUID :cljs UUID) [^java.util.UUID uuid]
   (let [uuid-str (.toString uuid)]
