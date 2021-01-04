@@ -871,6 +871,19 @@
           (is (== 1 value))
           (inc! l))))))
 
+(deftest test-ns-merge
+  (async done
+    (cljs/eval-str st
+                   "(ns foo.bar (:require [bootstrap-test.core :refer [foo]]))
+                   (ns foo.bar)
+                   (foo 1 1)"
+                   nil
+                   {:eval node-eval
+                    :load node-load}
+                   (fn [{:keys [value error]}]
+                     (is (nil? error))
+                     (done)))))
+
 (deftest test-cljs-1651
   (let [st (cljs/empty-state)]
     (async done

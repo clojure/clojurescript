@@ -3036,6 +3036,38 @@
       (symbol (str name-str "$macros"))
       name)))
 
+(defn- check-duplicate-aliases
+  [env old new]
+  (let [ns-name (:name old)]
+    (doseq [k [:requires :require-macros]]
+      (let [old-aliases (get old k)
+            new-aliases (get new k)]
+        (when-some [alias (some (set (keys new-aliases))
+                                (->> old-aliases
+                                     (remove (fn [[k v :as entry]]
+                                               (or (= k v)
+                                                   (= entry (find new-aliases k)))))
+                                     keys))]
+          (throw (error env
+                        (str "Alias " alias " already exists in namespace " ns-name
+                             ", aliasing " (get old-aliases alias)))))))))
+
+(defn- merge-ns-info [old new env]
+  (if (pos? (count old))
+    (let [deep-merge-keys
+          [:use-macros :require-macros :rename-macros
+           :uses :requires :renames :imports]]
+      #?(:clj
+         (when *check-alias-dupes*
+           (check-duplicate-aliases env old new)))
+      (merge
+       old
+       (select-keys new [:excludes])
+       (merge-with merge
+                   (select-keys old deep-merge-keys)
+                   (select-keys new deep-merge-keys))))
+    new))
+
 (defmethod parse 'ns
   [_ env [_ name & args :as form] _ opts]
   (when-not *allow-ns*
@@ -3129,7 +3161,7 @@
              :requires       requires
              :renames        (merge renames core-renames)
              :imports        imports}]
-        (swap! env/*compiler* update-in [::namespaces name] merge ns-info)
+        (swap! env/*compiler* update-in [::namespaces name] merge-ns-info ns-info env)
         (merge {:op      :ns
                 :env     env
                 :form    form
@@ -3143,22 +3175,6 @@
             (@reload :require)
             (update-in [:requires]
               (fn [m] (with-meta m {(@reload :require) true})))))))))
-
-(defn- check-duplicate-aliases
-  [env old new]
-  (let [ns-name (:name old)]
-    (doseq [k [:requires :require-macros]]
-      (let [old-aliases (get old k)
-            new-aliases (get new k)]
-        (when-some [alias (some (set (keys new-aliases))
-                            (->> old-aliases
-                              (remove (fn [[k v :as entry]]
-                                        (or (= k v)
-                                            (= entry (find new-aliases k)))))
-                              keys))]
-          (throw (error env
-                   (str "Alias " alias " already exists in namespace " ns-name
-                     ", aliasing " (get old-aliases alias)))))))))
 
 (defmethod parse 'ns*
   [_ env [_ quoted-specs :as form] _ opts]
@@ -3222,24 +3238,8 @@
            :uses           uses
            :requires       requires
            :renames        (merge renames core-renames)
-           :imports        imports}
-          ns-info
-          (let [ns-info' (get-in @env/*compiler* [::namespaces name])]
-            (if (pos? (count ns-info'))
-              (let [merge-keys
-                    [:use-macros :require-macros :rename-macros
-                     :uses :requires :renames :imports]]
-                #?(:clj
-                   (when *check-alias-dupes*
-                     (check-duplicate-aliases env ns-info' require-info)))
-                (merge
-                  ns-info'
-                  {:excludes excludes}
-                  (merge-with merge
-                    (select-keys ns-info' merge-keys)
-                    (select-keys require-info merge-keys))))
-              require-info))]
-      (swap! env/*compiler* update-in [::namespaces name] merge ns-info)
+           :imports        imports}]
+      (swap! env/*compiler* update-in [::namespaces name] merge-ns-info require-info env)
       (merge {:op      :ns*
               :env     env
               :form    form
