@@ -871,7 +871,7 @@
           (is (== 1 value))
           (inc! l))))))
 
-(deftest test-ns-merge
+#_(deftest test-ns-merge
   (async done
     (cljs/eval-str st
                    "(ns foo.bar (:require [bootstrap-test.core :refer [foo]]))
