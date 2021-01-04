@@ -84,7 +84,7 @@ fi
 now=$(date "+%Y%m%d%H%M%S")
 work_dir="tmp-build"
 
-echo "Working directory: $work_dir" 
+echo "Working directory: $work_dir"
 
 rm -rf "$work_dir"
 mkdir "$work_dir"
@@ -119,7 +119,6 @@ cp -r \
     "$closure_library_dir/LICENSE" \
     "$closure_library_dir/README.md" \
     "$closure_library_dir/closure/goog" \
-    "$closure_library_dir/closure/css" \
     "$src_dir"
 
 cp -r \
