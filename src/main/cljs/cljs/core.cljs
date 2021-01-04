@@ -10288,7 +10288,7 @@ reduces them without incurring seq initialization"
                               ns)))]
           (write-all writer
             "#inst \""
-            (str (.getUTCFullYear obj))             "-"
+            (normalize (.getUTCFullYear obj) 4)     "-"
             (normalize (inc (.getUTCMonth obj)) 2)  "-"
             (normalize (.getUTCDate obj) 2)         "T"
             (normalize (.getUTCHours obj) 2)        ":"
