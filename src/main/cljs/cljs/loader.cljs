@@ -70,7 +70,7 @@
    (assert (contains? module-infos module-name)
      (str "Module " module-name " does not exist"))
    (let [mname (-> module-name name munge)]
-     (.beforeLoadModuleCode loader/*module-manager* mname)
+     (.beforeLoadModuleCode *module-manager* mname)
      (if-not (nil? cb)
        (.execOnLoad *module-manager* mname cb)
        (.load *module-manager* mname)))))
@@ -84,9 +84,9 @@
     (str "Module " module-name " does not exist"))
   (let [xs (deps-for module-name module-infos)]
     (doseq [x xs]
-      (.setLoaded loader/*module-manager* (munge-kw x))
+      (.setLoaded *module-manager* (munge-kw x))
       (.setLoaded (.getModuleInfo *module-manager* (munge-kw x))))
-    (.setLoaded loader/*module-manager* (munge-kw module-name))
+    (.setLoaded *module-manager* (munge-kw module-name))
     (.setLoaded (.getModuleInfo *module-manager* (munge-kw module-name)))))
 
 (defn prefetch
