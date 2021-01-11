@@ -86,12 +86,12 @@
     (doseq [x xs]
       (let [munged-x (munge-kw x)]
         (when (.isModuleLoading *module-manager* munged-x)
-          (.setLoaded *module-manager* munged-x)
-          (.setLoaded (.getModuleInfo *module-manager* munged-x)))))
+          (.setLoaded *module-manager* munged-x))
+        (.setLoaded (.getModuleInfo *module-manager* munged-x))))
     (let [munged-module-name (munge-kw module-name)]
       (when (.isModuleLoading *module-manager* munged-module-name)
-        (.setLoaded *module-manager* munged-module-name)
-        (.setLoaded (.getModuleInfo *module-manager* munged-module-name))))))
+        (.setLoaded *module-manager* munged-module-name))
+      (.setLoaded (.getModuleInfo *module-manager* munged-module-name)))))
 
 (defn prefetch
   "Prefetch a module. module-name should be a keyword matching a :modules
