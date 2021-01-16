@@ -2733,7 +2733,7 @@
        []))))
 
 (defn- node-file-seq->libs-spec*
-  [module-fseq]
+  [module-fseq opts]
   (letfn [(package-json? [path]
             (boolean (re-find #"node_modules[/\\](@[^/\\]+?[/\\])?[^/\\]+?[/\\]package\.json$" path)))]
     (let [pkg-jsons (into {}
@@ -2756,24 +2756,26 @@
                     :module-type :es6}
                    (when-not (package-json? path)
                      (let [pkg-json-main (some
-                                           (fn [[pkg-json-path {:strs [main name]}]]
-                                             (when-not (nil? main)
-                                               ;; should be the only edge case in
-                                               ;; the package.json main field - Antonio
-                                               (let [main (cond-> main
-                                                            (string/starts-with? main "./")
-                                                            (subs 2))
-                                                     main-path (-> pkg-json-path
-                                                                 (string/replace \\ \/)
-                                                                 trim-package-json
-                                                                 (str main))]
-                                                 (some (fn [candidate]
-                                                         (when (= candidate (string/replace path \\ \/))
-                                                           name))
-                                                   (cond-> [main-path]
-                                                     (not (or (string/ends-with? main-path ".js")
-                                                              (string/ends-with? main-path ".json")))
-                                                     (into [(str main-path ".js") (str main-path "/index.js") (str main-path ".json")]))))))
+                                           (fn [[pkg-json-path {:as pkg-json :strs [name]}]]
+                                             (let [entries (package-json-entries opts)
+                                                   entry (first (keep (partial get pkg-json) entries))]
+                                               (when-not (nil? entry)
+                                                 ;; should be the only edge case in
+                                                 ;; the package.json main field - Antonio
+                                                 (let [entry (cond-> entry
+                                                              (string/starts-with? entry "./")
+                                                              (subs 2))
+                                                       entry-path (-> pkg-json-path
+                                                                     (string/replace \\ \/)
+                                                                     trim-package-json
+                                                                     (str entry))]
+                                                   (some (fn [candidate]
+                                                           (when (= candidate (string/replace path \\ \/))
+                                                             name))
+                                                         (cond-> [entry-path]
+                                                           (not (or (string/ends-with? entry-path ".js")
+                                                                    (string/ends-with? entry-path ".json")))
+                                                           (into [(str entry-path ".js") (str entry-path "/index.js") (str entry-path ".json")])))))))
                                            pkg-jsons)]
                        {:provides (let [module-rel-name (-> (subs path (.lastIndexOf path "node_modules"))
                                                             (string/replace \\ \/)
@@ -2797,7 +2799,7 @@
        (:options @env/*compiler*))))
   ([opts]
    (let [module-fseq (util/module-file-seq)]
-     (node-file-seq->libs-spec module-fseq))))
+     (node-file-seq->libs-spec module-fseq opts))))
 
 (defn preprocess-js
   "Given js-module map, apply preprocessing defined by :preprocess value in the map."
