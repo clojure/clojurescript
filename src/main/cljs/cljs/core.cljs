@@ -1795,8 +1795,10 @@ reduces them without incurring seq initialization"
 
 (defn conj
   "conj[oin]. Returns a new collection with the xs
-  'added'. (conj nil item) returns (item).  The 'addition' may
-  happen at different 'places' depending on the concrete type."
+  'added'. (conj nil item) returns (item).
+  (conj coll) returns coll. (conj) returns [].
+  The 'addition' may happen at different 'places' depending
+  on the concrete type."
   ([] [])
   ([coll] coll)
   ([coll x]
