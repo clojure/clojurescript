@@ -37,9 +37,10 @@
                                          CompilerInput CompilerInput$ModuleType DependencyOptions
                                          CompilerOptions$LanguageMode SourceMap$Format
                                          SourceMap$DetailLevel ClosureCodingConvention SourceFile
-                                         Result JSError CheckLevel DiagnosticGroups
-                                         CommandLineRunner AnonymousFunctionNamingPolicy
-                                         JSModule SourceMap VariableMap PrintStreamErrorManager]
+                                         Result JSError CheckLevel DiagnosticGroup DiagnosticGroups
+                                         CommandLineRunner
+                                         JSModule SourceMap VariableMap PrintStreamErrorManager DiagnosticType
+                                         VariableRenamingPolicy PropertyRenamingPolicy]
            [com.google.javascript.jscomp.bundle Transpiler]
            [com.google.javascript.jscomp.deps ClosureBundler ModuleLoader$ResolutionMode ModuleNames
                                               SimpleDependencyInfo]
@@ -47,8 +48,7 @@
            [java.nio.file Path Paths Files StandardWatchEventKinds WatchKey
                           WatchEvent FileVisitor FileVisitResult FileSystems]
            [java.nio.charset Charset StandardCharsets]
-           [com.sun.nio.file SensitivityWatchEventModifier]
-           [com.google.common.base Throwables]))
+           [com.sun.nio.file SensitivityWatchEventModifier]))
 
 ;; Copied from clojure.tools.gitlibs
 
@@ -162,7 +162,6 @@
    :message-descriptions DiagnosticGroups/MESSAGE_DESCRIPTIONS
    :misplaced-msg-annotation DiagnosticGroups/MISPLACED_MSG_ANNOTATION
    :misplaced-type-annotation DiagnosticGroups/MISPLACED_TYPE_ANNOTATION
-   :missing-getcssname DiagnosticGroups/MISSING_GETCSSNAME
    :missing-override DiagnosticGroups/MISSING_OVERRIDE
    :missing-polyfill DiagnosticGroups/MISSING_POLYFILL
    :missing-properties DiagnosticGroups/MISSING_PROPERTIES
@@ -175,7 +174,6 @@
    :non-standard-jsdoc DiagnosticGroups/NON_STANDARD_JSDOC
    :report-unknown-types DiagnosticGroups/REPORT_UNKNOWN_TYPES
    :strict-missing-properties DiagnosticGroups/STRICT_MISSING_PROPERTIES
-   :strict-missing-require DiagnosticGroups/STRICT_MISSING_REQUIRE
    :strict-module-dep-check DiagnosticGroups/STRICT_MODULE_DEP_CHECK
    :strict-requires DiagnosticGroups/STRICT_REQUIRES
    :suspicious-code DiagnosticGroups/SUSPICIOUS_CODE
@@ -261,15 +259,6 @@
 
   (when (contains? opts :pseudo-names)
     (set! (.generatePseudoNames compiler-options) (:pseudo-names opts)))
-
-  (when (contains? opts :anon-fn-naming-policy)
-    (let [policy (:anon-fn-naming-policy opts)]
-      (set! (.anonymousFunctionNaming compiler-options)
-        (case policy
-          :off AnonymousFunctionNamingPolicy/OFF
-          :unmapped AnonymousFunctionNamingPolicy/UNMAPPED
-          :mapped AnonymousFunctionNamingPolicy/MAPPED
-          (throw (util/compilation-error (IllegalArgumentException. (str "Invalid :anon-fn-naming-policy value " policy " - only :off, :unmapped, :mapped permitted"))))))))
 
   (when-let [lang-key (:language-in opts :ecmascript5)]
     (.setLanguageIn compiler-options (lang-key->lang-mode lang-key)))
@@ -816,7 +805,8 @@
     (if (seq requires)
       (let [node (or (get (@env/*compiler* :js-dependency-index) (first requires))
                      (deps/find-classpath-lib (first requires)))
-            new-req (remove #(contains? visited %) (:requires node))]
+            new-req (remove #(contains? visited %)
+                      (into (:requires node) (:require-types node)))]
         (recur (into (rest requires) new-req)
                (into visited new-req)
                (conj deps node)))
@@ -2052,18 +2042,45 @@
     (.appendTo bundler sb module source)
     (.toString sb)))
 
+(defn ^DiagnosticGroup es5-warnings []
+  (DiagnosticGroup.
+    (into-array DiagnosticType
+      [(DiagnosticType/error "JSC_CANNOT_CONVERT" "")])))
+
+(defn ^CompilerOptions transpile-options []
+  (doto (CompilerOptions.)
+    (.setQuoteKeywordProperties true)
+    (.setSkipNonTranspilationPasses true)
+    (.setVariableRenaming VariableRenamingPolicy/OFF)
+    (.setPropertyRenaming PropertyRenamingPolicy/OFF)
+    (.setWrapGoogModulesForWhitespaceOnly false)
+    (.setPrettyPrint true)
+    (.setSourceMapOutputPath "/dev/null")
+    (.setSourceMapIncludeSourcesContent true)
+    (.setWarningLevel (es5-warnings) CheckLevel/OFF)))
+
+(defn closure-transpile
+  "Transpile a single JavaScript file to JavaScript. Used to lower Closure
+  Library files written in more recent versions of the JavaScript standard."
+  ([rsc opts]
+   (closure-transpile (util/path rsc) (slurp rsc) opts))
+  ([path source opts]
+   (let [cc      (make-closure-compiler)
+         cc-opts (set-options opts (transpile-options))
+         externs (SourceFile/fromCode "externs.js" "function Symbol() {}")
+         source  (SourceFile/fromCode path source)
+         result  (.compile cc externs source cc-opts)]
+     ;; TODO: error handling
+     (.toSource cc))))
+
 ;; TODO: better error handling
-;; TODO: actually respect the target :language-out level
-;; currently just using default options for Transpiler
 (defn transpile
-  [{:keys [language-out] :or {language-out :es3}} rsc {:keys [module lang] :as js}]
+  [{:keys [language-out] :or {language-out :es3} :as opts} rsc {:keys [module lang] :as js}]
   (let [source  (slurp rsc)
         source' (if (and lang
                          (< (.indexOf lang-level (expand-lang-key language-out))
                             (.indexOf lang-level (expand-lang-key lang))))
-                  (let [cc (Transpiler/compilerSupplier)
-                        result (.compile cc (url->nio-path rsc) source)]
-                    (.source result))
+                  (closure-transpile (util/path rsc) source opts)
                   source)]
     (str "/*TRANSPILED*/"
       (cond-> source'
@@ -3286,7 +3303,7 @@
                     (if-let [f (opts-fn :watch-error-fn opts)]
                       (f e)
                       (binding [*out* *err*]
-                        (println (Throwables/getStackTraceAsString e)))))))
+                        (println e))))))
               (watch-all [^Path root]
                 (Files/walkFileTree root
                   (reify

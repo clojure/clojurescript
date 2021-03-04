@@ -117,20 +117,22 @@ case."
          (map string/trim)
          (drop-while #(not (or (string/includes? % "goog.provide(")
                                (string/includes? % "goog.module(")
-                               (string/includes? % "goog.require("))))
+                               (string/includes? % "goog.require(")
+                               (string/includes? % "goog.requireType("))))
          (take-while #(not (re-matches #".*=[\s]*function\(.*\)[\s]*[{].*" %)))
-         (map #(re-matches #".*goog\.(provide|module|require)\(['\"](.*)['\"]\)" %))
+         (map #(re-matches #".*goog\.(provide|module|require|requireType)\(['\"](.*)['\"]\)" %))
          (remove nil?)
          (map #(drop 1 %))
          (reduce (fn [m ns]
                    (let [munged-ns (string/replace (last ns) "_" "-")]
                      (case (first ns)
-                       "provide" (conj-in m :provides munged-ns)
-                       "module"  (-> m
-                                   (conj-in :provides munged-ns)
-                                   (assoc :module :goog))
-                       "require" (conj-in m :requires munged-ns))))
-                 {:requires [] :provides []}))))
+                       "provide"     (conj-in m :provides munged-ns)
+                       "module"      (-> m
+                                       (conj-in :provides munged-ns)
+                                       (assoc :module :goog))
+                       "require"     (conj-in m :requires munged-ns)
+                       "requireType" (conj-in m :require-types munged-ns))))
+                 {:requires [] :provides [] :require-types []}))))
 
 (defprotocol IJavaScript
   (-foreign? [this] "Whether the Javascript represents a foreign
@@ -319,11 +321,12 @@ JavaScript library containing provide/require 'declarations'."
 ;      (enumeration-seq (.getResources (.getContextClassLoader (Thread/currentThread)) path)))))
 
 ;; NOTE: because this looks at deps.js for indexing the Closure Library we
-;; don't need to bother parsing file in Closure Library. But it's also a
+;; don't need to bother parsing files in Closure Library. But it's also a
 ;; potential source of confusion as *other* Closure style libs will need to be
 ;; parsed, user won't typically provide a deps.js
 (defn goog-dependencies*
-  "Create an index of Google dependencies by namespace and file name."
+  "Create an index of Google dependencies by namespace and file name from
+  goog/deps.js"
   []
   (letfn [(parse-list [s] (when (> (count s) 0)
                             (-> (.substring ^String s 1 (dec (count s)))
@@ -337,12 +340,15 @@ JavaScript library containing provide/require 'declarations'."
            (map
              (fn [[file provides requires load-opts-str]]
                (let [{:strs [lang module]}
-                     (-> (string/replace load-opts-str "'" "\"") (json/read-str))]
+                     (-> (string/replace load-opts-str "'" "\"") (json/read-str))
+                     file' (str "goog/" file)]
                  (merge
-                   {:file     (str "goog/" file)
-                    :provides (parse-list provides)
-                    :requires (parse-list requires)
-                    :group    :goog}
+                   {:file          file'
+                    :provides      (parse-list provides)
+                    :requires      (parse-list requires)
+                    :require-types (-> file' io/resource io/reader line-seq
+                                     parse-js-ns :require-types)
+                    :group         :goog}
                    (when module
                      {:module (keyword module)})
                    (when lang

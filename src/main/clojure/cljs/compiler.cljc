@@ -210,7 +210,7 @@
      (nil? a) nil
      #?(:clj (map? a) :cljs (ana.impl/cljs-map? a)) (emit a)
      #?(:clj (seq? a) :cljs (ana.impl/cljs-seq? a)) (apply emits a)
-     #?(:clj (fn? a) :cljs ^boolean (goog/isFunction a)) (a)
+     #?(:clj (fn? a) :cljs (js-fn? a)) (a)
      :else (let [^String s (cond-> a (not (string? a)) .toString)]
              #?(:clj  (when-some [^AtomicLong gen-col *source-map-data-gen-col*]
                         (.addAndGet gen-col (.length s)))

@@ -29,8 +29,7 @@
            [java.util Base64]
            [java.util.concurrent.atomic AtomicLong]
            [clojure.lang IExceptionInfo]
-           [java.util.regex Pattern]
-           [com.google.common.base Throwables]))
+           [java.util.regex Pattern]))
 
 (def ^:dynamic *cljs-verbose* false)
 (def ^:dynamic *repl-opts* nil)
@@ -483,7 +482,7 @@
                      (catch Throwable e
                        (when (:repl-verbose opts)
                          (println "Failed to canonicalize stacktrace")
-                         (println (Throwables/getStackTraceAsString e)))))]
+                         (println e))))]
            (if (vector? cst)
              (if (satisfies? IPrintStacktrace repl-env)
                (-print-stacktrace repl-env cst ret opts)

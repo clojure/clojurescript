@@ -273,7 +273,7 @@
 (defn ^boolean string?
   "Returns true if x is a JavaScript string."
   [x]
-  (goog/isString x))
+  (identical? "string" (goog/typeOf x)))
 
 (defn char?
   "Returns true if x is a JavaScript string of length one."
@@ -2026,7 +2026,7 @@ reduces them without incurring seq initialization"
 (defn fn?
   "Return true if f is a JavaScript function or satisfies the Fn protocol."
   [f]
-  (or ^boolean (goog/isFunction f) (satisfies? Fn f)))
+  (or (js-fn? f) (satisfies? Fn f)))
 
 (deftype MetaFn [afn meta]
   IMeta
@@ -2085,7 +2085,7 @@ reduces them without incurring seq initialization"
   "Returns an object of the same type and value as obj, with
   map m as its metadata."
   [o meta]
-  (if ^boolean (goog/isFunction o)
+  (if (js-fn? o)
     (MetaFn. o meta)
     (when-not (nil? o)
       (-with-meta o meta))))
@@ -6461,14 +6461,14 @@ reduces them without incurring seq initialization"
   ILookup
   (-lookup [coll k] (-lookup coll k nil))
   (-lookup [coll k not-found]
-    (if (and ^boolean (goog/isString k)
+    (if (and (string? k)
              (not (nil? (scan-array 1 k keys))))
       (unchecked-get strobj k)
       not-found))
 
   IAssociative
   (-assoc [coll k v]
-    (if ^boolean (goog/isString k)
+    (if (string? k)
         (if (or (> update-count (.-HASHMAP_THRESHOLD ObjMap))
                 (>= (alength keys) (.-HASHMAP_THRESHOLD ObjMap)))
           (obj-map->hash-map coll k v)
@@ -6484,14 +6484,14 @@ reduces them without incurring seq initialization"
         ;; non-string key. game over.
         (obj-map->hash-map coll k v)))
   (-contains-key? [coll k]
-    (if (and ^boolean (goog/isString k)
+    (if (and (string? k)
              (not (nil? (scan-array 1 k keys))))
       true
       false))
 
   IFind
   (-find [coll k]
-    (when (and ^boolean (goog/isString k)
+    (when (and (string? k)
             (not (nil? (scan-array 1 k keys))))
       (MapEntry. k (unchecked-get strobj k) nil)))
 
@@ -6510,7 +6510,7 @@ reduces them without incurring seq initialization"
 
   IMap
   (-dissoc [coll k]
-    (if (and ^boolean (goog/isString k)
+    (if (and (string? k)
              (not (nil? (scan-array 1 k keys))))
       (let [new-keys (aclone keys)
             new-strobj (obj-clone strobj keys)]
@@ -6624,7 +6624,7 @@ reduces them without incurring seq initialization"
   (cond
     (keyword? k) (array-index-of-keyword? arr k)
 
-    (or ^boolean (goog/isString k) (number? k))
+    (or (string? k) (number? k))
     (array-index-of-identical? arr k)
 
     (symbol? k) (array-index-of-symbol? arr k)
@@ -10264,12 +10264,12 @@ reduces them without incurring seq initialization"
         (array? obj)
         (pr-sequential-writer writer pr-writer "#js [" " " "]" opts obj)
 
-        ^boolean (goog/isString obj)
+        (string? obj)
         (if (:readably opts)
           (-write writer (quote-string obj))
           (-write writer obj))
 
-        ^boolean (goog/isFunction obj)
+        (js-fn? obj)
         (let [name (.-name obj)
               name (if (or (nil? name) (gstring/isEmpty name))
                      "Function"

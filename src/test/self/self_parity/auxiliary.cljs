@@ -12,7 +12,6 @@
   the compiler tests in bootstrap mode."}
   self-parity.auxiliary
   (:require
-    goog.Delay
     goog.Disposable
     goog.Promise
     goog.Throttle
@@ -93,7 +92,6 @@
     goog.locale
     goog.locale.TimeZoneFingerprint
     goog.locale.defaultLocaleNameConstants
-    goog.locale.genericFontNames
     goog.locale.timeZoneDetection
     goog.math
     goog.math.AffineTransform

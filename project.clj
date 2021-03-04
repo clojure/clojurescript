@@ -8,15 +8,15 @@
   :source-paths ["src/main/clojure" "src/main/cljs"]
   :resource-paths ["src/main/cljs" "resources"]
   :test-paths ["src/test/clojure" "src/test/cljs" "src/test/self" "src/test/cljs_build" "src/test/cljs_cp"]
-  :dependencies [[org.clojure/clojure "1.10.0-alpha4"]
+  :dependencies [[org.clojure/clojure "1.10.0"]
                  [org.clojure/spec.alpha "0.1.143"]
                  [org.clojure/core.specs.alpha "0.1.24"]
                  [org.clojure/data.json "0.2.6"]
                  [org.clojure/tools.reader "1.3.3"]
                  [org.clojure/test.check "0.10.0-alpha3" :scope "test"]
                  [com.cognitect/transit-clj "0.8.309"]
-                 [org.clojure/google-closure-library "0.0-20191016-6ae1f72f"]
-                 [com.google.javascript/closure-compiler-unshaded "v20200315"]]
+                 [org.clojure/google-closure-library "0.0-20201211-3e6c510d"]
+                 [com.google.javascript/closure-compiler-unshaded "v20210202"]]
   :profiles {:1.6 {:dependencies [[org.clojure/clojure "1.6.0"]]}
              :uberjar {:aot :all :main cljs.main}
              :closure-snapshot {:dependencies [[com.google.javascript/closure-compiler-unshaded "1.0-SNAPSHOT"]]}}

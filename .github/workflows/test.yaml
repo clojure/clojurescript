@@ -44,7 +44,7 @@ jobs:
             ${{ runner.os }}-jsc
 
       - name: Build tests
-        run: clojure -A:runtime.test.build
+        run: clojure -M:runtime.test.build
 
       - name: Install JSC
         run: ./ci/install_jsc.sh
@@ -86,7 +86,7 @@ jobs:
             ${{ runner.os }}-${{ env.cache-name }}-
 
       - name: Build tests
-        run: clojure -A:selfhost.test.build
+        run: clojure -M:selfhost.test.build
 
       - name: Run tests
         run: |
@@ -125,7 +125,7 @@ jobs:
             ${{ runner.os }}-${{ env.cache-name }}-
 
       - name: Build tests
-        run: clojure -A:selfparity.test.build
+        run: clojure -M:selfparity.test.build
 
       - name: Run tests
         run: |
@@ -164,7 +164,7 @@ jobs:
             ${{ runner.os }}-${{ env.cache-name }}-
 
       - name: Run tests
-        run: clojure -A:compiler.test:compiler.test.run
+        run: clojure -M:compiler.test:compiler.test.run
 
   # CLI Tests
   cli-test:
@@ -205,5 +205,5 @@ jobs:
       - name: Run tests
         run: |
           unset JAVA_TOOL_OPTIONS
-          clojure -A:cli.test.run | tee test-out.txt
+          clojure -M:cli.test.run | tee test-out.txt
           grep -qxF '0 failures, 0 errors.' test-out.txt
