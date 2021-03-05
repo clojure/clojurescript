@@ -1,6 +1,6 @@
 {:paths ["src/main/clojure" "src/main/cljs" "resources"]
  :deps
- {com.google.javascript/closure-compiler-unshaded {:mvn/version "v20210202"}
+ {com.google.javascript/closure-compiler-unshaded {:mvn/version "v20210302"}
   com.cognitect/transit-clj {:mvn/version "0.8.309"}
   org.clojure/clojure {:mvn/version "1.10.0"}
   org.clojure/core.specs.alpha {:mvn/version "0.1.24"}
