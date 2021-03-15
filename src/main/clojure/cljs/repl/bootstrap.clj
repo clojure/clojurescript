@@ -30,7 +30,7 @@
        (fn [src reload]
          (when (= reload "reload-all")
            (set! (.-cljsReloadAll_ js/goog) true))
-         (let [reload? (or reload (.-cljsReloadAll__ js/goog))]
+         (let [reload? (or reload (.-cljsReloadAll_ js/goog))]
            (when reload?
              ;; check for new-ish private goog/debugLoader
              (if (some? goog/debugLoader_)

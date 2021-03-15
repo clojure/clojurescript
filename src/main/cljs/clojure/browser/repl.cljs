@@ -212,7 +212,7 @@
       (fn [src reload]
         (when (= reload "reload-all")
           (set! (.-cljsReloadAll_ js/goog) true))
-        (let [reload? (or reload (.-cljsReloadAll__ js/goog))]
+        (let [reload? (or reload (.-cljsReloadAll_ js/goog))]
           (when reload?
             (if (some? goog/debugLoader_)
               (let [path (.getPathFromDeps_ goog/debugLoader_ src)]
