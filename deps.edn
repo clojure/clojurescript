@@ -24,4 +24,7 @@
   :selfparity.test.build {:extra-paths ["src/test/self"]
                           :main-opts ["-i" "src/test/self/self_parity/setup.clj"
                                       "-e" "(self-parity.setup/-main)"
-                                      "-m" "cljs.main" "-co" "resources/self_parity_test.edn" "-c"]}}}
+                                      "-m" "cljs.main" "-co" "resources/self_parity_test.edn" "-c"]}
+  :uberjar               {:extra-deps {com.github.seancorfield/depstar {:mvn/version "2.0.193"}}
+                          :exec-fn hf.depstar/uberjar
+                          :exec-args {:aot true}}}}
