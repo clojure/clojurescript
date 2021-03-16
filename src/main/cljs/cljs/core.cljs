@@ -2918,7 +2918,7 @@ reduces them without incurring seq initialization"
   "Bitwise shift right"
   [x n] (cljs.core/bit-shift-right x n))
 
-(defn bit-shift-right-zero-fill
+(defn ^int bit-shift-right-zero-fill
   "DEPRECATED: Bitwise shift right with zero fill"
   [x n] (cljs.core/bit-shift-right-zero-fill x n))
 
@@ -5394,7 +5394,7 @@ reduces them without incurring seq initialization"
             _ (pv-aset r 0 embed)]
         (recur (- ll 5) r)))))
 
-(defn- push-tail [pv level parent tailnode]
+(defn- push-tail [pv ^int level parent tailnode]
   (let [ret (pv-clone-node parent)
         subidx (bit-and (bit-shift-right-zero-fill (dec (.-cnt pv)) level) 0x01f)]
     (if (== 5 level)
