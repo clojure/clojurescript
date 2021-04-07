@@ -11381,11 +11381,11 @@ reduces them without incurring seq initialization"
   [multifn] (-prefers multifn))
 
 (defn default-dispatch-val
-  "Given a multimethod, return it's default-dispatch-val."
+  "Given a multimethod, return its default-dispatch-val."
   [multifn] (-default-dispatch-val multifn))
 
 (defn dispatch-fn
-  "Given a multimethod, return it's dispatch-fn."
+  "Given a multimethod, return its dispatch-fn."
   [multifn] (-dispatch-fn multifn))
 
 ;; UUID
