@@ -176,7 +176,7 @@
   "Returns false-y, :warn, or :error based on configuration and the
    current value of *unchecked-arrays*."
   []
-  (when (and (not (:advanced (compiler-options)))
+  (when (and (not= :advanced (:optimizations (compiler-options)))
              (not *unchecked-arrays*))
     *checked-arrays*))
 
@@ -4473,7 +4473,7 @@
    (defn build-affecting-options [opts]
      (select-keys opts
        [:static-fns :fn-invoke-direct :optimize-constants :elide-asserts :target :nodejs-rt
-        :cache-key :checked-arrays :language-out])))
+        :cache-key :checked-arrays :language-out :optimizations])))
 
 #?(:clj
    (defn build-affecting-options-sha [path opts]
