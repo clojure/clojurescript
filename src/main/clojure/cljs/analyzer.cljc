@@ -1361,7 +1361,8 @@
   [env t]
   ;; don't use resolve-existing-var to avoid warnings
   (when (and (some? t) (symbol? t))
-    (let [var (resolve-var env t)]
+    (let [var (binding [*private-var-access-nowarn* true]
+                (resolve-var env t))]
       (if-some [type (:type var)]
         type
           (if-some [type (-> var :info :type)]

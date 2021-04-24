@@ -768,3 +768,17 @@
       (is (empty? @ws))))
   (.delete (io/file "package.json"))
   (test/delete-node-modules))
+
+(deftest test-cljs-3284
+  (testing "Type hint warnings don't fire just because of private types"
+    (let [ws (atom [])
+          out (.getPath (io/file (test/tmp-dir) "cljs-3235-out"))
+          {:keys [inputs opts]} {:inputs (str (io/file "src" "test" "cljs_build"))
+                                 :opts   {:main             'cljs-3284.core
+                                          :output-dir       out
+                                          :optimizations    :none}}
+          cenv (env/default-compiler-env opts)]
+      (test/delete-out-files out)
+      (ana/with-warning-handlers [(collecting-warning-handler ws)]
+        (build/build (build/inputs (io/file inputs "cljs_3284/core.cljs")) opts cenv))
+      (is (empty? @ws)))))
