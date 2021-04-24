@@ -1235,7 +1235,7 @@
                 :ns current-ns}))
 
            (core-name? env sym)
-           (do
+           (let [sym (resolve-alias 'cljs.core sym)]
              (when (some? confirm)
                (confirm env 'cljs.core sym))
              (merge (gets @env/*compiler* ::namespaces 'cljs.core :defs sym)
