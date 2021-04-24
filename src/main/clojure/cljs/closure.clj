@@ -188,7 +188,7 @@
    :unused-local-variable DiagnosticGroups/UNUSED_LOCAL_VARIABLE
    :unused-private-property DiagnosticGroups/UNUSED_PRIVATE_PROPERTY
    :violated-module-dep DiagnosticGroups/VIOLATED_MODULE_DEP
-   :visiblity DiagnosticGroups/VISIBILITY})
+   :visibility DiagnosticGroups/VISIBILITY})
 
 (def known-opts
   "Set of all known compiler options."
