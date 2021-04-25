@@ -1826,3 +1826,21 @@
 
 (deftest test-cljs-3271
   (is (== 0.6 (nth (range 0 1 0.1) 6))))
+
+(defrecord CLJS3305A [])
+(defrecord CLJS3305B [a b])
+
+(deftest test-cljs-3305
+  (let [empty-basis       (->CLJS3305A)
+        nonempty-basis    (->CLJS3305B 1 2)
+        empty-extended    (assoc empty-basis :y 1)
+        nonempty-extended (assoc nonempty-basis :y 1)]
+    (is (false? (contains? empty-basis       :a)))
+    (is (true?  (contains? nonempty-basis    :a)))
+    (is (false? (contains? nonempty-basis    :c)))
+    (is (true?  (contains? empty-extended    :y)))
+    (is (false? (contains? empty-extended    :z)))
+    (is (true?  (contains? nonempty-extended :a)))
+    (is (false? (contains? nonempty-extended :c)))
+    (is (true?  (contains? nonempty-extended :y)))
+    (is (false? (contains? nonempty-extended :z)))))

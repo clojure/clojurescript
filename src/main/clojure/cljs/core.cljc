@@ -1866,6 +1866,12 @@
                                this#
                                entry#)))
                         'IAssociative
+                        `(~'-contains-key? [this# ~ksym]
+                           ~(if (seq base-fields)
+                             `(case ~ksym
+                                (~@(map keyword base-fields)) true
+                                (cljs.core/contains? ~'__extmap ~ksym))
+                             `(cljs.core/contains? ~'__extmap ~ksym)))
                         `(~'-assoc [this# k# ~gs]
                            (condp keyword-identical? k#
                              ~@(mapcat (core/fn [fld]
