@@ -1844,3 +1844,13 @@
     (is (false? (contains? nonempty-extended :c)))
     (is (true?  (contains? nonempty-extended :y)))
     (is (false? (contains? nonempty-extended :z)))))
+
+(deftest test-cljs-3306
+  (let [sv (subvec [0 1 2 3 4] 2 4)]
+    (is (true?  (contains? sv 0)))
+    (is (false? (contains? sv 0.5)))
+    (is (true?  (contains? sv 1)))
+    (is (false? (contains? sv 1.5)))
+    (is (false? (contains? sv :kw))))
+  (let [sv (subvec [0 1 2 3 4] 2 2)]
+    (is (false? (contains? sv 0)))))
