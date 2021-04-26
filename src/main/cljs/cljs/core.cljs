@@ -2364,6 +2364,9 @@ reduces them without incurring seq initialization"
     (implements? IAssociative coll)
     (-contains-key? coll v)
 
+    (native-satisfies? IAssociative coll)
+    (-contains-key? coll v)
+
     (identical? (get coll v lookup-sentinel) lookup-sentinel)
     false
 

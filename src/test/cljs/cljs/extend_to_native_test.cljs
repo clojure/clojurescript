@@ -144,3 +144,11 @@
 
 (deftest test-protocol-with-slash
   (is (=  "result" (/ ""))))
+
+(deftest test-cljs-3307
+  (extend-type object
+    IAssociative
+    (-contains-key? [_ k] (= k :valid)))
+
+  (is (contains? #js {} :valid))
+  (is (not (contains? #js {} :invalid))))
