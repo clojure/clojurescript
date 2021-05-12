@@ -152,4 +152,11 @@
                      :a :b))))]
     (emit ast))
 
+  (let [ast (binding [ana/*passes* (into [optimize-and-or] ana/*passes*)]
+              (analyze (assoc (ana/empty-env) :context :expr)
+                `(fn []
+                   (if (and x false false)
+                     :a :b))))]
+    (emit ast))
+
   )
