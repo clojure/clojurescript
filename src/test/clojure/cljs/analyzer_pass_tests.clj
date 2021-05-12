@@ -24,11 +24,19 @@
       (is (and-or/returns-if? ast)))))
 
 (deftest and-or-matchers
-  (testing "Testing and/or ast matching"
+  (testing "Testing and/or ast matching & optimizability"
     (let [ast (analyze (ana/empty-env) `(and true false))]
       (is (and-or/simple-and? ast))
       (is (and-or/optimizable-and? ast)))
+    (let [ast (ana/no-warn
+                (analyze (ana/empty-env) `(and ~(with-meta 'x {:tag 'boolean}) false)))]
+      (is (and-or/simple-and? ast))
+      (is (and-or/optimizable-and? ast)))
     (let [ast (analyze (ana/empty-env) `(or true false))]
+      (is (and-or/simple-or? ast))
+      (is (and-or/optimizable-or? ast)))
+    (let [ast (ana/no-warn
+                (analyze (ana/empty-env) `(or ~(with-meta 'x {:tag 'boolean}) false)))]
       (is (and-or/simple-or? ast))
       (is (and-or/optimizable-or? ast)))))
 
@@ -60,6 +68,22 @@
   (test/run-tests)
 
   (require '[clojure.pprint :refer [pprint]])
+
+  ;; Doesn't seem right
+  (let [expr-env (assoc (ana/empty-env) :context :expr)
+        ast      (binding [ana/*passes* (conj ana/*passes* and-or/optimize)]
+                   (->> `(let [x# true]
+                           (and x# true))
+                     (analyze expr-env)))]
+    (:op ast))
+
+  ;; variation
+  (let [expr-env (assoc (ana/empty-env) :context :expr)
+        ast      (binding [ana/*passes* (conj ana/*passes* and-or/optimize)]
+                   (->> `(let [x# true]
+                           (and x# true false))
+                     (analyze expr-env)))]
+    (with-out-str (emit ast)))
 
   (let [ast (binding [ana/*passes* (conj ana/*passes* and-or/optimize)]
               (analyze (assoc (ana/empty-env) :context :expr)
