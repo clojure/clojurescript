@@ -9,6 +9,7 @@
 (ns cljs.analyzer-pass-tests
   (:require [cljs.analyzer :as ana]
             [cljs.analyzer-tests :as ana-tests :refer [analyze]]
+            [cljs.compiler-tests :as comp-tests :refer [emit]]
             [clojure.test :as test :refer [deftest is testing]]))
 
 (def simple-ops
@@ -67,7 +68,25 @@
 
 (defn optimizable-or? [ast]
   (and (simple-or? ast)
-       (simple-test-expr? (-> ast :body :ret :else))))
+    (simple-test-expr? (-> ast :body :ret :else))))
+
+(defn optimize-and [ast]
+  {:op :js
+   :env (:env ast)
+   :segs []
+   :args []
+   :form (:form ast)
+   :children [:args]
+   :tag 'boolean})
+
+(defn optimize-or [ast]
+  {:op :js
+   :env (:env ast)
+   :segs []
+   :args []
+   :form (:form ast)
+   :children [:args]
+   :tag 'boolean})
 
 (deftest test-helpers
   (testing "Testing and/or matching helpers"
@@ -93,8 +112,8 @@
 
   (require '[clojure.pprint :refer [pprint]])
 
-  (let [ast (analyze (ana/empty-env)
+  (let [ast (analyze (assoc (ana/empty-env) :context :expr)
               `(and true false))]
-    (pprint (-> ast :body :ret :then)))
+    (emit ast))
 
   )
