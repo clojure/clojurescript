@@ -62,7 +62,19 @@
                      (->> `(and true false)
                        (analyze expr-env)))
           code     (with-out-str (emit ast))]
-      (is (= code "(true) && (false)")))))
+      (is (= code "(true) && (false)")))
+    (let [expr-env (assoc (ana/empty-env) :context :expr)
+          ast      (binding [ana/*passes* (conj ana/*passes* and-or/optimize)]
+                     (analyze expr-env
+                       `(and true (or true false))))
+          code     (with-out-str (emit ast))]
+      (is (= code "(true) && ((true) || (false))")))
+    (let [expr-env (assoc (ana/empty-env) :context :expr)
+          ast      (binding [ana/*passes* (conj ana/*passes* and-or/optimize)]
+                     (analyze expr-env
+                       `(or true (and false true))))
+          code     (with-out-str (emit ast))]
+      (is (= code "(true) || ((false) && (true))")))))
 
 (deftest test-local
   (testing "and/or optimizable with boolean local"
