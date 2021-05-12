@@ -10,13 +10,14 @@
   (:require [cljs.analyzer :as ana]
             [cljs.analyzer.passes.and-or :as and-or]
             [cljs.analyzer-tests :as ana-tests :refer [analyze]]
+            [cljs.compiler :as comp]
             [cljs.compiler-tests :as comp-tests :refer [compile-form-seq emit]]
             [cljs.env :as env]
             [clojure.string :as string]
             [clojure.test :as test :refer [deftest is testing]]))
 
 (defmacro with-and-or-pass [& body]
-  `(binding [ana/*passes* (conj ana/*passes* and-or/optimize)]
+  `(binding [ana/*passes* (conj ana/default-passes and-or/optimize)]
      ~@body))
 
 (deftest test-and-or-helpers
@@ -154,7 +155,17 @@
                          (and ^boolean (.-woz x) false))])))]
       (is (= 1 (count (re-seq #"&&" code)))))))
 
-;; TODO: a couple of core predicates in compound expression
+(deftest test-core-predicates
+  (testing "and/or optimizable with core predicates"
+    (let [code (env/with-compiler-env (env/default-compiler-env)
+                (comp/with-core-cljs {}
+                  (fn []
+                    (with-and-or-pass
+                      (compile-form-seq
+                        '[(ns foo.bar)
+                          (defn bar []
+                            (and (even? 1) false))])))))]
+      (is (= 1 (count (re-seq #"&&" code)))))))
 
 (comment
   (test/run-tests)

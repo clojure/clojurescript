@@ -18,12 +18,12 @@
   (contains? simple-ops (:op ast)))
 
 (defn simple-test-expr?
-  [ast]
+  [{:keys [op] :as ast}]
   (boolean
     (and (simple-op? ast)
          ('#{boolean seq}
            (or (:tag ast)
-               (when (#{:local :var} (:op ast))
+               (when (#{:local :var} op)
                  (-> ast :info :tag)))))))
 
 (defn single-binding-let? [ast]
