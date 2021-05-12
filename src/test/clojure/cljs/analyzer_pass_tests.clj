@@ -74,6 +74,13 @@
           code     (with-out-str (emit ast))]
       (is (= code "(true) && (false)")))))
 
+;; TODO: a couple of core predicate in compound expression
+;; TODO: mixing and/or
+;; TODO: boolean var
+;; TODO: boolean js-var
+;; TODO: host-field
+;; TODO: host-call
+
 (comment
   (test/run-tests)
 
