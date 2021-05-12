@@ -40,6 +40,16 @@
       (is (and-or/simple-or? ast))
       (is (and-or/optimizable-or? ast)))))
 
+(deftest simple-let-optimizability
+  (testing "Testing that simple lets with boolean binding can optimize"
+    (let [expr-env (assoc (ana/empty-env) :context :expr)
+          ast      (->> `(let [x# true]
+                           (and x# true))
+                     (analyze expr-env))]
+      (is (and-or/simple-test-expr? (-> ast :bindings first :init)))
+      ;;
+      )))
+
 (deftest and-or-code-gen
   (testing "and/or optimization code gen"
     (let [expr-env (assoc (ana/empty-env) :context :expr)
@@ -70,14 +80,28 @@
   (require '[clojure.pprint :refer [pprint]])
 
   ;; Doesn't seem right
+  ;; it's understandable why the outside doesn't optimize
+  ;; but not why the inner part is not fully optimized
+  (let [expr-env (assoc (ana/empty-env) :context :expr)
+        ast      (->> `(and ~(with-meta 'x {:tag 'boolean}) false)
+                   (analyze expr-env))]
+    (and-or/optimizable-and? ast))
+
+  ;; works
+  (let [expr-env (assoc (ana/empty-env) :context :expr)
+        ast      (->> `(and ~(with-meta 'x {:tag 'boolean}) false)
+                   (analyze expr-env))]
+    (emit (and-or/optimize-and ast)))
+
+  ;; does not work
   (let [expr-env (assoc (ana/empty-env) :context :expr)
         ast      (binding [ana/*passes* (conj ana/*passes* and-or/optimize)]
-                   (->> `(let [x# true]
-                           (and x# true))
+                   (->> `(and ~(with-meta 'x {:tag 'boolean}) false)
                      (analyze expr-env)))]
-    (:op ast))
+    (emit ast))
 
-  ;; variation
+  ;; ==========
+  ;; variations
   (let [expr-env (assoc (ana/empty-env) :context :expr)
         ast      (binding [ana/*passes* (conj ana/*passes* and-or/optimize)]
                    (->> `(let [x# true]
