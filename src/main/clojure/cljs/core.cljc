@@ -872,22 +872,8 @@
   ([] true)
   ([x] x)
   ([x & next]
-   (core/let [forms (concat [x] next)]
-     (core/cond
-       (every? #(simple-test-expr? &env %)
-         (map #(cljs.analyzer/no-warn (cljs.analyzer/analyze &env %)) forms))
-       (core/let [and-str (core/->> (repeat (count forms) "(~{})")
-                            (interpose " && ")
-                            (#(concat ["("] % [")"]))
-                            (apply core/str))]
-         (bool-expr `(~'js* ~and-str ~@forms)))
-
-       (typed-expr? &env x '#{boolean})
-       `(if ~x (and ~@next) false)
-
-       :else
-       `(let [and# ~x]
-          (if and# (and ~@next) and#))))))
+   `(let [and# ~x]
+      (if and# (and ~@next) and#))))
 
 (core/defmacro or
   "Evaluates exprs one at a time, from left to right. If a form
@@ -897,16 +883,8 @@
   ([] nil)
   ([x] x)
   ([x & next]
-   (core/let [forms (concat [x] next)]
-     (if (every? #(simple-test-expr? &env %)
-           (map #(cljs.analyzer/no-warn (cljs.analyzer/analyze &env %)) forms))
-       (core/let [or-str (core/->> (repeat (count forms) "(~{})")
-                           (interpose " || ")
-                           (#(concat ["("] % [")"]))
-                           (apply core/str))]
-         (bool-expr `(~'js* ~or-str ~@forms)))
-       `(let [or# ~x]
-          (if or# or# (or ~@next)))))))
+   `(let [or# ~x]
+      (if or# or# (or ~@next)))))
 
 (core/defmacro nil? [x]
   `(coercive-= ~x nil))
