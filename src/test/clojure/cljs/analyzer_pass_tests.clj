@@ -10,9 +10,14 @@
   (:require [cljs.analyzer :as ana]
             [cljs.analyzer.passes.and-or :as and-or]
             [cljs.analyzer-tests :as ana-tests :refer [analyze]]
-            [cljs.compiler-tests :as comp-tests :refer [emit]]
+            [cljs.compiler-tests :as comp-tests :refer [compile-form-seq emit]]
+            [cljs.env :as env]
             [clojure.string :as string]
             [clojure.test :as test :refer [deftest is testing]]))
+
+(defmacro with-and-or-pass [& body]
+  `(binding [ana/*passes* (conj ana/*passes* and-or/optimize)]
+     ~@body))
 
 (deftest test-helpers
   (testing "Testing and/or matching helpers"
@@ -108,12 +113,28 @@
           code (with-out-str (emit ast))]
       (is (= 2 (count (re-seq #"&&" code)))))))
 
-;; TODO: a couple of core predicate in compound expression
-;; TODO: mixing and/or
-;; TODO: boolean var
-;; TODO: boolean js-var
+(deftest test-boolean-var
+  (let [code (env/with-compiler-env (env/default-compiler-env)
+               (with-and-or-pass
+                 (compile-form-seq
+                   '[(ns foo.bar)
+                     (def baz true)
+                     (defn bar []
+                       (and baz false))])))]
+    (is (= 1 (count (re-seq #"&&" code))))))
+
+(deftest test-js-boolean-var
+  (let [code (env/with-compiler-env (env/default-compiler-env)
+               (with-and-or-pass
+                 (compile-form-seq
+                   '[(ns foo.bar)
+                     (defn bar []
+                       (and ^boolean js/foo false))])))]
+    (is (= 1 (count (re-seq #"&&" code))))))
+
 ;; TODO: host-field
 ;; TODO: host-call
+;; TODO: a couple of core predicate in compound expression
 
 (comment
   (test/run-tests)
