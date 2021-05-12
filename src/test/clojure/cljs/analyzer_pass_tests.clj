@@ -11,6 +11,7 @@
             [cljs.analyzer.passes.and-or :as and-or]
             [cljs.analyzer-tests :as ana-tests :refer [analyze]]
             [cljs.compiler-tests :as comp-tests :refer [emit]]
+            [clojure.string :as string]
             [clojure.test :as test :refer [deftest is testing]]))
 
 (deftest test-helpers
@@ -74,7 +75,18 @@
                      (analyze expr-env
                        `(or true (and false true))))
           code     (with-out-str (emit ast))]
-      (is (= code "(true) || ((false) && (true))")))))
+      (is (= code "(true) || ((false) && (true))")))
+    (let [expr-env (assoc (ana/empty-env) :context :expr)
+          local    (gensym)
+          ast      (binding [ana/*passes* (conj ana/*passes* and-or/optimize)]
+                     (analyze expr-env
+                       `(let [~local true]
+                          (and true (or ~local false)))))
+          code     (with-out-str (emit ast))]
+      (is (= code
+            (string/replace
+              "(function (){var $SYM = true;\nreturn (true) && (($SYM) || (false));\n})()"
+              "$SYM" (str local)))))))
 
 (deftest test-local
   (testing "and/or optimizable with boolean local"
