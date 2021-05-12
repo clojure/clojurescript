@@ -75,7 +75,7 @@
       (is (= 2 (count (re-seq #"&&" code)))))))
 
 (deftest test-boolean-fn-arg
-  (testing "and/or optimizables with boolean fn arg"
+  (testing "and/or optimizable with boolean fn arg"
     (let [arg  (with-meta 'x {:tag 'boolean})
           ast  (binding [ana/*passes* (conj ana/*passes* and-or/optimize)]
                  (analyze (assoc (ana/empty-env) :context :expr)
@@ -95,43 +95,5 @@
   (test/run-tests)
 
   (require '[clojure.pprint :refer [pprint]])
-
-  ;; Doesn't seem right
-  ;; it's understandable why the outside doesn't optimize
-  ;; but not why the inner part is not fully optimized
-  (let [expr-env (assoc (ana/empty-env) :context :expr)
-        ast      (->> `(and ~(with-meta 'x {:tag 'boolean}) false)
-                   (analyze expr-env))]
-    (and-or/optimizable-and? ast))
-
-  ;; works, see below
-  (let [expr-env (assoc (ana/empty-env) :context :expr)
-        ast      (->> `(and ~(with-meta 'x {:tag 'boolean}) false)
-                   (analyze expr-env))]
-    (emit (and-or/optimize-and ast)))
-
-  ;; does not quite work
-  ;; manually running optimize one more time fixes it up
-  (let [expr-env (assoc (ana/empty-env) :context :expr)
-        ast      (binding [ana/*passes* (conj ana/*passes* and-or/optimize)]
-                   (->> `(and ~(with-meta 'x {:tag 'boolean}) false)
-                     (analyze expr-env)))]
-    (emit ast))
-
-  ;; false
-  (let [expr-env (assoc (ana/empty-env) :context :expr)
-        ast      (binding [ana/*passes* (conj ana/*passes* and-or/optimize)]
-                   (->> `(and ~(with-meta 'x {:tag 'boolean}) false)
-                     (analyze expr-env)))]
-    #_(and-or/no-statements? ast)
-    #_(and-or/simple-test-expr? (-> ast :bindings first :init))
-    #_(-> ast :bindings first )
-    (emit ast))
-
-  ;; true
-  (let [expr-env (assoc (ana/empty-env) :context :expr)
-        ast      (->> `(and ~(with-meta 'x {:tag 'boolean}) false)
-                   (analyze expr-env))]
-    (and-or/optimizable-and? ast))
 
   )
