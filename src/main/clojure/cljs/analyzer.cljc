@@ -14,6 +14,7 @@
                                      no-warn with-warning-handlers wrapping-errors]]
              [cljs.env.macros :refer [ensure]]))
   #?(:clj  (:require [cljs.analyzer.impl :as impl]
+                     [cljs.analyzer.passes.and-or :as and-or]
                      [cljs.env :as env :refer [ensure]]
                      [cljs.externs :as externs]
                      [cljs.js-deps :as deps]
@@ -26,6 +27,7 @@
                      [clojure.tools.reader :as reader]
                      [clojure.tools.reader.reader-types :as readers])
      :cljs (:require [cljs.analyzer.impl :as impl]
+                     [cljs.analyzer.passes.and-or :as and-or]
                      [cljs.env :as env]
                      [cljs.reader :as edn]
                      [cljs.tagged-literals :as tags]
@@ -4194,8 +4196,8 @@
            tag (assoc :tag tag))))))
 
 (def default-passes
-  #?(:clj  [infer-type check-invoke-arg-types ns-side-effects]
-     :cljs [infer-type check-invoke-arg-types]))
+  #?(:clj  [infer-type and-or/optimize check-invoke-arg-types ns-side-effects]
+     :cljs [infer-type and-or/optimize check-invoke-arg-types]))
 
 (defn analyze* [env form name opts]
   (let [passes *passes*
