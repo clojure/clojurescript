@@ -145,9 +145,11 @@
 
   (require '[clojure.pprint :refer [pprint]])
 
-  (let [ast (
+  (let [ast (binding [ana/*passes* (into [optimize-and-or] ana/*passes*)]
               (analyze (assoc (ana/empty-env) :context :expr)
-                `(and true false)))]
-    (:op ast))
+                `(fn []
+                   (if (and true false false)
+                     :a :b))))]
+    (emit ast))
 
   )
