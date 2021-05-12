@@ -7,7 +7,7 @@
 ;; You must not remove this notice, or any other, from this software.
 
 (ns cljs.analyzer-pass-tests
-  (:require [cljs.analyzer.api :as ana-api]
+  (:require [cljs.analyzer :as ana]
             [cljs.analyzer-tests :as ana-tests :refer [analyze]]
             [clojure.test :as test :refer [deftest is testing]]))
 
@@ -19,11 +19,11 @@
 
 (defn simple-test-expr?
   ([ast]
-   (simple-test-expr? (ana-api/empty-env) ast))
+   (simple-test-expr? (ana/empty-env) ast))
   ([env ast]
    (boolean
      (and (simple-ops (:op ast))
-          ('#{boolean seq} (cljs.analyzer/infer-tag env ast))))))
+          ('#{boolean seq} (ana/infer-tag env ast))))))
 
 (defn simple-and? [ast]
   (and (= :let (:op ast))
@@ -39,10 +39,10 @@
 
 (deftest test-helpers
   (testing "Testing and/or optimization helpers"
-    (let [ast (analyze (ana-api/empty-env) `(and true false))]
+    (let [ast (analyze (ana/empty-env) `(and true false))]
       (is (simple-op? (-> ast :bindings first :init))))
-    (let [ast (analyze (ana-api/empty-env) `(and true false))]
-      (simple-test-expr? (-> ast :bindings first :init)))))
+    (let [ast (analyze (ana/empty-env) `(and true false))]
+      (is (simple-test-expr? (-> ast :bindings first :init))))))
 
 (comment
   (test/run-tests)
