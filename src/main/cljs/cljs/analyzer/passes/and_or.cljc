@@ -73,7 +73,7 @@
 (defn optimize-and [ast]
   {:op :js
    :env (:env ast)
-   :segs ["(" ") && (" ")"]
+   :segs ["((" ") && (" "))"]
    :args [(-> ast :bindings first :init)
           (->expr-env (-> ast :body :ret :then))]
    :form (:form ast)
@@ -83,7 +83,7 @@
 (defn optimize-or [ast]
   {:op :js
    :env (:env ast)
-   :segs ["(" ") || (" ")"]
+   :segs ["((" ") || (" "))"]
    :args [(-> ast :bindings first :init)
           (->expr-env (-> ast :body :ret :else))]
    :form (:form ast)

@@ -22,17 +22,17 @@
           ast      (->> `(and true false)
                      (analyze expr-env))
           code     (with-out-str (emit ast))]
-      (is (= code "(true) && (false)")))
+      (is (= code "((true) && (false))")))
     (let [expr-env (assoc (ana/empty-env) :context :expr)
           ast      (analyze expr-env
                      `(and true (or true false)))
           code     (with-out-str (emit ast))]
-      (is (= code "(true) && ((true) || (false))")))
+      (is (= code "((true) && (((true) || (false))))")))
     (let [expr-env (assoc (ana/empty-env) :context :expr)
           ast      (analyze expr-env
                      `(or true (and false true)))
           code     (with-out-str (emit ast))]
-      (is (= code "(true) || ((false) && (true))")))
+      (is (= code "((true) || (((false) && (true))))")))
     (let [expr-env (assoc (ana/empty-env) :context :expr)
           local    (gensym)
           ast      (analyze expr-env
@@ -41,7 +41,7 @@
           code     (with-out-str (emit ast))]
       (is (= code
             (string/replace
-              "(function (){var $SYM = true;\nreturn (true) && (($SYM) || (false));\n})()"
+              "(function (){var $SYM = true;\nreturn ((true) && ((($SYM) || (false))));\n})()"
               "$SYM" (str local)))))))
 
 (deftest test-and-or-local
