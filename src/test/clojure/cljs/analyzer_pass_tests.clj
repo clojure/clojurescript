@@ -15,16 +15,17 @@
 (def simple-ops
   #{:var :js-var :local :invoke :const :host-field :host-call :js :quote})
 
+(defn ->expr-env [ast]
+  (assoc-in ast [:env :context] :expr))
+
 (defn simple-op? [ast]
   (contains? simple-ops (:op ast)))
 
 (defn simple-test-expr?
-  ([ast]
-   (simple-test-expr? (ana/empty-env) ast))
-  ([env ast]
-   (boolean
-     (and (simple-op? ast)
-          ('#{boolean seq} (:tag ast))))))
+  [ast]
+  (boolean
+    (and (simple-op? ast)
+         ('#{boolean seq} (:tag ast)))))
 
 (defn single-binding-let? [ast]
   (and (= :let (:op ast))
@@ -73,8 +74,9 @@
 (defn optimize-and [ast]
   {:op :js
    :env (:env ast)
-   :segs []
-   :args []
+   :segs ["(" ") && (" ")"]
+   :args [(-> ast :bindings first :init)
+          (->expr-env (-> ast :body :ret :then))]
    :form (:form ast)
    :children [:args]
    :tag 'boolean})
@@ -82,8 +84,9 @@
 (defn optimize-or [ast]
   {:op :js
    :env (:env ast)
-   :segs []
-   :args []
+   :segs ["(" ") || (" ")"]
+   :args [(-> ast :bindings first :init)
+          (->expr-env (-> ast :body :ret :else))]
    :form (:form ast)
    :children [:args]
    :tag 'boolean})
@@ -107,6 +110,15 @@
       (is (simple-or? ast))
       (is (optimizable-or? ast)))))
 
+(deftest and-or-code-gen
+  (testing "and/or optimization code gen"
+    (let [expr-env (assoc (ana/empty-env) :context :expr)
+          ast      (->> `(and true false)
+                     (analyze expr-env)
+                     optimize-and)
+          code     (with-out-str (emit ast))]
+      (is (= code "(true) && (false)")))))
+
 (comment
   (test/run-tests)
 
@@ -114,6 +126,16 @@
 
   (let [ast (analyze (assoc (ana/empty-env) :context :expr)
               `(and true false))]
+    (-> ast :bindings first :init))
+
+  (let [ast (analyze (assoc (ana/empty-env) :context :expr)
+              `(and true false))]
+    (emit ast))
+
+  (let [expr-env (assoc (ana/empty-env) :context :expr)
+        ast      (->> `(and true false)
+                   (analyze expr-env)
+                   optimize-and)]
     (emit ast))
 
   )
