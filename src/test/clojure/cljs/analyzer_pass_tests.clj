@@ -22,8 +22,8 @@
    (simple-test-expr? (ana/empty-env) ast))
   ([env ast]
    (boolean
-     (and (simple-ops (:op ast))
-          ('#{boolean seq} (ana/infer-tag env ast))))))
+     (and (simple-op? ast)
+          ('#{boolean seq} (:tag ast))))))
 
 (defn single-binding-let? [ast]
   (and (= :let (:op ast))
@@ -60,6 +60,12 @@
 (defn simple-or? [ast]
   (and (simple-test-binding-let? ast)
        (test=then? (-> ast :body :ret))))
+
+(defn optimizable-and? [ast]
+  (and (simple-and? ast)))
+
+(defn optimizable-or? [ast]
+  (and (simple-or? ast)))
 
 (deftest test-helpers
   (testing "Testing and/or matching helpers"
