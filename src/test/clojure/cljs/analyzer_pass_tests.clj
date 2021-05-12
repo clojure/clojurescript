@@ -69,7 +69,7 @@
 
 (defn optimizable-or? [ast]
   (and (simple-or? ast)
-    (simple-test-expr? (-> ast :body :ret :else))))
+       (simple-test-expr? (-> ast :body :ret :else))))
 
 (defn optimize-and [ast]
   {:op :js
@@ -90,6 +90,12 @@
    :form (:form ast)
    :children [:args]
    :tag 'boolean})
+
+(defn optimize-and-or [env ast _]
+  (cond
+    (optimizable-and? ast) (optimize-and ast)
+    (optimizable-or? ast)  (optimize-or ast)
+    :else ast))
 
 (deftest test-helpers
   (testing "Testing and/or matching helpers"
@@ -117,6 +123,21 @@
                      (analyze expr-env)
                      optimize-and)
           code     (with-out-str (emit ast))]
+      (is (= code "(true) && (false)")))
+    (let [expr-env (assoc (ana/empty-env) :context :expr)
+          ast      (->> `(or true false)
+                     (analyze expr-env)
+                     optimize-or)
+          code     (with-out-str (emit ast))]
+      (is (= code "(true) || (false)")))))
+
+(deftest and-or-code-gen-pass
+  (testing "and/or optimization code gen pass"
+    (let [expr-env (assoc (ana/empty-env) :context :expr)
+          ast      (binding [ana/*passes* (into [optimize-and-or] ana/*passes*)]
+                     (->> `(and true false)
+                       (analyze expr-env)))
+          code     (with-out-str (emit ast))]
       (is (= code "(true) && (false)")))))
 
 (comment
@@ -124,18 +145,9 @@
 
   (require '[clojure.pprint :refer [pprint]])
 
-  (let [ast (analyze (assoc (ana/empty-env) :context :expr)
-              `(and true false))]
-    (-> ast :bindings first :init))
-
-  (let [ast (analyze (assoc (ana/empty-env) :context :expr)
-              `(and true false))]
-    (emit ast))
-
-  (let [expr-env (assoc (ana/empty-env) :context :expr)
-        ast      (->> `(and true false)
-                   (analyze expr-env)
-                   optimize-and)]
-    (emit ast))
+  (let [ast (
+              (analyze (assoc (ana/empty-env) :context :expr)
+                `(and true false)))]
+    (:op ast))
 
   )
