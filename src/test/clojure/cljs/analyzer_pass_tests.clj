@@ -19,7 +19,7 @@
   `(binding [ana/*passes* (conj ana/*passes* and-or/optimize)]
      ~@body))
 
-(deftest test-helpers
+(deftest test-and-or-helpers
   (testing "Testing and/or matching helpers"
     (let [ast (analyze (ana/empty-env) `(and true false))]
       (is (and-or/simple-op? (-> ast :bindings first :init)))
@@ -29,7 +29,7 @@
       (is (and-or/no-statements? ast))
       (is (and-or/returns-if? ast)))))
 
-(deftest and-or-matchers
+(deftest test-and-or-matchers
   (testing "Testing and/or ast matching & optimizability"
     (let [ast (analyze (ana/empty-env) `(and true false))]
       (is (and-or/simple-and? ast))
@@ -46,7 +46,7 @@
       (is (and-or/simple-or? ast))
       (is (and-or/optimizable-or? ast)))))
 
-(deftest and-or-code-gen
+(deftest test-and-or-code-gen
   (testing "and/or optimization code gen"
     (let [expr-env (assoc (ana/empty-env) :context :expr)
           ast      (->> `(and true false)
@@ -61,7 +61,7 @@
           code     (with-out-str (emit ast))]
       (is (= code "(true) || (false)")))))
 
-(deftest and-or-code-gen-pass
+(deftest test-and-or-code-gen-pass
   (testing "and/or optimization code gen pass"
     (let [expr-env (assoc (ana/empty-env) :context :expr)
           ast      (with-and-or-pass
@@ -93,7 +93,7 @@
               "(function (){var $SYM = true;\nreturn (true) && (($SYM) || (false));\n})()"
               "$SYM" (str local)))))))
 
-(deftest test-local
+(deftest test-and-or-local
   (testing "and/or optimizable with boolean local"
     (let [expr-env (assoc (ana/empty-env) :context :expr)
           ast      (with-and-or-pass
@@ -103,7 +103,7 @@
           code     (with-out-str (emit ast))]
       (is (= 2 (count (re-seq #"&&" code)))))))
 
-(deftest test-boolean-fn-arg
+(deftest test-and-or-boolean-fn-arg
   (testing "and/or optimizable with boolean fn arg"
     (let [arg  (with-meta 'x {:tag 'boolean})
           ast  (with-and-or-pass
@@ -113,28 +113,48 @@
           code (with-out-str (emit ast))]
       (is (= 2 (count (re-seq #"&&" code)))))))
 
-(deftest test-boolean-var
-  (let [code (env/with-compiler-env (env/default-compiler-env)
-               (with-and-or-pass
-                 (compile-form-seq
-                   '[(ns foo.bar)
-                     (def baz true)
-                     (defn bar []
-                       (and baz false))])))]
-    (is (= 1 (count (re-seq #"&&" code))))))
+(deftest test-and-or-boolean-var
+  (testing "and/or optimizable with boolean var"
+    (let [code (env/with-compiler-env (env/default-compiler-env)
+                 (with-and-or-pass
+                   (compile-form-seq
+                     '[(ns foo.bar)
+                       (def baz true)
+                       (defn woz []
+                         (and baz false))])))]
+      (is (= 1 (count (re-seq #"&&" code)))))))
 
-(deftest test-js-boolean-var
-  (let [code (env/with-compiler-env (env/default-compiler-env)
-               (with-and-or-pass
-                 (compile-form-seq
-                   '[(ns foo.bar)
-                     (defn bar []
-                       (and ^boolean js/foo false))])))]
-    (is (= 1 (count (re-seq #"&&" code))))))
+(deftest test-and-or-js-boolean-var
+  (testing "and/or optimizable with js boolean var"
+    (let [code (env/with-compiler-env (env/default-compiler-env)
+                 (with-and-or-pass
+                   (compile-form-seq
+                     '[(ns foo.bar)
+                       (defn baz []
+                         (and ^boolean js/woz false))])))]
+      (is (= 1 (count (re-seq #"&&" code)))))))
 
-;; TODO: host-field
-;; TODO: host-call
-;; TODO: a couple of core predicate in compound expression
+(deftest test-and-or-host-call
+  (testing "and/or optimizable with host call"
+    (let [code (env/with-compiler-env (env/default-compiler-env)
+                 (with-and-or-pass
+                   (compile-form-seq
+                     '[(ns foo.bar)
+                       (defn bar [x]
+                         (and ^boolean (.woz x) false))])))]
+      (is (= 1 (count (re-seq #"&&" code)))))))
+
+(deftest test-and-or-host-field
+  (testing "and/or optimizable with host field"
+    (let [code (env/with-compiler-env (env/default-compiler-env)
+                 (with-and-or-pass
+                   (compile-form-seq
+                     '[(ns foo.bar)
+                       (defn bar [x]
+                         (and ^boolean (.-woz x) false))])))]
+      (is (= 1 (count (re-seq #"&&" code)))))))
+
+;; TODO: a couple of core predicates in compound expression
 
 (comment
   (test/run-tests)
