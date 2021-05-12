@@ -25,38 +25,67 @@
      (and (simple-ops (:op ast))
           ('#{boolean seq} (ana/infer-tag env ast))))))
 
-(defn simple-and? [ast]
+(defn single-binding-let? [ast]
   (and (= :let (:op ast))
-       (= 1 (count (-> ast :bindings)))
-       (= [] (-> ast :body :statements))
-       (= :if (-> ast :body :ret :op))))
+       (= 1 (count (-> ast :bindings)))))
+
+(defn no-statements? [let-ast]
+  (= [] (-> let-ast :body :statements)))
+
+(defn returns-if? [let-ast]
+  (= :if (-> let-ast :body :ret :op)))
+
+(defn test=then? [if-ast]
+  ;; remove :env, if same local will differ only by
+  ;; :context (:expr | :statement)
+  (= (dissoc (:test if-ast) :env)
+     (dissoc (:then if-ast) :env)))
+
+(defn test=else? [if-ast]
+  ;; remove :env, if same local will differ only by
+  ;; :context (:expr | :statement)
+  (= (dissoc (:test if-ast) :env)
+     (dissoc (:else if-ast) :env)))
+
+(defn simple-and? [ast]
+  (and (single-binding-let? ast)
+       (no-statements? ast)
+       (returns-if? ast)
+       (test=else? (-> ast :body :ret))))
 
 (defn simple-or? [ast]
-  (and (= :let (:op ast))
-       (= 1 (count (-> ast :bindings)))
-       (= [] (-> ast :body :statements))
-       (= :if (-> ast :body :ret :op))))
+  (and (single-binding-let? ast)
+       (no-statements? ast)
+       (returns-if? ast)
+       (test=then? (-> ast :body :ret))))
 
 (deftest test-helpers
-  (testing "Testing and/or optimization helpers"
+  (testing "Testing and/or matching helpers"
     (let [ast (analyze (ana/empty-env) `(and true false))]
-      (is (simple-op? (-> ast :bindings first :init))))
+      (is (simple-op? (-> ast :bindings first :init)))
+      (is (simple-test-expr? (-> ast :bindings first :init)))
+      (is (single-binding-let? ast))
+      (is (no-statements? ast))
+      (is (returns-if? ast)))))
+
+(deftest and-or-matchers
+  (testing "Testing and/or ast matching"
     (let [ast (analyze (ana/empty-env) `(and true false))]
-      (is (simple-test-expr? (-> ast :bindings first :init))))))
+      (is (simple-and? ast)))
+    (let [ast (analyze (ana/empty-env) `(or true false))]
+      (is (simple-or? ast)))))
 
 (comment
   (test/run-tests)
 
-  (let [ast (analyze (ana-api/empty-env)
+  (require '[clojure.pprint :refer [pprint]])
+
+  (let [ast (analyze (ana/empty-env)
               `(and true false))]
     (-> ast :body :ret :op))
 
-  (let [ast (analyze (ana-api/empty-env)
+  (let [ast (analyze (ana/empty-env)
               `(and true false))]
     (-> ast :body :ret :env :locals))
-
-  (let [ast (analyze (ana-api/empty-env)
-              `(or true false))]
-    (-> ast :body :ret))
 
   )
