@@ -50,7 +50,7 @@
 (deftest and-or-code-gen-pass
   (testing "and/or optimization code gen pass"
     (let [expr-env (assoc (ana/empty-env) :context :expr)
-          ast      (binding [ana/*passes* (into [and-or/optimize] ana/*passes*)]
+          ast      (binding [ana/*passes* (conj ana/*passes* and-or/optimize)]
                      (->> `(and true false)
                        (analyze expr-env)))
           code     (with-out-str (emit ast))]
@@ -61,14 +61,14 @@
 
   (require '[clojure.pprint :refer [pprint]])
 
-  (let [ast (binding [ana/*passes* (into [optimize-and-or] ana/*passes*)]
+  (let [ast (binding [ana/*passes* (conj ana/*passes* and-or/optimize)]
               (analyze (assoc (ana/empty-env) :context :expr)
                 `(fn []
                    (if (and true false false)
                      :a :b))))]
     (emit ast))
 
-  (let [ast (binding [ana/*passes* (into [optimize-and-or] ana/*passes*)]
+  (let [ast (binding [ana/*passes* (conj ana/*passes* and-or/optimize)]
               (analyze (assoc (ana/empty-env) :context :expr)
                 `(fn []
                    (if (and x false false)
