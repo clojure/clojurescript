@@ -62,10 +62,12 @@
        (test=then? (-> ast :body :ret))))
 
 (defn optimizable-and? [ast]
-  (and (simple-and? ast)))
+  (and (simple-and? ast)
+       (simple-test-expr? (-> ast :body :ret :then))))
 
 (defn optimizable-or? [ast]
-  (and (simple-or? ast)))
+  (and (simple-or? ast)
+       (simple-test-expr? (-> ast :body :ret :else))))
 
 (deftest test-helpers
   (testing "Testing and/or matching helpers"
@@ -80,9 +82,11 @@
 (deftest and-or-matchers
   (testing "Testing and/or ast matching"
     (let [ast (analyze (ana/empty-env) `(and true false))]
-      (is (simple-and? ast)))
+      (is (simple-and? ast))
+      (is (optimizable-and? ast)))
     (let [ast (analyze (ana/empty-env) `(or true false))]
-      (is (simple-or? ast)))))
+      (is (simple-or? ast))
+      (is (optimizable-or? ast)))))
 
 (comment
   (test/run-tests)
