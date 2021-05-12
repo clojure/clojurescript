@@ -40,16 +40,6 @@
       (is (and-or/simple-or? ast))
       (is (and-or/optimizable-or? ast)))))
 
-(deftest simple-let-optimizability
-  (testing "Testing that simple lets with boolean binding can optimize"
-    (let [expr-env (assoc (ana/empty-env) :context :expr)
-          ast      (->> `(let [x# true]
-                           (and x# true))
-                     (analyze expr-env))]
-      (is (and-or/simple-test-expr? (-> ast :bindings first :init)))
-      ;;
-      )))
-
 (deftest and-or-code-gen
   (testing "and/or optimization code gen"
     (let [expr-env (assoc (ana/empty-env) :context :expr)
@@ -73,6 +63,26 @@
                        (analyze expr-env)))
           code     (with-out-str (emit ast))]
       (is (= code "(true) && (false)")))))
+
+(deftest test-local
+  (testing "and/or optimizable with boolean local"
+    (let [expr-env (assoc (ana/empty-env) :context :expr)
+          ast      (binding [ana/*passes* (conj ana/*passes* and-or/optimize)]
+                     (->> `(let [x# true]
+                             (and x# true false))
+                       (analyze expr-env)))
+          code     (with-out-str (emit ast))]
+      (is (= 2 (count (re-seq #"&&" code)))))))
+
+(deftest test-boolean-fn-arg
+  (testing "and/or optimizables with boolean fn arg"
+    (let [arg  (with-meta 'x {:tag 'boolean})
+          ast  (binding [ana/*passes* (conj ana/*passes* and-or/optimize)]
+                 (analyze (assoc (ana/empty-env) :context :expr)
+                   `(fn [~arg]
+                      (and ~arg false false))))
+          code (with-out-str (emit ast))]
+      (is (= 2 (count (re-seq #"&&" code)))))))
 
 ;; TODO: a couple of core predicate in compound expression
 ;; TODO: mixing and/or
@@ -108,28 +118,20 @@
                      (analyze expr-env)))]
     (emit ast))
 
-  ;; ==========
-  ;; variations
+  ;; false
   (let [expr-env (assoc (ana/empty-env) :context :expr)
         ast      (binding [ana/*passes* (conj ana/*passes* and-or/optimize)]
-                   (->> `(let [x# true]
-                           (and x# true false))
+                   (->> `(and ~(with-meta 'x {:tag 'boolean}) false)
                      (analyze expr-env)))]
-    (with-out-str (emit ast)))
-
-  ;; same - doesn't collapse the last one
-  (let [arg (with-meta 'x {:tag 'boolean})
-        ast (binding [ana/*passes* (conj ana/*passes* and-or/optimize)]
-              (analyze (assoc (ana/empty-env) :context :expr)
-                `(fn [~arg]
-                   (and ~arg false false))))]
+    #_(and-or/no-statements? ast)
+    #_(and-or/simple-test-expr? (-> ast :bindings first :init))
+    #_(-> ast :bindings first )
     (emit ast))
 
-  (let [ast (binding [ana/*passes* (conj ana/*passes* and-or/optimize)]
-              (analyze (assoc (ana/empty-env) :context :expr)
-                `(fn []
-                   (if (and x false false)
-                     :a :b))))]
-    (emit ast))
+  ;; true
+  (let [expr-env (assoc (ana/empty-env) :context :expr)
+        ast      (->> `(and ~(with-meta 'x {:tag 'boolean}) false)
+                   (analyze expr-env))]
+    (and-or/optimizable-and? ast))
 
   )

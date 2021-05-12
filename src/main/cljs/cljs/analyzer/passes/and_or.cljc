@@ -21,7 +21,10 @@
   [ast]
   (boolean
     (and (simple-op? ast)
-         ('#{boolean seq} (:tag ast)))))
+         ('#{boolean seq}
+           (or (:tag ast)
+               (when (#{:local :var} (:op ast))
+                 (-> ast :info :tag)))))))
 
 (defn single-binding-let? [ast]
   (and (= :let (:op ast))
