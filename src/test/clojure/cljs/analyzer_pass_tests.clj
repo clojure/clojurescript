@@ -64,26 +64,26 @@
 (deftest and-or-code-gen-pass
   (testing "and/or optimization code gen pass"
     (let [expr-env (assoc (ana/empty-env) :context :expr)
-          ast      (binding [ana/*passes* (conj ana/*passes* and-or/optimize)]
+          ast      (with-and-or-pass
                      (->> `(and true false)
                        (analyze expr-env)))
           code     (with-out-str (emit ast))]
       (is (= code "(true) && (false)")))
     (let [expr-env (assoc (ana/empty-env) :context :expr)
-          ast      (binding [ana/*passes* (conj ana/*passes* and-or/optimize)]
+          ast      (with-and-or-pass
                      (analyze expr-env
                        `(and true (or true false))))
           code     (with-out-str (emit ast))]
       (is (= code "(true) && ((true) || (false))")))
     (let [expr-env (assoc (ana/empty-env) :context :expr)
-          ast      (binding [ana/*passes* (conj ana/*passes* and-or/optimize)]
+          ast      (with-and-or-pass
                      (analyze expr-env
                        `(or true (and false true))))
           code     (with-out-str (emit ast))]
       (is (= code "(true) || ((false) && (true))")))
     (let [expr-env (assoc (ana/empty-env) :context :expr)
           local    (gensym)
-          ast      (binding [ana/*passes* (conj ana/*passes* and-or/optimize)]
+          ast      (with-and-or-pass
                      (analyze expr-env
                        `(let [~local true]
                           (and true (or ~local false)))))
@@ -96,7 +96,7 @@
 (deftest test-local
   (testing "and/or optimizable with boolean local"
     (let [expr-env (assoc (ana/empty-env) :context :expr)
-          ast      (binding [ana/*passes* (conj ana/*passes* and-or/optimize)]
+          ast      (with-and-or-pass
                      (->> `(let [x# true]
                              (and x# true false))
                        (analyze expr-env)))
@@ -106,7 +106,7 @@
 (deftest test-boolean-fn-arg
   (testing "and/or optimizable with boolean fn arg"
     (let [arg  (with-meta 'x {:tag 'boolean})
-          ast  (binding [ana/*passes* (conj ana/*passes* and-or/optimize)]
+          ast  (with-and-or-pass
                  (analyze (assoc (ana/empty-env) :context :expr)
                    `(fn [~arg]
                       (and ~arg false false))))
