@@ -28,7 +28,7 @@
 
 (defn single-binding-let? [ast]
   (and (= :let (:op ast))
-    (= 1 (count (-> ast :bindings)))))
+       (= 1 (count (-> ast :bindings)))))
 
 (defn no-statements? [let-ast]
   (= [] (-> let-ast :body :statements)))
@@ -46,7 +46,7 @@
   ;; remove :env, if same, local will differ only by
   ;; :context (:expr | :statement)
   (= (dissoc (:test if-ast) :env)
-    (dissoc (:then if-ast) :env)))
+     (dissoc (:then if-ast) :env)))
 
 (defn test=else? [if-ast]
   ;; remove :env, if same, local will differ only by
@@ -60,7 +60,7 @@
 
 (defn simple-or? [ast]
   (and (simple-test-binding-let? ast)
-    (test=then? (-> ast :body :ret))))
+       (test=then? (-> ast :body :ret))))
 
 (defn optimizable-and? [ast]
   (and (simple-and? ast)
