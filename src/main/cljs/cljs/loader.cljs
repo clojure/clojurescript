@@ -70,6 +70,7 @@
    (assert (contains? module-infos module-name)
      (str "Module " module-name " does not exist"))
    (let [mname (-> module-name name munge)]
+     (.beforeLoadModuleCode *module-manager* mname)
      (if-not (nil? cb)
        (.execOnLoad *module-manager* mname cb)
        (.load *module-manager* mname)))))
@@ -81,10 +82,16 @@
   [module-name]
   (assert (contains? module-infos module-name)
     (str "Module " module-name " does not exist"))
-  (let [xs (deps-for module-name module-infos)]
-    (doseq [x xs]
-      (.setLoaded (.getModuleInfo *module-manager* (munge-kw x))))
-    (.setLoaded (.getModuleInfo *module-manager* (munge-kw module-name)))))
+  (let [deps (deps-for module-name module-infos)]
+    (doseq [dep deps]
+      (let [dep' (munge-kw dep)]
+        (when (.isModuleLoading *module-manager* dep')
+          (.setLoaded *module-manager* dep'))
+        (.setLoaded (.getModuleInfo *module-manager* dep'))))
+    (let [module-name' (munge-kw module-name)]
+      (when (.isModuleLoading *module-manager* module-name')
+        (.setLoaded *module-manager* module-name'))
+      (.setLoaded (.getModuleInfo *module-manager* module-name')))))
 
 (defn prefetch
   "Prefetch a module. module-name should be a keyword matching a :modules
