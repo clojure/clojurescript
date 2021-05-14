@@ -229,7 +229,7 @@
 
 (def lang-level
   [:ecmascript3 :ecmascript5 :ecmascript5-strict :ecmascript6 :ecmascript6-strict
-   :ecmascript-2015 :ecmascript6-typed :ecmascript-2016 :ecmascript-2017 :ecmascript-next
+   :ecmascript-2015 :ecmascript-2016 :ecmascript-2017 :ecmascript-next
    :no-transpile])
 
 (defn expand-lang-key [key]
@@ -244,7 +244,6 @@
     :ecmascript6           CompilerOptions$LanguageMode/ECMASCRIPT_2015 ;; (deprecated and remapped)
     :ecmascript6-strict    CompilerOptions$LanguageMode/ECMASCRIPT_2015 ;; (deprecated and remapped)
     :ecmascript-2015       CompilerOptions$LanguageMode/ECMASCRIPT_2015
-    :ecmascript6-typed     CompilerOptions$LanguageMode/ECMASCRIPT6_TYPED
     :ecmascript-2016       CompilerOptions$LanguageMode/ECMASCRIPT_2016
     :ecmascript-2017       CompilerOptions$LanguageMode/ECMASCRIPT_2017
     :ecmascript-next       CompilerOptions$LanguageMode/ECMASCRIPT_NEXT))
