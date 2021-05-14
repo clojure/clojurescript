@@ -11,7 +11,7 @@ jobs:
 
       - uses: DeLaGuardo/setup-clojure@3.2
         with:
-          tools-deps: '1.10.3.839'
+          cli: '1.10.3.839'
 
       - name: Cache maven
         uses: actions/cache@v2
@@ -63,7 +63,7 @@ jobs:
 
       - uses: DeLaGuardo/setup-clojure@3.2
         with:
-          tools-deps: '1.10.3.839'
+          cli: '1.10.3.839'
 
       - name: Cache maven
         uses: actions/cache@v2
@@ -102,7 +102,7 @@ jobs:
 
       - uses: DeLaGuardo/setup-clojure@3.2
         with:
-          tools-deps: '1.10.3.839'
+          cli: '1.10.3.839'
 
       - name: Cache maven
         uses: actions/cache@v2
@@ -141,7 +141,7 @@ jobs:
 
       - uses: DeLaGuardo/setup-clojure@3.2
         with:
-          tools-deps: '1.10.3.839'
+          cli: '1.10.3.839'
 
       - name: Cache maven
         uses: actions/cache@v2
@@ -177,7 +177,7 @@ jobs:
 
       - uses: DeLaGuardo/setup-clojure@3.2
         with:
-          tools-deps: '1.10.3.839'
+          cli: '1.10.3.839'
 
       - name: Cache maven
         uses: actions/cache@v2
