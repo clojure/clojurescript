@@ -16,7 +16,7 @@
                  [org.clojure/test.check "0.10.0-alpha3" :scope "test"]
                  [com.cognitect/transit-clj "0.8.309"]
                  [org.clojure/google-closure-library "0.0-20201211-3e6c510d"]
-                 [com.google.javascript/closure-compiler-unshaded "v20210302"]]
+                 [com.google.javascript/closure-compiler-unshaded "v20210505"]]
   :profiles {:1.6 {:dependencies [[org.clojure/clojure "1.6.0"]]}
              :uberjar {:aot :all :main cljs.main}
              :closure-snapshot {:dependencies [[com.google.javascript/closure-compiler-unshaded "1.0-SNAPSHOT"]]}}
