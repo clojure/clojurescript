@@ -115,4 +115,13 @@
 
   (require '[clojure.pprint :refer [pprint]])
 
+  (let [code (env/with-compiler-env (env/default-compiler-env)
+               (comp/with-core-cljs {}
+                 (fn []
+                   (compile-form-seq
+                     '[(loop [x 4]
+                         (when (or (< x 4) (not-any? (fn [y] x) [1]))
+                           (recur 5)))]))))]
+    code)
+
   )
