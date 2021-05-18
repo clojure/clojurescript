@@ -8,6 +8,7 @@
 
 (ns cljs.analyzer-pass-tests
   (:require [cljs.analyzer :as ana]
+            [cljs.analyzer.passes :as passes]
             [cljs.analyzer.passes.and-or :as and-or]
             [cljs.analyzer-tests :as ana-tests :refer [analyze]]
             [cljs.compiler :as comp]
@@ -15,6 +16,15 @@
             [cljs.env :as env]
             [clojure.string :as string]
             [clojure.test :as test :refer [deftest is testing]]))
+
+(deftest test-walk
+  (testing "walking visits every node"
+    (let [expr-env (assoc (ana/empty-env) :context :expr)
+          ast      (->> `(and true false)
+                     (analyze expr-env))
+          ast'     (passes/walk ast [(fn [_ ast _] (dissoc ast :env))])]
+      (is (not (contains? ast' :env)))
+      (is (not (some #(contains? % :env) (:args ast')))))))
 
 (deftest test-and-or-code-gen-pass
   (testing "and/or optimization code gen pass"
