@@ -2219,7 +2219,8 @@
                               :init fexpr
                               :variadic? (:variadic? fexpr)
                               :max-fixed-arity (:max-fixed-arity fexpr)
-                              :method-params (map :params (:methods fexpr)))]
+                              :method-params (map :params (:methods fexpr))
+                              :children [:init])]
                     [(assoc-in env [:locals name] be')
                      (conj bes be')]))
           [meth-env []] bes)
@@ -2296,7 +2297,8 @@
                     :env {:line line :column col}
                     :info {:name name
                            :shadow shadow}
-                    :binding-form? true}
+                    :binding-form? true
+                    :children [:init]}
                 be (if (= :fn (:op init-expr))
                      ;; TODO: can we simplify - David
                      (merge be

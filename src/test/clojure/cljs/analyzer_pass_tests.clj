@@ -24,7 +24,17 @@
                      (analyze expr-env))
           ast'     (passes/walk ast [(fn [_ ast _] (dissoc ast :env))])]
       (is (not (contains? ast' :env)))
-      (is (not (some #(contains? % :env) (:args ast')))))))
+      (is (not (some #(contains? % :env) (:args ast')))))
+    (let [expr-env (assoc (ana/empty-env) :context :expr)
+          ast      (->> `(let [x# 1
+                               y# (fn [] x#)
+                               z# (fn [] y#)]
+                           'x)
+                     (analyze expr-env))
+          ast'     (passes/walk ast [(fn [_ ast _] (dissoc ast :env))])]
+      (is (not (contains? ast' :env)))
+      (is (= 3 (count (:bindings ast'))))
+      (is (not (some #(contains? % :env) (:bindings ast')))))))
 
 (deftest remove-local
   (testing "and/or remove local pass"
@@ -156,11 +166,19 @@
                             (for [e s :when (and (sequential? e) (every? (fn [x] x) e))]
                               e))
                           [[]])]))))]
-      (is (empty? (re-seq #"and_" code))))))
+      (is (empty? (re-seq #"and_" code))))
+    (let [code (env/with-compiler-env (env/default-compiler-env)
+                 (comp/with-core-cljs {}
+                   (fn []
+                     (compile-form-seq
+                       '[(or false
+                             (boolean
+                               (for [s (range 1)]
+                                 (map (fn [x] x) s))))]))))]
+      (is (empty? (re-seq #"or_" code))))))
 
 (comment
   (test/run-tests)
 
   (require '[clojure.pprint :refer [pprint]])
-
   )
