@@ -138,18 +138,29 @@
                           (and (even? 1) false))]))))]
       (is (= 1 (count (re-seq #"&&" code)))))))
 
+(deftest test-cljs-3309
+  (testing "CLJS-3309: and/or optimization removes discarded local and loop-lets"
+    (let [code (env/with-compiler-env (env/default-compiler-env)
+                 (comp/with-core-cljs {}
+                   (fn []
+                     (compile-form-seq
+                       '[(loop [x 4]
+                           (when (or (< x 4) (not-any? (fn [y] x) [1]))
+                             (recur 5)))]))))]
+      (is (empty? (re-seq #"or_" code))))
+    (let [code (env/with-compiler-env (env/default-compiler-env)
+                 (comp/with-core-cljs {}
+                   (fn []
+                     (compile-form-seq
+                       '[((fn [s]
+                            (for [e s :when (and (sequential? e) (every? (fn [x] x) e))]
+                              e))
+                          [[]])]))))]
+      (is (empty? (re-seq #"and_" code))))))
+
 (comment
   (test/run-tests)
 
   (require '[clojure.pprint :refer [pprint]])
-
-  (let [code (env/with-compiler-env (env/default-compiler-env)
-               (comp/with-core-cljs {}
-                 (fn []
-                   (compile-form-seq
-                     '[(loop [x 4]
-                         (when (or (< x 4) (not-any? (fn [y] x) [1]))
-                           (recur 5)))]))))]
-    code)
 
   )
