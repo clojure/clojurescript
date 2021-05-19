@@ -1854,3 +1854,15 @@
     (is (false? (contains? sv :kw))))
   (let [sv (subvec [0 1 2 3 4] 2 2)]
     (is (false? (contains? sv 0)))))
+
+(deftest test-cljs-3309
+  (is (= :ok
+         (loop [x 4]
+           (if (or (< x 4) (not-any? (fn [y] x) [1]))
+             (recur 5)
+             :ok))))
+  (is (= '([])
+         ((fn [s]
+            (for [e s :when (and (sequential? e) (every? (fn [x] x) e))]
+              e))
+          [[]]))))
