@@ -26,6 +26,24 @@
       (is (not (contains? ast' :env)))
       (is (not (some #(contains? % :env) (:args ast')))))))
 
+(deftest remove-local
+  (testing "and/or remove local pass"
+    (let [ast  {:op :fn
+                :env '{:locals {x {}}}
+                :loop-lets '[{:params [{:name x}]}]}
+          pass (and-or/remove-local-pass 'x)
+          ast' (passes/apply-passes ast [pass])]
+      (is (contains? (-> ast :env :locals) 'x))
+      (is (not (contains? (-> ast' :env :locals) 'x)))
+      (is (some
+            (fn [{:keys [params]}]
+              (some #(= 'x (:name %)) params))
+            (:loop-lets ast)))
+      (is (not (some
+                 (fn [{:keys [params]}]
+                   (some #(= 'x (:name %)) params))
+                 (:loop-lets ast')))))))
+
 (deftest test-and-or-code-gen-pass
   (testing "and/or optimization code gen pass"
     (let [expr-env (assoc (ana/empty-env) :context :expr)

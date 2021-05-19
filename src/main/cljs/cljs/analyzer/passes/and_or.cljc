@@ -6,7 +6,8 @@
 ;; the terms of this license.
 ;; You must not remove this notice, or any other, from this software.
 
-(ns cljs.analyzer.passes.and-or)
+(ns cljs.analyzer.passes.and-or
+  (:require [cljs.analyzer.passes :as passes]))
 
 (def simple-ops
   #{:var :js-var :local :invoke :const :host-field :host-call :js :quote})
@@ -70,25 +71,45 @@
   (and (simple-or? ast)
        (simple-test-expr? (-> ast :body :ret :else))))
 
+(defn remove-loop-let [fn-ast local]
+  (update fn-ast :loop-lets
+    (fn [loop-lets]
+      (map
+        (fn [m]
+          (update m :params
+            (fn [xs] (remove #(= local (:name %)) xs))))
+        loop-lets))))
+
+(defn remove-local-pass [local]
+  (fn [env ast opts]
+    (cond-> (update-in ast [:env :locals] dissoc local)
+      (= :fn (:op ast)) (remove-loop-let local))))
+
 (defn optimize-and [ast]
-  {:op :js
-   :env (:env ast)
-   :segs ["((" ") && (" "))"]
-   :args [(-> ast :bindings first :init)
-          (->expr-env (-> ast :body :ret :then))]
-   :form (:form ast)
-   :children [:args]
-   :tag 'boolean})
+  (let [{:keys [init name]} (-> ast :bindings first)]
+    {:op :js
+     :env (:env ast)
+     :segs ["((" ") && (" "))"]
+     :args [init
+            (passes/walk
+              (->expr-env (-> ast :body :ret :then))
+              [(remove-local-pass name)])]
+     :form (:form ast)
+     :children [:args]
+     :tag 'boolean}))
 
 (defn optimize-or [ast]
-  {:op :js
-   :env (:env ast)
-   :segs ["((" ") || (" "))"]
-   :args [(-> ast :bindings first :init)
-          (->expr-env (-> ast :body :ret :else))]
-   :form (:form ast)
-   :children [:args]
-   :tag 'boolean})
+  (let [{:keys [init name]} (-> ast :bindings first)]
+    {:op :js
+     :env (:env ast)
+     :segs ["((" ") || (" "))"]
+     :args [init
+            (passes/walk
+              (->expr-env (-> ast :body :ret :else))
+              [(remove-local-pass name)])]
+     :form (:form ast)
+     :children [:args]
+     :tag 'boolean}))
 
 (defn optimize [env ast _]
   (cond
