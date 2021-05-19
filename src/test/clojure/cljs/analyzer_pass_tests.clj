@@ -8,6 +8,7 @@
 
 (ns cljs.analyzer-pass-tests
   (:require [cljs.analyzer :as ana]
+            [cljs.analyzer.passes :as passes]
             [cljs.analyzer.passes.and-or :as and-or]
             [cljs.analyzer-tests :as ana-tests :refer [analyze]]
             [cljs.compiler :as comp]
@@ -15,6 +16,33 @@
             [cljs.env :as env]
             [clojure.string :as string]
             [clojure.test :as test :refer [deftest is testing]]))
+
+(deftest test-walk
+  (testing "walking visits every node"
+    (let [expr-env (assoc (ana/empty-env) :context :expr)
+          ast      (->> `(and true false)
+                     (analyze expr-env))
+          ast'     (passes/walk ast [(fn [_ ast _] (dissoc ast :env))])]
+      (is (not (contains? ast' :env)))
+      (is (not (some #(contains? % :env) (:args ast')))))))
+
+(deftest remove-local
+  (testing "and/or remove local pass"
+    (let [ast  {:op :fn
+                :env '{:locals {x {}}}
+                :loop-lets '[{:params [{:name x}]}]}
+          pass (and-or/remove-local-pass 'x)
+          ast' (passes/apply-passes ast [pass])]
+      (is (contains? (-> ast :env :locals) 'x))
+      (is (not (contains? (-> ast' :env :locals) 'x)))
+      (is (some
+            (fn [{:keys [params]}]
+              (some #(= 'x (:name %)) params))
+            (:loop-lets ast)))
+      (is (not (some
+                 (fn [{:keys [params]}]
+                   (some #(= 'x (:name %)) params))
+                 (:loop-lets ast')))))))
 
 (deftest test-and-or-code-gen-pass
   (testing "and/or optimization code gen pass"
@@ -109,6 +137,26 @@
                         (defn bar []
                           (and (even? 1) false))]))))]
       (is (= 1 (count (re-seq #"&&" code)))))))
+
+(deftest test-cljs-3309
+  (testing "CLJS-3309: and/or optimization removes discarded local and loop-lets"
+    (let [code (env/with-compiler-env (env/default-compiler-env)
+                 (comp/with-core-cljs {}
+                   (fn []
+                     (compile-form-seq
+                       '[(loop [x 4]
+                           (when (or (< x 4) (not-any? (fn [y] x) [1]))
+                             (recur 5)))]))))]
+      (is (empty? (re-seq #"or_" code))))
+    (let [code (env/with-compiler-env (env/default-compiler-env)
+                 (comp/with-core-cljs {}
+                   (fn []
+                     (compile-form-seq
+                       '[((fn [s]
+                            (for [e s :when (and (sequential? e) (every? (fn [x] x) e))]
+                              e))
+                          [[]])]))))]
+      (is (empty? (re-seq #"and_" code))))))
 
 (comment
   (test/run-tests)
