@@ -28,5 +28,5 @@
          (let [child (get ast child-k)]
            (if (vector? child)
              (into [] (map #(walk % passes opts)) child)
-             (walk child passes)))))
+             (walk child passes opts)))))
      (some-> ast (apply-passes passes opts)) (:children ast))))
