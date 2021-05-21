@@ -1,3 +1,31 @@
+## 1.10.866
+
+### Changes
+* Google Closure v20210505
+
+### Enhancements
+* CLJS-3260: and/or optimization as compiler pass, fixes core.async go macro issue
+* CLJS-3276: Support macros that expand to require statements
+
+
+### Fixes
+* CLJS-3309: and/or opt bug - passes to remove dropped locals from anon fns,
+  missing :children keys on binding nodes
+* CLJS-3300: cljs.loader regression
+* CLJS-3293: Some npm packages fail to require
+* CLJS-3306: subvecs must implement IAssociative -contains-key?
+* CLJS-3307: Allow extending IAssociative -contains-key? to native
+* CLJS-3305: defrecord must implement IAssociative -contains-key?
+* CLJS-3303: checked arrays enabled in advanced
+* CLJS-3304: Higher order checked arrays
+* CLJS-3284: Use of private deftype by public function in another namespace when
+  inside an if causes warning
+* CLJS-3282: document bundle target in CLI help
+* CLJS-3283: Support -contains-key? protocol check in contains?
+* CLJS-3296: Update conj docstring for missing arities
+* CLJS-3298: visibility diagnostic group typo
+* CLJS-3302: Fixup docstring for `default-dispatch-val` and `dispatch-fn`
+
 ## 1.10.844
 
 ### Changes
