@@ -13,7 +13,7 @@ if ! test "$(ls -A "$CLOJURESCRIPT_HOME/lib" 2>/dev/null)"; then
 fi
 
 CLJSC_CP=''
-for next in lib/*: src/main/clojure: src/main/cljs: src/test/cljs; do
+for next in lib/*: src/main/clojure: src/main/cljs: src/test/cljs: src/test/self; do
   CLJSC_CP="${CLJSC_CP}${CLOJURESCRIPT_HOME}/${next}"
 done
 

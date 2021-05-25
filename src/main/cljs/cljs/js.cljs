@@ -837,9 +837,15 @@
                         (filter ana/dep-has-global-exports? (:deps ast))
                         ns-name
                         (:def-emits-var opts))
-                      (cb {:value (*eval-fn* {:source (.toString sb)})})))))
+                      (cb (try
+                            {:ns ns-name :value (*eval-fn* {:source (.toString sb)})}
+                            (catch :default cause
+                              (wrap-error (ana/error aenv "ERROR" cause)))))))))
               (let [src (with-out-str (comp/emit ast))]
-                (cb {:value (*eval-fn* {:source src})})))))))))
+                (cb (try
+                      {:value (*eval-fn* {:source src})}
+                      (catch :default cause
+                        (wrap-error (ana/error aenv "ERROR" cause)))))))))))))
 
 (defn eval
   "Evaluate a single ClojureScript form. The parameters:

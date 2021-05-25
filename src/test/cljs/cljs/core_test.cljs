@@ -84,7 +84,14 @@
     (is (not (contains? (to-array [5 6 7]) 3)))
     (is (not (contains? nil 42)))
     (is (contains? "f" 0))
-    (is (not (contains? "f" 55)))))
+    (is (not (contains? "f" 55))))
+
+  (testing "Testing contains? with IAssociative protocol"
+    (let [ds (reify
+               IAssociative
+               (-contains-key? [_ k] (= k :valid)))]
+     (is (contains? ds :valid))
+     (is (not (contains? ds :invalid))))))
 
 (deftest test-run!
   (testing "Testing run!"
@@ -146,9 +153,9 @@
       (is (= (clj->js 1) 1))
       (is (= (clj->js nil) (js* "null")))
       (is (= (clj->js true) (js* "true")))
-      (is (goog/isArray (clj->js [])))
-      (is (goog/isArray (clj->js #{})))
-      (is (goog/isArray (clj->js '())))
+      (is (goog/typeOf "array" (clj->js [])))
+      (is (goog/typeOf "array" (clj->js #{})))
+      (is (goog/typeOf "array" (clj->js '())))
       (is (goog/isObject (clj->js {})))
       (is (= (gobject/get (clj->js {:a 1}) "a") 1))
       (is (= (-> (clj->js {:a {:b {{:k :ey} :d}}})
@@ -1810,8 +1817,52 @@
   (is (= :/ (keyword "/")))
   (is (= (hash :/) (hash (keyword "/")))))
 
+(deftest test-cljs-3263
+  (is (= "#inst \"0985-04-12T23:20:50.520-00:00\"" (pr-str #inst "0985-04-12T23:20:50.520-00:00")))
+  (is (= "#inst \"1970-12-18T23:20:50.520-00:00\"" (pr-str #inst "1970-12-18T23:20:50.520-00:00"))))
+
 (deftest test-cljs-3270
   (is (== 10 (count (range 0 (+ 1 (/ 9)) (/ 9))))))
 
 (deftest test-cljs-3271
   (is (== 0.6 (nth (range 0 1 0.1) 6))))
+
+(defrecord CLJS3305A [])
+(defrecord CLJS3305B [a b])
+
+(deftest test-cljs-3305
+  (let [empty-basis       (->CLJS3305A)
+        nonempty-basis    (->CLJS3305B 1 2)
+        empty-extended    (assoc empty-basis :y 1)
+        nonempty-extended (assoc nonempty-basis :y 1)]
+    (is (false? (contains? empty-basis       :a)))
+    (is (true?  (contains? nonempty-basis    :a)))
+    (is (false? (contains? nonempty-basis    :c)))
+    (is (true?  (contains? empty-extended    :y)))
+    (is (false? (contains? empty-extended    :z)))
+    (is (true?  (contains? nonempty-extended :a)))
+    (is (false? (contains? nonempty-extended :c)))
+    (is (true?  (contains? nonempty-extended :y)))
+    (is (false? (contains? nonempty-extended :z)))))
+
+(deftest test-cljs-3306
+  (let [sv (subvec [0 1 2 3 4] 2 4)]
+    (is (true?  (contains? sv 0)))
+    (is (false? (contains? sv 0.5)))
+    (is (true?  (contains? sv 1)))
+    (is (false? (contains? sv 1.5)))
+    (is (false? (contains? sv :kw))))
+  (let [sv (subvec [0 1 2 3 4] 2 2)]
+    (is (false? (contains? sv 0)))))
+
+(deftest test-cljs-3309
+  (is (= :ok
+         (loop [x 4]
+           (if (or (< x 4) (not-any? (fn [y] x) [1]))
+             (recur 5)
+             :ok))))
+  (is (= '([])
+         ((fn [s]
+            (for [e s :when (and (sequential? e) (every? (fn [x] x) e))]
+              e))
+          [[]]))))

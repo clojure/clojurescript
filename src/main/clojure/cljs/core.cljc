@@ -42,7 +42,7 @@
                             #?@(:cljs [alias coercive-not coercive-not= coercive-= coercive-boolean
                                        truth_ js-arguments js-delete js-in js-debugger exists? divide js-mod
                                        unsafe-bit-and bit-shift-right-zero-fill mask bitpos caching-hash
-                                       defcurried rfn specify! js-this this-as implements? array js-obj
+                                       defcurried rfn specify! js-this this-as implements? array js-obj js-fn?
                                        simple-benchmark gen-apply-to js-str es6-iterable load-file* undefined?
                                        specify copy-arguments goog-define js-comment js-inline-comment
                                        unsafe-cast require-macros use-macros gen-apply-to-simple unchecked-get unchecked-set])])
@@ -872,22 +872,8 @@
   ([] true)
   ([x] x)
   ([x & next]
-   (core/let [forms (concat [x] next)]
-     (core/cond
-       (every? #(simple-test-expr? &env %)
-         (map #(cljs.analyzer/no-warn (cljs.analyzer/analyze &env %)) forms))
-       (core/let [and-str (core/->> (repeat (count forms) "(~{})")
-                            (interpose " && ")
-                            (#(concat ["("] % [")"]))
-                            (apply core/str))]
-         (bool-expr `(~'js* ~and-str ~@forms)))
-
-       (typed-expr? &env x '#{boolean})
-       `(if ~x (and ~@next) false)
-
-       :else
-       `(let [and# ~x]
-          (if and# (and ~@next) and#))))))
+   `(let [and# ~x]
+      (if and# (and ~@next) and#))))
 
 (core/defmacro or
   "Evaluates exprs one at a time, from left to right. If a form
@@ -897,16 +883,8 @@
   ([] nil)
   ([x] x)
   ([x & next]
-   (core/let [forms (concat [x] next)]
-     (if (every? #(simple-test-expr? &env %)
-           (map #(cljs.analyzer/no-warn (cljs.analyzer/analyze &env %)) forms))
-       (core/let [or-str (core/->> (repeat (count forms) "(~{})")
-                           (interpose " || ")
-                           (#(concat ["("] % [")"]))
-                           (apply core/str))]
-         (bool-expr `(~'js* ~or-str ~@forms)))
-       `(let [or# ~x]
-          (if or# or# (or ~@next)))))))
+   `(let [or# ~x]
+      (if or# or# (or ~@next)))))
 
 (core/defmacro nil? [x]
   `(coercive-= ~x nil))
@@ -981,6 +959,9 @@
 
 (core/defmacro string? [x]
   (bool-expr (core/list 'js* "typeof ~{} === 'string'" x)))
+
+(core/defmacro js-fn? [x]
+  (bool-expr (core/list 'js* "typeof ~{} === 'function'" x)))
 
 (core/defmacro exists?
   "Return true if argument exists, analogous to usage of typeof operator
@@ -1863,6 +1844,12 @@
                                this#
                                entry#)))
                         'IAssociative
+                        `(~'-contains-key? [this# ~ksym]
+                           ~(if (seq base-fields)
+                             `(case ~ksym
+                                (~@(map keyword base-fields)) true
+                                (cljs.core/contains? ~'__extmap ~ksym))
+                             `(cljs.core/contains? ~'__extmap ~ksym)))
                         `(~'-assoc [this# k# ~gs]
                            (condp keyword-identical? k#
                              ~@(mapcat (core/fn [fld]

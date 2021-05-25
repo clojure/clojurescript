@@ -5,13 +5,13 @@ jobs:
   # Runtime Tests
   runtime-test:
     name: Runtime Tests
-    runs-on: ubuntu-latest
+    runs-on: macos-10.15
     steps:
       - uses: actions/checkout@v2
 
-      - uses: DeLaGuardo/setup-clojure@2.0
+      - uses: DeLaGuardo/setup-clojure@3.1
         with:
-          tools-deps: '1.10.1.536'
+          tools-deps: '1.10.1.763'
 
       - name: Cache maven
         uses: actions/cache@v2
@@ -44,7 +44,7 @@ jobs:
             ${{ runner.os }}-jsc
 
       - name: Build tests
-        run: clojure -A:runtime.test.build
+        run: clojure -M:runtime.test.build
 
       - name: Install JSC
         run: ./ci/install_jsc.sh
@@ -57,13 +57,13 @@ jobs:
   # Self-host Tests
   self-host-test:
     name: Self-host Tests
-    runs-on: ubuntu-latest
+    runs-on: macos-10.15
     steps:
       - uses: actions/checkout@v2
 
-      - uses: DeLaGuardo/setup-clojure@2.0
+      - uses: DeLaGuardo/setup-clojure@3.1
         with:
-          tools-deps: '1.10.1.536'
+          tools-deps: '1.10.1.763'
 
       - name: Cache maven
         uses: actions/cache@v2
@@ -86,7 +86,7 @@ jobs:
             ${{ runner.os }}-${{ env.cache-name }}-
 
       - name: Build tests
-        run: clojure -A:selfhost.test.build
+        run: clojure -M:selfhost.test.build
 
       - name: Run tests
         run: |
@@ -96,13 +96,13 @@ jobs:
   # Self-parity Tests
   self-parity-test:
     name: Self-parity Tests
-    runs-on: ubuntu-latest
+    runs-on: macos-10.15
     steps:
       - uses: actions/checkout@v2
 
-      - uses: DeLaGuardo/setup-clojure@2.0
+      - uses: DeLaGuardo/setup-clojure@3.1
         with:
-          tools-deps: '1.10.1.536'
+          tools-deps: '1.10.1.763'
 
       - name: Cache maven
         uses: actions/cache@v2
@@ -125,7 +125,7 @@ jobs:
             ${{ runner.os }}-${{ env.cache-name }}-
 
       - name: Build tests
-        run: clojure -A:selfparity.test.build
+        run: clojure -M:selfparity.test.build
 
       - name: Run tests
         run: |
@@ -135,13 +135,13 @@ jobs:
   # Compiler Tests
   compiler-test:
     name: Compiler Tests
-    runs-on: ubuntu-latest
+    runs-on: macos-10.15
     steps:
       - uses: actions/checkout@v2
 
-      - uses: DeLaGuardo/setup-clojure@2.0
+      - uses: DeLaGuardo/setup-clojure@3.1
         with:
-          tools-deps: '1.10.1.536'
+          tools-deps: '1.10.1.763'
 
       - name: Cache maven
         uses: actions/cache@v2
@@ -164,20 +164,20 @@ jobs:
             ${{ runner.os }}-${{ env.cache-name }}-
 
       - name: Run tests
-        run: clojure -A:compiler.test:compiler.test.run
+        run: clojure -M:compiler.test:compiler.test.run
 
   # CLI Tests
   cli-test:
     name: CLI Tests
-    runs-on: ubuntu-latest
+    runs-on: macos-10.15
     steps:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 0
 
-      - uses: DeLaGuardo/setup-clojure@2.0
+      - uses: DeLaGuardo/setup-clojure@3.1
         with:
-          tools-deps: '1.10.1.536'
+          tools-deps: '1.10.1.763'
 
       - name: Cache maven
         uses: actions/cache@v2
@@ -205,5 +205,5 @@ jobs:
       - name: Run tests
         run: |
           unset JAVA_TOOL_OPTIONS
-          clojure -A:cli.test.run | tee test-out.txt
+          clojure -M:cli.test.run | tee test-out.txt
           grep -qxF '0 failures, 0 errors.' test-out.txt

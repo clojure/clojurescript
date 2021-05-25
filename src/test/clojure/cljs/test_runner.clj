@@ -6,6 +6,7 @@
             [cljs.compiler-tests]
             [cljs.externs-infer-tests]
             [cljs.externs-parsing-tests]
+            [cljs.instant-tests]
             [cljs.module-graph-tests]
             [cljs.module-processing-tests]
             [cljs.source-map.base64-tests]
@@ -23,6 +24,7 @@
           'cljs.compiler-tests
           'cljs.externs-infer-tests
           'cljs.externs-parsing-tests
+          'cljs.instant-tests
           'cljs.module-graph-tests
           'cljs.module-processing-tests
           'cljs.source-map.base64-tests

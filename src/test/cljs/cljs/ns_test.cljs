@@ -39,6 +39,7 @@
   (is (= (always-let [foo 42] foo) 42)))
 
 (deftest test-cljs-1677
-  (is (.isNumber js/goog 3))
-  (is (goog/isNumber 3))
-  (is (goog-alias/isNumber 3)))
+  (let [array-like #js {:length 3}]
+    (is (.isArrayLike js/goog array-like))
+    (is (goog/isArrayLike array-like))
+    (is (goog-alias/isArrayLike array-like))))

@@ -17,18 +17,20 @@
   ;; we never care how many times a namespace is loaded it doesn't matter if
   ;; Google Closure Library or ClojureScript
   (repl/evaluate-form repl-env env "<cljs repl>"
-    '(set! (.-isProvided__ js/goog) js/goog.isProvided_))
+    '(when-not (.-isProvided__ js/goog)
+       (set! (.-isProvided__ js/goog) js/goog.isProvided_)))
   (repl/evaluate-form repl-env env "<cljs repl>"
     '(set! (.-isProvided_ js/goog) (fn [x] false)))
   ;; monkey-patch goog.require
   (repl/evaluate-form repl-env env "<cljs repl>"
-    '(set! (.-require__ js/goog) js/goog.require))
+    '(when-not (.-require__ js/goog)
+       (set! (.-require__ js/goog) js/goog.require)))
   (repl/evaluate-form repl-env env "<cljs repl>"
     '(set! (.-require js/goog)
        (fn [src reload]
          (when (= reload "reload-all")
            (set! (.-cljsReloadAll_ js/goog) true))
-         (let [reload? (or reload (.-cljsReloadAll__ js/goog))]
+         (let [reload? (or reload (.-cljsReloadAll_ js/goog))]
            (when reload?
              ;; check for new-ish private goog/debugLoader
              (if (some? goog/debugLoader_)

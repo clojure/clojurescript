@@ -37,9 +37,10 @@
                                          CompilerInput CompilerInput$ModuleType DependencyOptions
                                          CompilerOptions$LanguageMode SourceMap$Format
                                          SourceMap$DetailLevel ClosureCodingConvention SourceFile
-                                         Result JSError CheckLevel DiagnosticGroups
-                                         CommandLineRunner AnonymousFunctionNamingPolicy
-                                         JSModule SourceMap VariableMap PrintStreamErrorManager]
+                                         Result JSError CheckLevel DiagnosticGroup DiagnosticGroups
+                                         CommandLineRunner
+                                         JSModule SourceMap VariableMap PrintStreamErrorManager DiagnosticType
+                                         VariableRenamingPolicy PropertyRenamingPolicy]
            [com.google.javascript.jscomp.bundle Transpiler]
            [com.google.javascript.jscomp.deps ClosureBundler ModuleLoader$ResolutionMode ModuleNames
                                               SimpleDependencyInfo]
@@ -47,8 +48,7 @@
            [java.nio.file Path Paths Files StandardWatchEventKinds WatchKey
                           WatchEvent FileVisitor FileVisitResult FileSystems]
            [java.nio.charset Charset StandardCharsets]
-           [com.sun.nio.file SensitivityWatchEventModifier]
-           [com.google.common.base Throwables]))
+           [com.sun.nio.file SensitivityWatchEventModifier]))
 
 ;; Copied from clojure.tools.gitlibs
 
@@ -162,7 +162,6 @@
    :message-descriptions DiagnosticGroups/MESSAGE_DESCRIPTIONS
    :misplaced-msg-annotation DiagnosticGroups/MISPLACED_MSG_ANNOTATION
    :misplaced-type-annotation DiagnosticGroups/MISPLACED_TYPE_ANNOTATION
-   :missing-getcssname DiagnosticGroups/MISSING_GETCSSNAME
    :missing-override DiagnosticGroups/MISSING_OVERRIDE
    :missing-polyfill DiagnosticGroups/MISSING_POLYFILL
    :missing-properties DiagnosticGroups/MISSING_PROPERTIES
@@ -175,7 +174,6 @@
    :non-standard-jsdoc DiagnosticGroups/NON_STANDARD_JSDOC
    :report-unknown-types DiagnosticGroups/REPORT_UNKNOWN_TYPES
    :strict-missing-properties DiagnosticGroups/STRICT_MISSING_PROPERTIES
-   :strict-missing-require DiagnosticGroups/STRICT_MISSING_REQUIRE
    :strict-module-dep-check DiagnosticGroups/STRICT_MODULE_DEP_CHECK
    :strict-requires DiagnosticGroups/STRICT_REQUIRES
    :suspicious-code DiagnosticGroups/SUSPICIOUS_CODE
@@ -190,7 +188,7 @@
    :unused-local-variable DiagnosticGroups/UNUSED_LOCAL_VARIABLE
    :unused-private-property DiagnosticGroups/UNUSED_PRIVATE_PROPERTY
    :violated-module-dep DiagnosticGroups/VIOLATED_MODULE_DEP
-   :visiblity DiagnosticGroups/VISIBILITY})
+   :visibility DiagnosticGroups/VISIBILITY})
 
 (def known-opts
   "Set of all known compiler options."
@@ -231,7 +229,7 @@
 
 (def lang-level
   [:ecmascript3 :ecmascript5 :ecmascript5-strict :ecmascript6 :ecmascript6-strict
-   :ecmascript-2015 :ecmascript6-typed :ecmascript-2016 :ecmascript-2017 :ecmascript-next
+   :ecmascript-2015 :ecmascript-2016 :ecmascript-2017 :ecmascript-next
    :no-transpile])
 
 (defn expand-lang-key [key]
@@ -246,7 +244,6 @@
     :ecmascript6           CompilerOptions$LanguageMode/ECMASCRIPT_2015 ;; (deprecated and remapped)
     :ecmascript6-strict    CompilerOptions$LanguageMode/ECMASCRIPT_2015 ;; (deprecated and remapped)
     :ecmascript-2015       CompilerOptions$LanguageMode/ECMASCRIPT_2015
-    :ecmascript6-typed     CompilerOptions$LanguageMode/ECMASCRIPT6_TYPED
     :ecmascript-2016       CompilerOptions$LanguageMode/ECMASCRIPT_2016
     :ecmascript-2017       CompilerOptions$LanguageMode/ECMASCRIPT_2017
     :ecmascript-next       CompilerOptions$LanguageMode/ECMASCRIPT_NEXT))
@@ -261,15 +258,6 @@
 
   (when (contains? opts :pseudo-names)
     (set! (.generatePseudoNames compiler-options) (:pseudo-names opts)))
-
-  (when (contains? opts :anon-fn-naming-policy)
-    (let [policy (:anon-fn-naming-policy opts)]
-      (set! (.anonymousFunctionNaming compiler-options)
-        (case policy
-          :off AnonymousFunctionNamingPolicy/OFF
-          :unmapped AnonymousFunctionNamingPolicy/UNMAPPED
-          :mapped AnonymousFunctionNamingPolicy/MAPPED
-          (throw (util/compilation-error (IllegalArgumentException. (str "Invalid :anon-fn-naming-policy value " policy " - only :off, :unmapped, :mapped permitted"))))))))
 
   (when-let [lang-key (:language-in opts :ecmascript5)]
     (.setLanguageIn compiler-options (lang-key->lang-mode lang-key)))
@@ -816,7 +804,8 @@
     (if (seq requires)
       (let [node (or (get (@env/*compiler* :js-dependency-index) (first requires))
                      (deps/find-classpath-lib (first requires)))
-            new-req (remove #(contains? visited %) (:requires node))]
+            new-req (remove #(contains? visited %)
+                      (into (:requires node) (:require-types node)))]
         (recur (into (rest requires) new-req)
                (into visited new-req)
                (conj deps node)))
@@ -2052,18 +2041,45 @@
     (.appendTo bundler sb module source)
     (.toString sb)))
 
+(defn ^DiagnosticGroup es5-warnings []
+  (DiagnosticGroup.
+    (into-array DiagnosticType
+      [(DiagnosticType/error "JSC_CANNOT_CONVERT" "")])))
+
+(defn ^CompilerOptions transpile-options []
+  (doto (CompilerOptions.)
+    (.setQuoteKeywordProperties true)
+    (.setSkipNonTranspilationPasses true)
+    (.setVariableRenaming VariableRenamingPolicy/OFF)
+    (.setPropertyRenaming PropertyRenamingPolicy/OFF)
+    (.setWrapGoogModulesForWhitespaceOnly false)
+    (.setPrettyPrint true)
+    (.setSourceMapOutputPath "/dev/null")
+    (.setSourceMapIncludeSourcesContent true)
+    (.setWarningLevel (es5-warnings) CheckLevel/OFF)))
+
+(defn closure-transpile
+  "Transpile a single JavaScript file to JavaScript. Used to lower Closure
+  Library files written in more recent versions of the JavaScript standard."
+  ([rsc opts]
+   (closure-transpile (util/path rsc) (slurp rsc) opts))
+  ([path source opts]
+   (let [cc      (make-closure-compiler)
+         cc-opts (set-options opts (transpile-options))
+         externs (SourceFile/fromCode "externs.js" "function Symbol() {}")
+         source  (SourceFile/fromCode path source)
+         result  (.compile cc externs source cc-opts)]
+     ;; TODO: error handling
+     (.toSource cc))))
+
 ;; TODO: better error handling
-;; TODO: actually respect the target :language-out level
-;; currently just using default options for Transpiler
 (defn transpile
-  [{:keys [language-out] :or {language-out :es3}} rsc {:keys [module lang] :as js}]
+  [{:keys [language-out] :or {language-out :es3} :as opts} rsc {:keys [module lang] :as js}]
   (let [source  (slurp rsc)
         source' (if (and lang
                          (< (.indexOf lang-level (expand-lang-key language-out))
                             (.indexOf lang-level (expand-lang-key lang))))
-                  (let [cc (Transpiler/compilerSupplier)
-                        result (.compile cc (url->nio-path rsc) source)]
-                    (.source result))
+                  (closure-transpile (util/path rsc) source opts)
                   source)]
     (str "/*TRANSPILED*/"
       (cond-> source'
@@ -2716,7 +2732,7 @@
        []))))
 
 (defn- node-file-seq->libs-spec*
-  [module-fseq]
+  [module-fseq opts]
   (letfn [(package-json? [path]
             (boolean (re-find #"node_modules[/\\](@[^/\\]+?[/\\])?[^/\\]+?[/\\]package\.json$" path)))]
     (let [pkg-jsons (into {}
@@ -2739,24 +2755,26 @@
                     :module-type :es6}
                    (when-not (package-json? path)
                      (let [pkg-json-main (some
-                                           (fn [[pkg-json-path {:strs [main name]}]]
-                                             (when-not (nil? main)
-                                               ;; should be the only edge case in
-                                               ;; the package.json main field - Antonio
-                                               (let [main (cond-> main
-                                                            (string/starts-with? main "./")
-                                                            (subs 2))
-                                                     main-path (-> pkg-json-path
-                                                                 (string/replace \\ \/)
-                                                                 trim-package-json
-                                                                 (str main))]
-                                                 (some (fn [candidate]
-                                                         (when (= candidate (string/replace path \\ \/))
-                                                           name))
-                                                   (cond-> [main-path]
-                                                     (not (or (string/ends-with? main-path ".js")
-                                                              (string/ends-with? main-path ".json")))
-                                                     (into [(str main-path ".js") (str main-path "/index.js") (str main-path ".json")]))))))
+                                           (fn [[pkg-json-path {:as pkg-json :strs [name]}]]
+                                             (let [entries (package-json-entries opts)
+                                                   entry (first (keep (partial get pkg-json) entries))]
+                                               (when-not (nil? entry)
+                                                 ;; should be the only edge case in
+                                                 ;; the package.json main field - Antonio
+                                                 (let [entry (cond-> entry
+                                                              (string/starts-with? entry "./")
+                                                              (subs 2))
+                                                       entry-path (-> pkg-json-path
+                                                                     (string/replace \\ \/)
+                                                                     trim-package-json
+                                                                     (str entry))]
+                                                   (some (fn [candidate]
+                                                           (when (= candidate (string/replace path \\ \/))
+                                                             name))
+                                                         (cond-> [entry-path]
+                                                           (not (or (string/ends-with? entry-path ".js")
+                                                                    (string/ends-with? entry-path ".json")))
+                                                           (into [(str entry-path ".js") (str entry-path "/index.js") (str entry-path ".json")])))))))
                                            pkg-jsons)]
                        {:provides (let [module-rel-name (-> (subs path (.lastIndexOf path "node_modules"))
                                                             (string/replace \\ \/)
@@ -2780,7 +2798,7 @@
        (:options @env/*compiler*))))
   ([opts]
    (let [module-fseq (util/module-file-seq)]
-     (node-file-seq->libs-spec module-fseq))))
+     (node-file-seq->libs-spec module-fseq opts))))
 
 (defn preprocess-js
   "Given js-module map, apply preprocessing defined by :preprocess value in the map."
@@ -3286,7 +3304,7 @@
                     (if-let [f (opts-fn :watch-error-fn opts)]
                       (f e)
                       (binding [*out* *err*]
-                        (println (Throwables/getStackTraceAsString e)))))))
+                        (println e))))))
               (watch-all [^Path root]
                 (Files/walkFileTree root
                   (reify

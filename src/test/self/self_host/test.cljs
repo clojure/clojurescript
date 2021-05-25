@@ -871,6 +871,19 @@
           (is (== 1 value))
           (inc! l))))))
 
+#_(deftest test-ns-merge
+  (async done
+    (cljs/eval-str st
+                   "(ns foo.bar (:require [bootstrap-test.core :refer [foo]]))
+                   (ns foo.bar)
+                   (foo 1 1)"
+                   nil
+                   {:eval node-eval
+                    :load node-load}
+                   (fn [{:keys [value error]}]
+                     (is (nil? error))
+                     (done)))))
+
 (deftest test-cljs-1651
   (let [st (cljs/empty-state)]
     (async done
@@ -1556,6 +1569,28 @@
                 (is (= "Wrong number of args (0) passed to foo-3129-3.core$macros/when"
                       (ex-message (ex-cause (ex-cause error)))))
                 (inc! l)))))))))
+
+(deftest test-cljs-3287
+  (async done
+    (let [st (cljs/empty-state)
+          l (latch 2 done)]
+      (cljs/eval-str st
+                     "(throw (js/Error. \"eval error\"))"
+                     nil
+                     {:ns         'cljs.user
+                      :target     :nodejs
+                      :eval       node-eval}
+                     (fn [{:keys [error]}]
+                       (is (some? error))
+                       (inc! l)))
+      (cljs/eval st
+                 '(throw (js/Error. "eval error"))
+                 {:ns     'cljs.user
+                  :target :nodejs
+                  :eval   node-eval}
+                 (fn [{:keys [error]}]
+                   (is (some? error))
+                   (inc! l))))))
 
 (defn -main [& args]
   (run-tests))

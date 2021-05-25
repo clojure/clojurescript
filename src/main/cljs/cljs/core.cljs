@@ -273,7 +273,7 @@
 (defn ^boolean string?
   "Returns true if x is a JavaScript string."
   [x]
-  (goog/isString x))
+  (identical? "string" (goog/typeOf x)))
 
 (defn char?
   "Returns true if x is a JavaScript string of length one."
@@ -1795,8 +1795,10 @@ reduces them without incurring seq initialization"
 
 (defn conj
   "conj[oin]. Returns a new collection with the xs
-  'added'. (conj nil item) returns (item).  The 'addition' may
-  happen at different 'places' depending on the concrete type."
+  'added'. (conj nil item) returns (item).
+  (conj coll) returns coll. (conj) returns [].
+  The 'addition' may happen at different 'places' depending
+  on the concrete type."
   ([] [])
   ([coll] coll)
   ([coll x]
@@ -2026,7 +2028,7 @@ reduces them without incurring seq initialization"
 (defn fn?
   "Return true if f is a JavaScript function or satisfies the Fn protocol."
   [f]
-  (or ^boolean (goog/isFunction f) (satisfies? Fn f)))
+  (or (js-fn? f) (satisfies? Fn f)))
 
 (deftype MetaFn [afn meta]
   IMeta
@@ -2085,7 +2087,7 @@ reduces them without incurring seq initialization"
   "Returns an object of the same type and value as obj, with
   map m as its metadata."
   [o meta]
-  (if ^boolean (goog/isFunction o)
+  (if (js-fn? o)
     (MetaFn. o meta)
     (when-not (nil? o)
       (-with-meta o meta))))
@@ -2358,8 +2360,17 @@ reduces them without incurring seq initialization"
   range of indexes. 'contains?' operates constant or logarithmic time;
   it will not perform a linear search for a value.  See also 'some'."
   [coll v]
-  (if (identical? (get coll v lookup-sentinel) lookup-sentinel)
+  (cond
+    (implements? IAssociative coll)
+    (-contains-key? coll v)
+
+    (native-satisfies? IAssociative coll)
+    (-contains-key? coll v)
+
+    (identical? (get coll v lookup-sentinel) lookup-sentinel)
     false
+
+    :else
     true))
 
 (defn find
@@ -5932,6 +5943,10 @@ reduces them without incurring seq initialization"
     (if (number? key)
       (-assoc-n coll key val)
       (throw (js/Error. "Subvec's key for assoc must be a number."))))
+  (-contains-key? [coll key]
+    (if (integer? key)
+      (and (<= 0 key) (< key (- end start)))
+      false))
 
   IFind
   (-find [coll n]
@@ -6461,14 +6476,14 @@ reduces them without incurring seq initialization"
   ILookup
   (-lookup [coll k] (-lookup coll k nil))
   (-lookup [coll k not-found]
-    (if (and ^boolean (goog/isString k)
+    (if (and (string? k)
              (not (nil? (scan-array 1 k keys))))
       (unchecked-get strobj k)
       not-found))
 
   IAssociative
   (-assoc [coll k v]
-    (if ^boolean (goog/isString k)
+    (if (string? k)
         (if (or (> update-count (.-HASHMAP_THRESHOLD ObjMap))
                 (>= (alength keys) (.-HASHMAP_THRESHOLD ObjMap)))
           (obj-map->hash-map coll k v)
@@ -6484,14 +6499,14 @@ reduces them without incurring seq initialization"
         ;; non-string key. game over.
         (obj-map->hash-map coll k v)))
   (-contains-key? [coll k]
-    (if (and ^boolean (goog/isString k)
+    (if (and (string? k)
              (not (nil? (scan-array 1 k keys))))
       true
       false))
 
   IFind
   (-find [coll k]
-    (when (and ^boolean (goog/isString k)
+    (when (and (string? k)
             (not (nil? (scan-array 1 k keys))))
       (MapEntry. k (unchecked-get strobj k) nil)))
 
@@ -6510,7 +6525,7 @@ reduces them without incurring seq initialization"
 
   IMap
   (-dissoc [coll k]
-    (if (and ^boolean (goog/isString k)
+    (if (and (string? k)
              (not (nil? (scan-array 1 k keys))))
       (let [new-keys (aclone keys)
             new-strobj (obj-clone strobj keys)]
@@ -6624,7 +6639,7 @@ reduces them without incurring seq initialization"
   (cond
     (keyword? k) (array-index-of-keyword? arr k)
 
-    (or ^boolean (goog/isString k) (number? k))
+    (or (string? k) (number? k))
     (array-index-of-identical? arr k)
 
     (symbol? k) (array-index-of-symbol? arr k)
@@ -10264,12 +10279,12 @@ reduces them without incurring seq initialization"
         (array? obj)
         (pr-sequential-writer writer pr-writer "#js [" " " "]" opts obj)
 
-        ^boolean (goog/isString obj)
+        (string? obj)
         (if (:readably opts)
           (-write writer (quote-string obj))
           (-write writer obj))
 
-        ^boolean (goog/isFunction obj)
+        (js-fn? obj)
         (let [name (.-name obj)
               name (if (or (nil? name) (gstring/isEmpty name))
                      "Function"
@@ -10288,7 +10303,7 @@ reduces them without incurring seq initialization"
                               ns)))]
           (write-all writer
             "#inst \""
-            (str (.getUTCFullYear obj))             "-"
+            (normalize (.getUTCFullYear obj) 4)     "-"
             (normalize (inc (.getUTCMonth obj)) 2)  "-"
             (normalize (.getUTCDate obj) 2)         "T"
             (normalize (.getUTCHours obj) 2)        ":"
@@ -11381,11 +11396,11 @@ reduces them without incurring seq initialization"
   [multifn] (-prefers multifn))
 
 (defn default-dispatch-val
-  "Given a multimethod, return it's default-dispatch-val."
+  "Given a multimethod, return its default-dispatch-val."
   [multifn] (-default-dispatch-val multifn))
 
 (defn dispatch-fn
-  "Given a multimethod, return it's dispatch-fn."
+  "Given a multimethod, return its dispatch-fn."
   [multifn] (-dispatch-fn multifn))
 
 ;; UUID

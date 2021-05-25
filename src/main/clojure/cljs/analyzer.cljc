@@ -14,6 +14,7 @@
                                      no-warn with-warning-handlers wrapping-errors]]
              [cljs.env.macros :refer [ensure]]))
   #?(:clj  (:require [cljs.analyzer.impl :as impl]
+                     [cljs.analyzer.passes.and-or :as and-or]
                      [cljs.env :as env :refer [ensure]]
                      [cljs.externs :as externs]
                      [cljs.js-deps :as deps]
@@ -26,6 +27,7 @@
                      [clojure.tools.reader :as reader]
                      [clojure.tools.reader.reader-types :as readers])
      :cljs (:require [cljs.analyzer.impl :as impl]
+                     [cljs.analyzer.passes.and-or :as and-or]
                      [cljs.env :as env]
                      [cljs.reader :as edn]
                      [cljs.tagged-literals :as tags]
@@ -176,7 +178,7 @@
   "Returns false-y, :warn, or :error based on configuration and the
    current value of *unchecked-arrays*."
   []
-  (when (and (not (:advanced (compiler-options)))
+  (when (and (not= :advanced (:optimizations (compiler-options)))
              (not *unchecked-arrays*))
     *checked-arrays*))
 
@@ -1235,7 +1237,7 @@
                 :ns current-ns}))
 
            (core-name? env sym)
-           (do
+           (let [sym (resolve-alias 'cljs.core sym)]
              (when (some? confirm)
                (confirm env 'cljs.core sym))
              (merge (gets @env/*compiler* ::namespaces 'cljs.core :defs sym)
@@ -1361,7 +1363,8 @@
   [env t]
   ;; don't use resolve-existing-var to avoid warnings
   (when (and (some? t) (symbol? t))
-    (let [var (resolve-var env t)]
+    (let [var (binding [*private-var-access-nowarn* true]
+                (resolve-var env t))]
       (if-some [type (:type var)]
         type
           (if-some [type (-> var :info :type)]
@@ -2216,7 +2219,8 @@
                               :init fexpr
                               :variadic? (:variadic? fexpr)
                               :max-fixed-arity (:max-fixed-arity fexpr)
-                              :method-params (map :params (:methods fexpr)))]
+                              :method-params (map :params (:methods fexpr))
+                              :children [:init])]
                     [(assoc-in env [:locals name] be')
                      (conj bes be')]))
           [meth-env []] bes)
@@ -2293,7 +2297,8 @@
                     :env {:line line :column col}
                     :info {:name name
                            :shadow shadow}
-                    :binding-form? true}
+                    :binding-form? true
+                    :children [:init]}
                 be (if (= :fn (:op init-expr))
                      ;; TODO: can we simplify - David
                      (merge be
@@ -3036,6 +3041,38 @@
       (symbol (str name-str "$macros"))
       name)))
 
+(defn- check-duplicate-aliases
+  [env old new]
+  (let [ns-name (:name old)]
+    (doseq [k [:requires :require-macros]]
+      (let [old-aliases (get old k)
+            new-aliases (get new k)]
+        (when-some [alias (some (set (keys new-aliases))
+                                (->> old-aliases
+                                     (remove (fn [[k v :as entry]]
+                                               (or (= k v)
+                                                   (= entry (find new-aliases k)))))
+                                     keys))]
+          (throw (error env
+                        (str "Alias " alias " already exists in namespace " ns-name
+                             ", aliasing " (get old-aliases alias)))))))))
+
+(defn- merge-ns-info [old new env]
+  (if (pos? (count old))
+    (let [deep-merge-keys
+          [:use-macros :require-macros :rename-macros
+           :uses :requires :renames :imports]]
+      #?(:clj
+         (when *check-alias-dupes*
+           (check-duplicate-aliases env old new)))
+      (merge
+       old
+       (select-keys new [:excludes])
+       (merge-with merge
+                   (select-keys old deep-merge-keys)
+                   (select-keys new deep-merge-keys))))
+    new))
+
 (defmethod parse 'ns
   [_ env [_ name & args :as form] _ opts]
   (when-not *allow-ns*
@@ -3144,22 +3181,6 @@
             (update-in [:requires]
               (fn [m] (with-meta m {(@reload :require) true})))))))))
 
-(defn- check-duplicate-aliases
-  [env old new]
-  (let [ns-name (:name old)]
-    (doseq [k [:requires :require-macros]]
-      (let [old-aliases (get old k)
-            new-aliases (get new k)]
-        (when-some [alias (some (set (keys new-aliases))
-                            (->> old-aliases
-                              (remove (fn [[k v :as entry]]
-                                        (or (= k v)
-                                            (= entry (find new-aliases k)))))
-                              keys))]
-          (throw (error env
-                   (str "Alias " alias " already exists in namespace " ns-name
-                     ", aliasing " (get old-aliases alias)))))))))
-
 (defmethod parse 'ns*
   [_ env [_ quoted-specs :as form] _ opts]
   (when-let [not-quoted (->> (remove keyword? quoted-specs)
@@ -3222,24 +3243,8 @@
            :uses           uses
            :requires       requires
            :renames        (merge renames core-renames)
-           :imports        imports}
-          ns-info
-          (let [ns-info' (get-in @env/*compiler* [::namespaces name])]
-            (if (pos? (count ns-info'))
-              (let [merge-keys
-                    [:use-macros :require-macros :rename-macros
-                     :uses :requires :renames :imports]]
-                #?(:clj
-                   (when *check-alias-dupes*
-                     (check-duplicate-aliases env ns-info' require-info)))
-                (merge
-                  ns-info'
-                  {:excludes excludes}
-                  (merge-with merge
-                    (select-keys ns-info' merge-keys)
-                    (select-keys require-info merge-keys))))
-              require-info))]
-      (swap! env/*compiler* update-in [::namespaces name] merge ns-info)
+           :imports        imports}]
+      (swap! env/*compiler* update-in [::namespaces name] merge-ns-info require-info env)
       (merge {:op      :ns*
               :env     env
               :form    form
@@ -4193,8 +4198,8 @@
            tag (assoc :tag tag))))))
 
 (def default-passes
-  #?(:clj  [infer-type check-invoke-arg-types ns-side-effects]
-     :cljs [infer-type check-invoke-arg-types]))
+  #?(:clj  [infer-type and-or/optimize check-invoke-arg-types ns-side-effects]
+     :cljs [infer-type and-or/optimize check-invoke-arg-types]))
 
 (defn analyze* [env form name opts]
   (let [passes *passes*
@@ -4330,6 +4335,19 @@
          (symbol (str "cljs.user." name (util/content-sha full-name 7)))))))
 
 #?(:clj
+   (defn macro-call? [form env]
+     (when (and (seq? form) (seq form) (and (symbol? (first form))))
+       (let [sym (first form)
+             nstr (namespace sym)]
+         (or (and (some? nstr)
+                  (some? (gets env :ns :require-macros (symbol nstr))))
+             (some? (gets env :ns :rename-macros sym))
+             (some? (gets env :ns :use-macros sym)))))))
+
+#?(:clj
+   (declare ns-side-effects macroexpand-1))
+
+#?(:clj
    (defn ^:dynamic parse-ns
      "Helper for parsing only the essential namespace information from a
       ClojureScript source file and returning a cljs.closure/IJavaScript compatible
@@ -4354,6 +4372,9 @@
               (binding [env/*compiler* (if (false? (:restore opts))
                                          env/*compiler*
                                          (atom @env/*compiler*))
+                        *file-defs* nil
+                        #?@(:clj [*unchecked-if* false
+                                  *unchecked-arrays* false])
                         *cljs-ns* 'cljs.user
                         *cljs-file* src
                         *macro-infer*
@@ -4370,7 +4391,8 @@
                           false)]
                 (let [rdr (when-not (sequential? src) (io/reader src))]
                   (try
-                    (loop [forms (if rdr
+                    (loop [env (empty-env)
+                           forms (if rdr
                                    (forms-seq* rdr (source-path src))
                                    src)
                            ret (merge
@@ -4385,8 +4407,15 @@
                                    {:lines (with-open [reader (io/reader dest)]
                                              (-> reader line-seq count))}))]
                       (if (seq forms)
-                        (let [env (empty-env)
-                              ast (no-warn (analyze env (first forms) nil opts))]
+                        (let [form (first forms)
+                              macro? (macro-call? form env)
+                              env (if macro?
+                                    (binding [*load-macros* true]
+                                      (assoc (:env (ns-side-effects env (:ast ret) opts)) :ns (:ns env)))
+                                    env)
+                              ast (when (or macro? (and (seq? form) ('#{ns ns* require use require-macros} (first form))))
+                                    (no-warn (analyze env form nil opts)))
+                              env (assoc (:env ast) :ns (:ns env))]
                           (cond
                             (= :ns (:op ast))
                             (let [ns-name (:name ast)
@@ -4394,34 +4423,38 @@
                                                    (= "cljc" (util/ext src)))
                                             'cljs.core$macros
                                             ns-name)
-                                  deps (merge (:uses ast) (:requires ast))]
-                              (merge
-                                {:ns           (or ns-name 'cljs.user)
-                                 :provides     [ns-name]
-                                 :requires     (if (= 'cljs.core ns-name)
-                                                 (set (vals deps))
-                                                 (cond-> (conj (set (vals deps)) 'cljs.core)
-                                                   (get-in @env/*compiler* [:options :emit-constants])
-                                                   (conj constants-ns-sym)))
-                                 :file         dest
-                                 :source-file  (when rdr src)
-                                 :source-forms (when-not rdr src)
-                                 :ast          ast
-                                 :macros-ns    (or (:macros-ns opts)
-                                                   (= 'cljs.core$macros ns-name))}
-                                (when (and dest (.exists ^File dest))
-                                  {:lines (with-open [reader (io/reader dest)]
-                                            (-> reader line-seq count))})))
+                                  deps (merge (:uses ast) (:requires ast))
+                                  env (assoc (:env ast) :ns (dissoc ast :env))]
+                              (recur env
+                                     (rest forms)
+                                     (cond->
+                                         {:ns           (or ns-name 'cljs.user)
+                                          :provides     [ns-name]
+                                          :requires     (if (= 'cljs.core ns-name)
+                                                          (set (vals deps))
+                                                          (cond-> (conj (set (vals deps)) 'cljs.core)
+                                                            (get-in @env/*compiler* [:options :emit-constants])
+                                                            (conj constants-ns-sym)))
+                                          :file         dest
+                                          :source-file  (when rdr src)
+                                          :source-forms (when-not rdr src)
+                                          :ast          ast
+                                          :macros-ns    (or (:macros-ns opts)
+                                                            (= 'cljs.core$macros ns-name))}
+                                       (and dest (.exists ^File dest))
+                                       (assoc :lines (with-open [reader (io/reader dest)]
+                                                       (-> reader line-seq count))))))
 
                             (= :ns* (:op ast))
                             (let [deps (merge (:uses ast) (:requires ast))]
-                              (recur (rest forms)
-                                (cond-> (update-in ret [:requires] into (set (vals deps)))
-                                  ;; we need to defer generating the user namespace
-                                  ;; until we actually need or it will break when
-                                  ;; `src` is a sequence of forms - António Monteiro
-                                  (not (:ns ret))
-                                  (assoc :ns (gen-user-ns src) :provides [(gen-user-ns src)]))))
+                              (recur (:env ast)
+                                     (rest forms)
+                                     (cond-> (update-in ret [:requires] into (set (vals deps)))
+                                       ;; we need to defer generating the user namespace
+                                       ;; until we actually need or it will break when
+                                       ;; `src` is a sequence of forms - António Monteiro
+                                       (not (:ns ret))
+                                       (assoc :ns (gen-user-ns src) :provides [(gen-user-ns src)]))))
 
                             :else ret))
                         ret))
@@ -4444,7 +4477,7 @@
    (defn build-affecting-options [opts]
      (select-keys opts
        [:static-fns :fn-invoke-direct :optimize-constants :elide-asserts :target :nodejs-rt
-        :cache-key :checked-arrays :language-out])))
+        :cache-key :checked-arrays :language-out :optimizations])))
 
 #?(:clj
    (defn build-affecting-options-sha [path opts]

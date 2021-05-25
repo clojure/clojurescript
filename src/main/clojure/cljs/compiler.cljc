@@ -33,6 +33,7 @@
   #?(:clj (:import [cljs.tagged_literals JSValue]
                    java.lang.StringBuilder
                    [java.io File Writer]
+                   [java.time Instant]
                    [java.util.concurrent Executors ExecutorService TimeUnit]
                    [java.util.concurrent.atomic AtomicLong])
      :cljs (:import [goog.string StringBuffer])))
@@ -209,7 +210,7 @@
      (nil? a) nil
      #?(:clj (map? a) :cljs (ana.impl/cljs-map? a)) (emit a)
      #?(:clj (seq? a) :cljs (ana.impl/cljs-seq? a)) (apply emits a)
-     #?(:clj (fn? a) :cljs ^boolean (goog/isFunction a)) (a)
+     #?(:clj (fn? a) :cljs (js-fn? a)) (a)
      :else (let [^String s (cond-> a (not (string? a)) .toString)]
              #?(:clj  (when-some [^AtomicLong gen-col *source-map-data-gen-col*]
                         (.addAndGet gen-col (.length s)))
@@ -418,8 +419,15 @@
 
 ;; tagged literal support
 
+(defn- emit-inst [inst-ms]
+  (emits "new Date(" inst-ms ")"))
+
 (defmethod emit-constant* #?(:clj java.util.Date :cljs js/Date) [^java.util.Date date]
-  (emits "new Date(" (.getTime date) ")"))
+  (emit-inst (.getTime date)))
+
+#?(:clj
+   (defmethod emit-constant* java.time.Instant [^java.time.Instant inst]
+     (emit-inst (.toEpochMilli inst))))
 
 (defmethod emit-constant* #?(:clj java.util.UUID :cljs UUID) [^java.util.UUID uuid]
   (let [uuid-str (.toString uuid)]
