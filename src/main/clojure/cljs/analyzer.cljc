@@ -3270,7 +3270,7 @@
              :requires       requires
              :renames        (merge renames core-renames)
              :imports        imports}]
-        (swap! env/*compiler* update-in [::namespaces name] merge ns-info)
+        (swap! env/*compiler* update-in [::namespaces name] merge-ns-info ns-info env)
         (merge {:op      :ns
                 :env     env
                 :form    form
