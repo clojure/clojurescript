@@ -1770,8 +1770,8 @@
 (deftest test-cljs-2960
   ;; protocol impl via metadata
   (is (= 1 (ext-meta-protocol (with-meta {} {`ext-meta-protocol (fn [_] 1)}))))
-  ;; actual impl before metadata
-  (is (= 2 (ext-meta-protocol (with-meta (SomeMetaImpl. 2) {`ext-meta-protocol (fn [_] 1)}))))
+  ;; metadata before actual impl
+  (is (= 1 (ext-meta-protocol (with-meta (SomeMetaImpl. 2) {`ext-meta-protocol (fn [_] 1)}))))
   ;; protocol not marked as :extend-via-metadata so fallthrough to no impl
   (is (thrown? js/Error (non-meta-protocol (with-meta {} {`non-meta-protocol (fn [_] 1)}))))
   ;; normal impl call just in case

@@ -2072,14 +2072,6 @@
                                             (missing-protocol
                                               ~(core/str psym "." fname) ~fsig))))
 
-                                     ;; then check protocol fn in metadata (only when protocol is marked with :extend-via-metadata true)
-                                     check
-                                     (core/if-not (:extend-via-metadata opts)
-                                       check
-                                       `(if-let [meta-impl# (-> ~fsig (core/meta) (core/get '~fqn-fname))]
-                                          (meta-impl# ~@sig)
-                                          ~check))
-
                                      ;; then check protocol on js string,function,array,object (first dynamic check actually executed)
                                      check
                                      `(let [x# (if (nil? ~fsig) nil ~fsig)
@@ -2088,9 +2080,10 @@
                                           (m# ~@sig)
                                           ~check))]
                             `(~sig ~check)))
-             expand-sig (core/fn [dyn-name slot sig]
+             expand-sig (core/fn [fname dyn-name slot sig]
                           (core/let [sig (sig->syms sig)
 
+                                     fqn-fname (with-meta (fqn fname) {:cljs.analyzer/no-resolve true})
                                      fsig (first sig)
 
                                      ;; check protocol property on object (first check executed)
@@ -2099,7 +2092,15 @@
                                                ;; Property access needed here.
                                                (not (nil? (. ~fsig ~(with-meta (symbol (core/str "-" slot)) {:protocol-prop true})))))
                                         (. ~fsig ~slot ~@sig)
-                                        (~dyn-name ~@sig))]
+                                        (~dyn-name ~@sig))
+
+                                     ;; then check protocol fn in metadata (only when protocol is marked with :extend-via-metadata true)
+                                     check
+                                     (core/if-not (:extend-via-metadata opts)
+                                       check
+                                       `(if-let [meta-impl# (-> ~fsig (core/meta) (core/get '~fqn-fname))]
+                                          (meta-impl# ~@sig)
+                                          ~check))]
                             `(~sig ~check)))
              psym (core/-> psym
                     (vary-meta update-in [:jsdoc] conj "@interface")
@@ -2147,7 +2148,7 @@
                                                sigs))]
                            (defn ~fname
                              ~@(map (core/fn [sig]
-                                      (expand-sig dyn-name
+                                      (expand-sig fname dyn-name
                                         (with-meta (symbol (core/str slot "$arity$" (count sig)))
                                           {:protocol-prop true})
                                         sig))
