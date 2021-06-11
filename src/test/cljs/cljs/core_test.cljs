@@ -1777,6 +1777,14 @@
   ;; normal impl call just in case
   (is (= 2 (non-meta-protocol (with-meta (SomeMetaImpl. 2) {`non-meta-protocol (fn [_] 1)})))))
 
+(extend-type PersistentArrayMap
+  ExtMetaProtocol
+  (ext-meta-protocol [m] 2))
+
+(deftest test-cljs-3313
+  (testing "metadata protocol fn takes precedence over direct implementation"
+    (= 1 (ext-meta-protocol (with-meta (array-map) {`ext-meta-protocol (fn [_] 1)})))))
+
 (deftest test-cljs-3054
   (testing "`into` behaves the same as Clojure"
     (is (nil? (into nil #{})))
