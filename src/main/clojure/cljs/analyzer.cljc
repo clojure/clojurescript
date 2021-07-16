@@ -3166,7 +3166,16 @@
              :requires       requires
              :renames        (merge renames core-renames)
              :imports        imports}]
-        (swap! env/*compiler* update-in [::namespaces name] merge ns-info)
+        (swap! env/*compiler* update-in [::namespaces name]
+          (fn [the-ns]
+            ;; just merge - do not replace - then macros can emit
+            ;; modifications to the ns
+            (reduce-kv
+              (fn [the-ns k v]
+                (if (map? v)
+                  (update the-ns k merge v)
+                  (assoc the-ns k v)))
+              the-ns ns-info)))
         (merge {:op      :ns
                 :env     env
                 :form    form
