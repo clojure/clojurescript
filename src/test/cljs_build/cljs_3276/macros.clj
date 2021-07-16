@@ -1,4 +1,5 @@
 (ns cljs-3276.macros)
 
 (defmacro macro-that-requires []
-  `(require 'cljs-3276.foo))
+  '(ns test.foo
+     (:require cljs-3276.foo)))
