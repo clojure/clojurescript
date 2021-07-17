@@ -4335,19 +4335,6 @@
          (symbol (str "cljs.user." name (util/content-sha full-name 7)))))))
 
 #?(:clj
-   (defn macro-call? [form env]
-     (when (and (seq? form) (seq form) (and (symbol? (first form))))
-       (let [sym (first form)
-             nstr (namespace sym)]
-         (or (and (some? nstr)
-                  (some? (gets env :ns :require-macros (symbol nstr))))
-             (some? (gets env :ns :rename-macros sym))
-             (some? (gets env :ns :use-macros sym)))))))
-
-#?(:clj
-   (declare ns-side-effects macroexpand-1))
-
-#?(:clj
    (defn ^:dynamic parse-ns
      "Helper for parsing only the essential namespace information from a
       ClojureScript source file and returning a cljs.closure/IJavaScript compatible
@@ -4372,9 +4359,6 @@
               (binding [env/*compiler* (if (false? (:restore opts))
                                          env/*compiler*
                                          (atom @env/*compiler*))
-                        *file-defs* nil
-                        #?@(:clj [*unchecked-if* false
-                                  *unchecked-arrays* false])
                         *cljs-ns* 'cljs.user
                         *cljs-file* src
                         *macro-infer*
@@ -4391,8 +4375,7 @@
                           false)]
                 (let [rdr (when-not (sequential? src) (io/reader src))]
                   (try
-                    (loop [env (empty-env)
-                           forms (if rdr
+                    (loop [forms (if rdr
                                    (forms-seq* rdr (source-path src))
                                    src)
                            ret (merge
@@ -4407,15 +4390,8 @@
                                    {:lines (with-open [reader (io/reader dest)]
                                              (-> reader line-seq count))}))]
                       (if (seq forms)
-                        (let [form (first forms)
-                              macro? (macro-call? form env)
-                              env (if macro?
-                                    (binding [*load-macros* true]
-                                      (assoc (:env (ns-side-effects env (:ast ret) opts)) :ns (:ns env)))
-                                    env)
-                              ast (when (or macro? (and (seq? form) ('#{ns ns* require use require-macros} (first form))))
-                                    (no-warn (analyze env form nil opts)))
-                              env (assoc (:env ast) :ns (:ns env))]
+                        (let [env (empty-env)
+                              ast (no-warn (analyze env (first forms) nil opts))]
                           (cond
                             (= :ns (:op ast))
                             (let [ns-name (:name ast)
@@ -4423,38 +4399,34 @@
                                                    (= "cljc" (util/ext src)))
                                             'cljs.core$macros
                                             ns-name)
-                                  deps (merge (:uses ast) (:requires ast))
-                                  env (assoc (:env ast) :ns (dissoc ast :env))]
-                              (recur env
-                                     (rest forms)
-                                     (cond->
-                                         {:ns           (or ns-name 'cljs.user)
-                                          :provides     [ns-name]
-                                          :requires     (if (= 'cljs.core ns-name)
-                                                          (set (vals deps))
-                                                          (cond-> (conj (set (vals deps)) 'cljs.core)
-                                                            (get-in @env/*compiler* [:options :emit-constants])
-                                                            (conj constants-ns-sym)))
-                                          :file         dest
-                                          :source-file  (when rdr src)
-                                          :source-forms (when-not rdr src)
-                                          :ast          ast
-                                          :macros-ns    (or (:macros-ns opts)
-                                                            (= 'cljs.core$macros ns-name))}
-                                       (and dest (.exists ^File dest))
-                                       (assoc :lines (with-open [reader (io/reader dest)]
-                                                       (-> reader line-seq count))))))
+                                  deps (merge (:uses ast) (:requires ast))]
+                              (merge
+                                {:ns           (or ns-name 'cljs.user)
+                                 :provides     [ns-name]
+                                 :requires     (if (= 'cljs.core ns-name)
+                                                 (set (vals deps))
+                                                 (cond-> (conj (set (vals deps)) 'cljs.core)
+                                                   (get-in @env/*compiler* [:options :emit-constants])
+                                                   (conj constants-ns-sym)))
+                                 :file         dest
+                                 :source-file  (when rdr src)
+                                 :source-forms (when-not rdr src)
+                                 :ast          ast
+                                 :macros-ns    (or (:macros-ns opts)
+                                                 (= 'cljs.core$macros ns-name))}
+                                (when (and dest (.exists ^File dest))
+                                  {:lines (with-open [reader (io/reader dest)]
+                                            (-> reader line-seq count))})))
 
                             (= :ns* (:op ast))
                             (let [deps (merge (:uses ast) (:requires ast))]
-                              (recur (:env ast)
-                                     (rest forms)
-                                     (cond-> (update-in ret [:requires] into (set (vals deps)))
-                                       ;; we need to defer generating the user namespace
-                                       ;; until we actually need or it will break when
-                                       ;; `src` is a sequence of forms - António Monteiro
-                                       (not (:ns ret))
-                                       (assoc :ns (gen-user-ns src) :provides [(gen-user-ns src)]))))
+                              (recur (rest forms)
+                                (cond-> (update-in ret [:requires] into (set (vals deps)))
+                                  ;; we need to defer generating the user namespace
+                                  ;; until we actually need or it will break when
+                                  ;; `src` is a sequence of forms - António Monteiro
+                                  (not (:ns ret))
+                                  (assoc :ns (gen-user-ns src) :provides [(gen-user-ns src)]))))
 
                             :else ret))
                         ret))
