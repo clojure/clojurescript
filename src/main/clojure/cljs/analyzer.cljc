@@ -4396,7 +4396,7 @@
                             (= :ns (:op ast))
                             (let [ns-name (:name ast)
                                   ns-name (if (and (= 'cljs.core ns-name)
-                                                (= "cljc" (util/ext src)))
+                                                   (= "cljc" (util/ext src)))
                                             'cljs.core$macros
                                             ns-name)
                                   deps (merge (:uses ast) (:requires ast))]
