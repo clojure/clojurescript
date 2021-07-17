@@ -1492,18 +1492,3 @@
         '[(ns test.foo
             (:import goog))]))
     (is (= {} (get-in @cenv [::ana/namespaces 'test.foo :imports])))))
-
-(deftest test-cljs-3276-require-from-macro
-  (let [cenv (env/default-compiler-env)]
-    (env/with-compiler-env cenv
-      (comp/with-core-cljs {}
-        (fn []
-          (ana/analyze-form-seq
-            '[(ns test.foo
-                (:require [clojure.set :as set])
-                (:require-macros [cljs-3276.macros :refer [macro-that-requires]]))
-              (macro-that-requires)]))))
-    (is (= '{set clojure.set, clojure.set clojure.set, cljs-3276.foo cljs-3276.foo}
-            (get-in @cenv [::ana/namespaces 'test.foo :requires])))
-    (is (contains? (get @cenv ::ana/namespaces) 'cljs-3276.foo))
-    (is (contains? (get @cenv ::ana/namespaces) 'clojure.set))))
