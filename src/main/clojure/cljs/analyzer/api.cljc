@@ -166,6 +166,7 @@
       (env/with-compiler-env state
         (binding [ana/*cljs-warning-handlers* (:warning-handlers opts ana/*cljs-warning-handlers*)]
           (ana/parse-ns src dest opts))))))
+
 #?(:clj
    (defn analyze-file
      "Given a java.io.File, java.net.URL or a string identifying a resource on the
