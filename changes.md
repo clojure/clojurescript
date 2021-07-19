@@ -1,3 +1,12 @@
+## 1.10.879
+
+### Changes
+* Revert CLJS-3276 - macros that expand to require
+
+### Fixes
+* CLJS-3096 Add :exception true to prepl errors
+* CLJS-3313: Protocol implementations via metadata: ClojureScript behaves differently from Clojure
+
 ## 1.10.866
 
 ### Changes
@@ -6,7 +15,6 @@
 ### Enhancements
 * CLJS-3260: and/or optimization as compiler pass, fixes core.async go macro issue
 * CLJS-3276: Support macros that expand to require statements
-
 
 ### Fixes
 * CLJS-3309: and/or opt bug - passes to remove dropped locals from anon fns,
