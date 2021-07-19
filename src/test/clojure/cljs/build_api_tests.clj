@@ -782,3 +782,17 @@
       (ana/with-warning-handlers [(collecting-warning-handler ws)]
         (build/build (build/inputs (io/file inputs "cljs_3284/core.cljs")) opts cenv))
       (is (empty? @ws)))))
+
+(deftest test-cljs-3311-regress
+  (testing "Test that CLJS-3311 did not regress"
+    (let [ws (atom [])
+          out (.getPath (io/file (test/tmp-dir) "cljs-3311-regress-out"))
+          {:keys [inputs opts]} {:inputs (str (io/file "src" "test" "cljs_build"))
+                                 :opts   {:main             'cljs-3311-regress.core
+                                          :output-dir       out
+                                          :optimizations    :none}}
+          cenv (env/default-compiler-env opts)]
+      (test/delete-out-files out)
+      (ana/with-warning-handlers [(collecting-warning-handler ws)]
+        (build/build (build/inputs (io/file inputs "cljs_3311_regress/core.cljs")) opts cenv))
+      (is (empty? @ws)))))
