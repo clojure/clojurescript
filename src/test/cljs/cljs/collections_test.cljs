@@ -1080,6 +1080,10 @@
     (persistent! t)
     (is (= :fail (try (get t :a :not-found) (catch js/Error e :fail))))))
 
+(deftest test-cljs-3317
+  (testing "persistent vector invoke matches clojure"
+    (is (thrown-with-msg? js/Error #"Key must be integer" ([1 2] nil)))))
+
 (comment
 
   (run-tests)

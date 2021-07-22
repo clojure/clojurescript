@@ -5693,9 +5693,9 @@ reduces them without incurring seq initialization"
 
   IFn
   (-invoke [coll k]
-    (-nth coll k))
-  (-invoke [coll k not-found]
-    (-nth coll k not-found))
+    (if (number? k)
+      (-nth coll k)
+      (throw (js/Error. "Key must be integer"))))
 
   IEditableCollection
   (-as-transient [coll]
