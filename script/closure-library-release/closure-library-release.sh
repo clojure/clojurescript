@@ -115,6 +115,13 @@ mkdir -p "$src_dir" "$third_party_src_dir"
 ## Generate deps.js
 ../closure_deps_graph.sh
 
+## Normalize deps.js
+perl -p -i -e 's/\]\);/\], \{\}\);/go' \
+    "$closure_library_base/goog/deps.js"
+
+perl -p -i -e 's/..\/..\/third_party\/closure\/goog\///go' \
+    "$closure_library_base/goog/deps.js"
+
 ## Copy Closure sources
 
 cp -r \

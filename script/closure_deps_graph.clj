@@ -22,7 +22,7 @@
       []
       (map #(SourceFile/fromFile (.getAbsolutePath %))
         (mapcat (comp js-files-in io/file)
-          ["closure-library/closure/goog"]))
+          ["closure-library/closure/goog" "closure-library/third_party/closure/goog"]))
       DepsGenerator$InclusionStrategy/ALWAYS
       (.getAbsolutePath (io/file "closure-library/closure/goog"))
       (proxy [BasicErrorManager] []
