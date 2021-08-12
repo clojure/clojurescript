@@ -112,6 +112,9 @@ third_party_src_dir="$third_party_project_dir/src/main/resources"
 
 mkdir -p "$src_dir" "$third_party_src_dir"
 
+## Generate deps.js
+../closure_deps_graph.sh
+
 ## Copy Closure sources
 
 cp -r \
