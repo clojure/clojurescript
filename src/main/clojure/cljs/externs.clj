@@ -240,7 +240,7 @@
                 (parse-externs
                   (-> (SourceFile/builder)
                     (.withPath (.toPath (io/file (.getPath rsrc))))
-                    (.withCharset StandardCharsets/UTF_8)
+                    (.withContent (io/input-stream rsrc))
                     (.build))))}))))
 
 (comment
