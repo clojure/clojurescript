@@ -19,7 +19,7 @@
             [clojure.java.io :as io]
             [clojure.string :as string])
   (:import [java.io File]
-           [com.google.javascript.jscomp JSModule]))
+           [com.google.javascript.jscomp JSChunk]))
 
 (deftest test-make-preamble
   (testing "no options"
@@ -60,7 +60,7 @@
     (test/delete-out-files out)
     (build/build (build/inputs (:inputs project)) (:opts project))
     (let [compiler (closure/make-closure-compiler)
-          module (JSModule. "module-c")]
+          module (JSChunk. "module-c")]
       (.initOptions compiler (closure/make-options (:opts project)))
       (doseq [file ["cljs/core/constants.js"
                     "module_test/modules/a.js"

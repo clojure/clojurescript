@@ -26,7 +26,7 @@
             [cljs.module-graph :as module-graph])
   (:import [java.lang ProcessBuilder]
            [java.io
-            File BufferedInputStream BufferedReader
+            File BufferedReader BufferedInputStream
             Writer InputStreamReader IOException StringWriter ByteArrayInputStream]
            [java.net URI URL]
            [java.util.logging Level]
@@ -39,9 +39,8 @@
                                          SourceMap$DetailLevel ClosureCodingConvention SourceFile
                                          Result JSError CheckLevel DiagnosticGroup DiagnosticGroups
                                          CommandLineRunner
-                                         JSModule SourceMap VariableMap PrintStreamErrorManager DiagnosticType
+                                         JSChunk SourceMap VariableMap PrintStreamErrorManager DiagnosticType
                                          VariableRenamingPolicy PropertyRenamingPolicy]
-           [com.google.javascript.jscomp.bundle Transpiler]
            [com.google.javascript.jscomp.deps ClosureBundler ModuleLoader$ResolutionMode ModuleNames
                                               SimpleDependencyInfo]
            [com.google.javascript.rhino Node]
@@ -117,16 +116,25 @@
 (defmulti js-source-file (fn [_ source] (class source)))
 
 (defmethod js-source-file String [^String name ^String source]
-  (SourceFile/fromCode name source))
+  (-> (SourceFile/builder)
+    (.withPath name)
+    (.withContent source)
+    (.build)))
 
 (defmethod js-source-file File [_ ^File source]
-  (SourceFile/fromPath (.toPath source) StandardCharsets/UTF_8))
+  (-> (SourceFile/builder)
+    (.withPath (.toPath source))
+    (.withCharset StandardCharsets/UTF_8)
+    (.build)))
 
 (defmethod js-source-file URL [_ ^URL source]
   (js-source-file _ (io/file (.getPath source))))
 
 (defmethod js-source-file BufferedInputStream [^String name ^BufferedInputStream source]
-  (SourceFile/fromInputStream name source))
+  (-> (SourceFile/builder)
+    (.withPath name)
+    (.withContent source)
+    (.build)))
 
 (def check-level
   {:error CheckLevel/ERROR
@@ -180,7 +188,6 @@
    :too-many-type-params DiagnosticGroups/TOO_MANY_TYPE_PARAMS
    :tweaks DiagnosticGroups/TWEAKS
    :type-invalidation DiagnosticGroups/TYPE_INVALIDATION
-   :undefined-names DiagnosticGroups/UNDEFINED_NAMES
    :undefined-variables DiagnosticGroups/UNDEFINED_VARIABLES
    :underscore DiagnosticGroups/UNDERSCORE
    :unknown-defines DiagnosticGroups/UNKNOWN_DEFINES
@@ -1262,7 +1269,7 @@
   "Given a list of IJavaScript sources in dependency order and compiler options
    return a dependency sorted list of module name / description tuples. The
    module descriptions will be augmented with a :closure-module entry holding
-   the Closure JSModule. Each module description will also be augmented with
+   the Closure JSChunk. Each module description will also be augmented with
    a :foreign-deps vector containing foreign IJavaScript sources in dependency
    order."
   [sources opts]
@@ -1287,7 +1294,7 @@
               (str "Module " name " does not define any :entries"))
             (when (:verbose opts)
               (util/debug-prn "Building module" name))
-            (let [js-module (JSModule. (clojure.core/name name))
+            (let [js-module (JSChunk. (clojure.core/name name))
                   module-sources
                   (reduce
                     (fn [ret entry-sym]
@@ -1315,7 +1322,7 @@
                   (do
                     (when (:verbose opts)
                       (util/debug-prn "  module" name "depends on" dep))
-                    (.addDependency js-module ^JSModule parent-module))
+                    (.addDependency js-module ^JSChunk parent-module))
                   (throw (util/compilation-error (IllegalArgumentException.
                                                    (str "Parent module " dep " does not exist"))))))
               (conj ret
@@ -1424,7 +1431,7 @@
         (io/file prop-out)))))
 
 (defn optimize-modules
-  "Use the Closure Compiler to optimize one or more Closure JSModules. Returns
+  "Use the Closure Compiler to optimize one or more Closure JSChunks. Returns
    a dependency sorted list of module name and description tuples."
   [opts & sources]
   ;; the following pre-condition can't be enabled
@@ -1445,7 +1452,7 @@
                   sources)
         modules (build-modules sources opts)
         ^List inputs (map (comp :closure-module second) modules)
-        _ (doseq [^JSModule input inputs]
+        _ (doseq [^JSChunk input inputs]
             (.sortInputsByDeps input closure-compiler))
         _ (when (or ana/*verbose* (:verbose opts))
             (util/debug-prn "Applying optimizations" (:optimizations opts) "to" (count sources) "sources"))
@@ -1465,7 +1472,7 @@
                  :source
                  (do
                    (when source-map (.reset source-map))
-                   (.toSource closure-compiler ^JSModule closure-module)))
+                   (.toSource closure-compiler ^JSChunk closure-module)))
                (when source-map
                  (let [sw (StringWriter.)
                        source-map-name (str output-to ".map.closure")]
