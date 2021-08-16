@@ -16,6 +16,7 @@
            [com.google.javascript.jscomp.parsing Config$JsDocParsing]
            [com.google.javascript.rhino
             Node Token JSTypeExpression JSDocInfo$Visibility]
+           [java.nio.charset StandardCharsets]
            [java.util.logging Level]))
 
 (def ^:dynamic *ignore-var* false)
@@ -237,7 +238,10 @@
        {:name ns
         :defs (parsed->defs
                 (parse-externs
-                  (SourceFile/fromInputStream f (io/input-stream rsrc))))}))))
+                  (-> (SourceFile/builder)
+                    (.withPath (.toPath (io/file (.getPath rsrc))))
+                    (.withCharset StandardCharsets/UTF_8)
+                    (.build))))}))))
 
 (comment
   (require '[clojure.java.io :as io]
