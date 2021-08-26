@@ -8931,7 +8931,8 @@ reduces them without incurring seq initialization"
       (let [in' (next in)]
         (if (nil? in')
           (throw (js/Error. (str "No value supplied for key: " (first in))))
-          (recur (next in') (assoc! out (first in) (first in')) ))))))
+          (recur (next in') (assoc! out (first in) (first in')) )))
+      (persistent! out))))
 
 (defn array-map
   "keyval => key val
