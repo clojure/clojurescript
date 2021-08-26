@@ -1084,6 +1084,13 @@
   (testing "persistent vector invoke matches clojure"
     (is (thrown-with-msg? js/Error #"Key must be integer" ([1 2] nil)))))
 
+(deftest test-cljs-3324
+  (testing "hash-map behavior with missing values matches clojure"
+    (is (thrown-with-msg? js/Error #"No value supplied for key: :a"
+          (hash-map :a)))
+    (is (thrown-with-msg? js/Error #"No value supplied for key: :a"
+          (apply hash-map [:a])))))
+
 (comment
 
   (run-tests)

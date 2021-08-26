@@ -2623,9 +2623,12 @@
 (core/defmacro hash-map
   ([] `(.-EMPTY cljs.core/PersistentHashMap))
   ([& kvs]
-   (core/let [pairs (partition 2 kvs)
+   (core/let [pairs (map
+                      (core/fn [pair]
+                        (remove #{::missing} pair))
+                      (partition 2 2 (repeat ::missing) kvs))
               ks    (map first pairs)
-              vs    (map second pairs)]
+              vs    (map second (take-while #(= 2 (count %)) pairs))]
      (vary-meta
        `(.fromArrays cljs.core/PersistentHashMap (array ~@ks) (array ~@vs))
        assoc :tag 'cljs.core/PersistentHashMap))))

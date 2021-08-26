@@ -8052,7 +8052,9 @@ reduces them without incurring seq initialization"
     (let [len (alength ks)]
       (loop [i 0 ^not-native out (transient (.-EMPTY PersistentHashMap))]
         (if (< i len)
-          (recur (inc i) (-assoc! out (aget ks i) (aget vs i)))
+          (if (<= (alength vs) i)
+            (throw (js/Error. (str "No value supplied for key: " (aget ks i))))
+            (recur (inc i) (-assoc! out (aget ks i) (aget vs i))))
           (persistent! out))))))
 
 (set! (.-createWithCheck PersistentHashMap)
@@ -8926,8 +8928,10 @@ reduces them without incurring seq initialization"
   [& keyvals]
   (loop [in (seq keyvals), out (transient (.-EMPTY PersistentHashMap))]
     (if in
-      (recur (nnext in) (assoc! out (first in) (second in)))
-      (persistent! out))))
+      (let [in' (next in)]
+        (if (nil? in')
+          (throw (js/Error. (str "No value supplied for key: " (first in))))
+          (recur (next in') (assoc! out (first in) (first in')) ))))))
 
 (defn array-map
   "keyval => key val
