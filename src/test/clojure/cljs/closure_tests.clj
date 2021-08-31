@@ -490,3 +490,24 @@
     (.delete (io/file "package.json"))
     (test/delete-node-modules)
     (test/delete-out-files out)))
+
+(defn empty-handler [warning-type env extra])
+
+(deftest test-cljs-3074
+  (testing "CLJS-3074: resolve-warning-handlers\n"
+    (testing "\tfunctions are left alone"
+      (let [h (fn [warning-type env extra])]
+        (is (= [h] (closure/resolve-warning-handlers [h])))))
+    (testing "\tsymbols are resolved"
+      (is (= [#'empty-handler] (closure/resolve-warning-handlers [`empty-handler]))))
+    (testing "\tsymbols and fns can be mixed"
+      (let [h (fn [warning-type env extra])]
+        (is (= [h #'empty-handler] (closure/resolve-warning-handlers [h `empty-handler])))))
+    (testing "\tinvalid warning handler types are detected"
+        (is (thrown-with-msg? Throwable
+              #"Invalid warning handler 1 of type class java.lang.Long"
+              (closure/resolve-warning-handlers [1]))))
+    (testing "\tnon-existent handlers are detected"
+      (is (thrown-with-msg? Throwable
+            #"Could not resolve warning handler: clojure.core/foo"
+            (closure/resolve-warning-handlers ['clojure.core/foo]))))))
