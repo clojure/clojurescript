@@ -83,25 +83,27 @@
   "Converts a namespaced symbol to a var, loading the requisite namespace if
   needed. For use with a function defined under a keyword in opts. The kw and
   ex-data arguments are used to form exceptions."
-  [sym kw ex-data]
-  (let [ns     (namespace sym)
-        _      (when (nil? ns)
-                 (throw
-                   (ex-info (str kw " symbol " sym " is not fully qualified")
-                     (merge ex-data {kw sym
-                                     :clojure.error/phase :compilation}))))
-        var-ns (symbol ns)]
-    (when (not (find-ns var-ns))
-      (try
-        (locking ana/load-mutex
-          (require var-ns))
-        (catch Throwable t
-          (throw (ex-info (str "Cannot require namespace referred by " kw " value " sym)
-                   (merge ex-data {kw sym
-                                   :clojure.error/phase :compilation})
-                   t)))))
+  ([sym kw]
+   (sym->var sym kw nil))
+  ([sym kw ex-data]
+   (let [ns     (namespace sym)
+         _      (when (nil? ns)
+                  (throw
+                    (ex-info (str kw " symbol " sym " is not fully qualified")
+                      (merge ex-data {kw sym
+                                      :clojure.error/phase :compilation}))))
+         var-ns (symbol ns)]
+     (when (not (find-ns var-ns))
+       (try
+         (locking ana/load-mutex
+           (require var-ns))
+         (catch Throwable t
+           (throw (ex-info (str "Cannot require namespace referred by " kw " value " sym)
+                    (merge ex-data {kw sym
+                                    :clojure.error/phase :compilation})
+                    t)))))
 
-    (find-var sym)))
+     (find-var sym))))
 
 (defn- opts-fn
   "Extracts a function from opts, by default expecting a function value, but
@@ -2483,6 +2485,28 @@
            [(if (symbol? k) (str (comp/munge k)) k) v])
       defines)))
 
+(defn resolve-warning-handlers [fns]
+  (reduce
+    (fn [ret afn]
+      (cond
+        (fn? afn) (conj ret afn)
+
+        (symbol? afn)
+        (let [afn' (sym->var afn :warning-handlers)]
+          (when-not afn'
+            (throw
+              (ex-info (str "Could not resolve warning handler: " afn)
+                {:warning-handlers fns
+                 :clojure.error/phase :compilation})))
+          (conj ret afn'))
+
+        :else
+        (throw
+          (ex-info (str "Invalid warning handler " afn " of type " (type afn))
+            {:warning-handlers fns
+             :clojure.error/phase :compilation}))))
+    [] fns))
+
 (defn add-implicit-options
   [{:keys [optimizations output-dir]
     :or {optimizations :none
@@ -2586,7 +2610,10 @@
             opts)))
 
       (nil? (:ignore-js-module-exts opts))
-      (assoc :ignore-js-module-exts [".css"]))))
+      (assoc :ignore-js-module-exts [".css"])
+
+      (:warning-handlers opts)
+      (update :warning-handlers resolve-warning-handlers))))
 
 (defn- alive? [proc]
   (try (.exitValue proc) false (catch IllegalThreadStateException _ true)))
