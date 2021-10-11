@@ -1016,8 +1016,11 @@
   (str "node$module$" (munge (string/replace (str name) #"[.\/]" #?(:clj "\\$"
                                                                     :cljs "$$")))))
 
-(defn munge-goog-module-lib [name]
-  (str "goog$module$" (munge (string/replace (str name) #"[.\/]" #?(:clj "\\$" :cljs "$$")))))
+(defn munge-goog-module-lib
+  ([name]
+   (str "goog$module$" (munge (string/replace (str name) #"[.\/]" #?(:clj "\\$" :cljs "$$")))))
+  ([ns name]
+   (str (munge ns) "." (munge-goog-module-lib name))))
 
 (defn munge-global-export [name]
   (str "global$module$" (munge (string/replace (str name) #"[.\/]" #?(:clj "\\$"
@@ -1150,6 +1153,15 @@
                        (munge-global-export (resolve-ns-alias env ns)))
                :op :js-var
                :ns current-ns})))
+
+(defn resolve-import
+  "goog.modules are deterministically assigned to a property of the namespace,
+   we cannot expect the reference will be globally available, so we resolve to
+   namespace local reference."
+  [env import]
+  (if (goog-module-dep? import)
+    (symbol (munge-goog-module-lib (-> env :ns :name) import))
+    import))
 
 ;; core.async calls `macroexpand-1` manually with an ill-formed
 ;; :locals map. Normally :locals maps symbols maps, but
