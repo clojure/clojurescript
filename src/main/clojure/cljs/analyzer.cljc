@@ -1235,7 +1235,13 @@
              ;; check if prefix is some existing def
              (if-let [resolved (resolve-var env prefix nil false)]
                (update resolved :name #(symbol (str % "." suffix)))
-               (let [idx (.lastIndexOf s ".")
+               ;; glib imports (i.e. (:import [goog.module ModuleLoader])
+               ;; are always just dotted symbols after the recursion
+               (let [s   (str
+                           (cond->> s
+                             (goog-module-dep? sym)
+                             (resolve-import env)))
+                     idx (.lastIndexOf (str s) ".")
                      pre (subs s 0 idx)
                      suf (subs s (inc idx))]
                  {:op   :var
