@@ -122,6 +122,9 @@ perl -p -i -e 's/\]\);/\], \{\}\);/go' \
 perl -p -i -e 's/..\/..\/third_party\/closure\/goog\///go' \
     "$closure_library_base/goog/deps.js"
 
+perl -p -i -e "s/goog.addDependency\('base.js', \[\], \[\], \{\}\);/goog.addDependency\(\'base.js\', \[\'goog\'\], \[\], \{\}\);/go" \
+    "$closure_library_base/goog/deps.js"
+
 ## Copy Closure sources
 
 cp -r \
