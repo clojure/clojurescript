@@ -812,6 +812,12 @@
     (or (contains? global-exports (symbol module))
         (contains? global-exports (name module)))))
 
+(defn goog-module-dep?
+  [module]
+  (let [[module _] (lib&sublib module)
+        module-type (get-in @env/*compiler* [:js-dependency-index (str module) :module])]
+    (= :goog module-type)))
+
 (defn confirm-var-exists
   ([env prefix suffix]
    (let [warn (confirm-var-exist-warning env prefix suffix)]
@@ -1010,6 +1016,9 @@
   (str "node$module$" (munge (string/replace (str name) #"[.\/]" #?(:clj "\\$"
                                                                     :cljs "$$")))))
 
+(defn munge-goog-module-lib [name]
+  (str "goog$module$" (munge (string/replace (str name) #"[.\/]" #?(:clj "\\$" :cljs "$$")))))
+
 (defn munge-global-export [name]
   (str "global$module$" (munge (string/replace (str name) #"[.\/]" #?(:clj "\\$"
                                                                       :cljs "$$")))))
@@ -1031,6 +1040,7 @@
 
 (defn ns->module-type [ns]
   (cond
+    (goog-module-dep? ns) :goog-module
     (js-module-exists? ns) :js
     (node-module-dep? ns) :node
     (dep-has-global-exports? ns) :global))
@@ -1071,6 +1081,12 @@
      :name    (symbol (str current-ns) (str (munge-node-lib full-ns) "." (name sym)))
      :op      :js-var
      :foreign true}))
+
+(defmethod resolve* :goog-module
+  [env sym full-ns current-ns]
+  {:name (symbol (str current-ns) (str (munge-goog-module-lib full-ns) "." (name sym)))
+   :ns current-ns
+   :op :var})
 
 (defmethod resolve* :global
   [env sym full-ns current-ns]

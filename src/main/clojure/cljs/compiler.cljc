@@ -1294,6 +1294,9 @@
                                      (let [{node-libs true libs-to-load false} (group-by ana/node-module-dep? libs)]
                                        [node-libs libs-to-load])
                                      [nil libs]))
+        [goog-modules libs-to-load] (let [{goog-modules true libs-to-load false}
+                                          (group-by ana/goog-module-dep? libs-to-load)]
+                                      [goog-modules libs-to-load])
         global-exports-libs (filter ana/dep-has-global-exports? libs-to-load)]
     (when (-> libs meta :reload-all)
       (emitln "if(!COMPILED) " loaded-libs-temp " = " loaded-libs " || cljs.core.set([\"cljs.core\"]);")
@@ -1336,11 +1339,21 @@
         :else
         (when-not (= lib 'goog)
           (emitln "goog.require('" (munge lib) "');"))))
+    ;; Node Libraries
     (doseq [lib node-libs]
       (let [[lib' sublib] (ana/lib&sublib lib)]
         (emitln (munge ns-name) "."
           (ana/munge-node-lib lib)
           " = require('" lib' "')" (sublib-select sublib) ";")))
+    ;; Google Closure Library Modules (i.e. goog.module(...))
+    ;; these must be assigned to vars
+    (doseq [lib goog-modules]
+      (let [[lib' sublib] (ana/lib&sublib lib)]
+        (emitln "goog.require('" lib' "');")
+        (emitln (munge ns-name) "."
+          (ana/munge-goog-module-lib lib)
+          " = goog.module.get('" lib' "')" (sublib-select sublib) ";")))
+    ;; Global Exports
     (doseq [lib global-exports-libs]
       (let [{:keys [global-exports]} (get js-dependency-index (name (-> lib ana/lib&sublib first)))]
         (emit-global-export ns-name global-exports lib)))
