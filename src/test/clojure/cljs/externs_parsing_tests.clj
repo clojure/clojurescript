@@ -36,6 +36,8 @@
 
 (comment
 
+  (externs/analyze-goog-file "goog/object/object.js")
+
   (test/run-tests)
 
   (externs/analyze-goog-file "goog/date/date.js" 'goog.date.month)
