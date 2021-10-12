@@ -270,6 +270,13 @@
            m))
        {} externs))))
 
+(defn resource->source-file
+  [resource]
+  (-> (SourceFile/builder)
+    (.withPath (.toPath (io/file (.getPath resource))))
+    (.withContent (io/input-stream resource))
+    (.build)))
+
 (defn analyze-goog-file
   ([f]
    (analyze-goog-file f nil))
@@ -280,11 +287,7 @@
      (binding [*goog-ns* ns]
        {:name ns
         :defs (parsed->defs
-                (parse-externs
-                  (-> (SourceFile/builder)
-                    (.withPath (.toPath (io/file (.getPath rsrc))))
-                    (.withContent (io/input-stream rsrc))
-                    (.build)))
+                (parse-externs (resource->source-file rsrc))
                 (:module desc))}))))
 
 (comment
