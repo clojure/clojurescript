@@ -1430,9 +1430,9 @@
   (core/let [psym       (resolve p)
              pfn-prefix (subs (core/str psym) 0
                           (clojure.core/inc (.indexOf (core/str psym) "/")))]
-    (cons `(goog.object/set ~psym ~type true)
+    (cons `(unchecked-set ~psym ~type true)
       (map (core/fn [[f & meths :as form]]
-             `(goog.object/set ~(symbol (core/str pfn-prefix f))
+             `(unchecked-set ~(symbol (core/str pfn-prefix f))
                 ~type ~(with-meta `(fn ~@meths) (meta form))))
         sigs))))
 
@@ -2672,8 +2672,8 @@
       (js-obj* '())
       `(let [~@(apply concat (clojure.set/map-invert expr->local))
             ~obj ~(js-obj* (filter-on-keys core/string? kvs))]
-        ~@(map (core/fn [[k v]] `(goog.object/set ~obj ~k ~v)) sym-pairs)
-        ~@(map (core/fn [[k v]] `(goog.object/set ~obj ~v ~(core/get kvs k))) expr->local)
+        ~@(map (core/fn [[k v]] `(unchecked-set ~obj ~k ~v)) sym-pairs)
+        ~@(map (core/fn [[k v]] `(unchecked-set ~obj ~v ~(core/get kvs k))) expr->local)
         ~obj))))
 
 (core/defmacro alength [a]
@@ -2888,7 +2888,7 @@
   (core/list 'js* "''+~{}" s))
 
 (core/defmacro es6-iterable [ty]
-  `(goog.object/set (.-prototype ~ty) cljs.core/ITER_SYMBOL
+  `(unchecked-set (.-prototype ~ty) cljs.core/ITER_SYMBOL
      (fn []
        (this-as this#
          (cljs.core/es6-iterator this#)))))
