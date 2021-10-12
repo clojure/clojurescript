@@ -1350,9 +1350,11 @@
     (doseq [lib goog-modules]
       (let [[lib' sublib] (ana/lib&sublib lib)]
         (emitln "goog.require('" lib' "');")
+        (emitln "goog.scope(function(){")
         (emitln (munge ns-name) "."
           (ana/munge-goog-module-lib lib)
-          " = goog.module.get('" lib' "')" (sublib-select sublib) ";")))
+          " = goog.module.get('" lib' "')" (sublib-select sublib) ";")
+        (emitln "});")))
     ;; Global Exports
     (doseq [lib global-exports-libs]
       (let [{:keys [global-exports]} (get js-dependency-index (name (-> lib ana/lib&sublib first)))]
