@@ -1350,6 +1350,9 @@
     (doseq [lib goog-modules]
       (let [[lib' sublib] (ana/lib&sublib lib)]
         (emitln "goog.require('" lib' "');")
+        ;; we emit goog.scope here to suppress a Closure error about
+        ;; goog.module.get when compiling - meant to discourage incorrect
+        ;; usage by hand written code - not applicable here
         (emitln "goog.scope(function(){")
         (emitln (munge ns-name) "."
           (ana/munge-goog-module-lib lib)
