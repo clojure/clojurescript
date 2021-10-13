@@ -11477,6 +11477,7 @@ reduces them without incurring seq initialization"
   (let [e (js/Error. message)]
     (this-as this
       (set! (.-message this) message)
+      (set! (.-error this) message)
       (set! (.-data this) data)
       (set! (.-cause this) cause)
       (do
