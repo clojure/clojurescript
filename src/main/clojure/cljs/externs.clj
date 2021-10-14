@@ -269,11 +269,9 @@
          exported (filter exports (get grouped false))]
      (reduce
        (fn [m xs]
-         (if-not (= 'exports (first xs))
-           (let [sym (last xs)]
-             (cond-> m
-               (seq xs) (assoc sym (merge (meta sym) {:ns *goog-ns* :name sym}))))
-           m))
+         (let [sym (last xs)]
+           (cond-> m
+             (seq xs) (assoc sym (merge (meta sym) {:ns *goog-ns* :name sym})))))
        {} exported))))
 
 (defmethod parsed->defs :default
