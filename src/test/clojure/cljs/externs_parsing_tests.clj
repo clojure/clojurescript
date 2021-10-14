@@ -36,6 +36,9 @@
 
 (comment
 
+  (externs/parse-externs
+    (externs/resource->source-file (io/resource "goog/object/object.js")))
+
   (externs/analyze-goog-file "goog/object/object.js")
 
   (test/run-tests)

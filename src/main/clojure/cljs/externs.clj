@@ -101,24 +101,25 @@
     (.getToken node)))
 
 ;; handle named function case (i.e. goog.modules)
-(defmethod parse-extern-node Token/FUNCTION [node]
+;; function foo {}, the entire function is the node
+(defmethod parse-extern-node Token/FUNCTION [^Node node]
   (when (> (.getChildCount node) 0)
     (let [ty (get-var-info node)]
       (doto
         (cond-> (parse-extern-node (.getFirstChild node))
           ty (-> first (annotate ty) vector))))))
 
-(defmethod parse-extern-node Token/VAR [node]
+(defmethod parse-extern-node Token/VAR [^Node node]
   (when (> (.getChildCount node) 0)
     (let [ty (get-var-info node)]
       (cond-> (parse-extern-node (.getFirstChild node))
         ty (-> first (annotate ty) vector)))))
 
-(defmethod parse-extern-node Token/EXPR_RESULT [node]
+(defmethod parse-extern-node Token/EXPR_RESULT [^Node node]
   (when (> (.getChildCount node) 0)
     (parse-extern-node (.getFirstChild node))))
 
-(defmethod parse-extern-node Token/ASSIGN [node]
+(defmethod parse-extern-node Token/ASSIGN [^Node node]
   (when (> (.getChildCount node) 0)
     (let [ty  (get-var-info node)
           lhs (cond-> (first (parse-extern-node (.getFirstChild node)))
@@ -131,14 +132,24 @@
             lhs))
         [lhs]))))
 
-(defmethod parse-extern-node Token/NAME [node]
-  ;; also check .getString - goog.module won't have qualified names
-  (let [lhs (map symbol (string/split (or (.getQualifiedName node) (.getString node)) #"\."))]
-    (if (> (.getChildCount node) 0)
-      (let [externs (parse-extern-node (.getFirstChild node))]
-        (conj (map (fn [ext] (concat lhs ext)) externs)
-          lhs))
-      [lhs])))
+;; JavaScript name
+;; function foo {}, in this case the `foo` name node
+;; {"foo": bar}, in this case the `bar` name node
+(defmethod parse-extern-node Token/NAME [^Node node]
+  (if (= Token/STRING_KEY (-> node .getParent .getToken))
+    ;; if we are inside an object literal we are done
+    []
+    ;; also check .getString - goog.module defs won't have qualified names
+    (let [name (or (.getQualifiedName node) (.getString node))
+          lhs  (when-not (string/blank? name)
+                 (map symbol (string/split name #"\.")))]
+      (if (seq lhs)
+        (if (> (.getChildCount node) 0)
+          (let [externs (parse-extern-node (.getFirstChild node))]
+            (conj (map (fn [ext] (concat lhs ext)) externs)
+              lhs))
+          [lhs])
+        []))))
 
 (defmethod parse-extern-node Token/GETPROP [node]
   (when-not *ignore-var*
@@ -147,6 +158,8 @@
          (annotate props ty)
          props)])))
 
+;; JavaScript Object literal
+;; { ... }
 (defmethod parse-extern-node Token/OBJECTLIT [node]
   (when (> (.getChildCount node) 0)
     (loop [nodes (.children node)
@@ -156,8 +169,10 @@
         (recur (rest nodes)
           (concat externs (parse-extern-node (first nodes))))))))
 
-(defmethod parse-extern-node Token/STRING_KEY [node]
-  (let [lhs (map symbol (string/split (.getString node) #"\."))]
+;; Object literal string key node
+;; {"foo": bar} - the key and value together
+(defmethod parse-extern-node Token/STRING_KEY [^Node node]
+  (let [lhs [(-> node .getString symbol)]]
     (if (> (.getChildCount node) 0)
       (let [externs (parse-extern-node (.getFirstChild node))]
         (conj (map (fn [ext] (concat lhs ext)) externs)
@@ -246,16 +261,20 @@
 
 (defmethod parsed->defs :goog
   ([externs _]
-   (let [ns-segs (into [] (map symbol (string/split (str *goog-ns*) #"\.")))]
+   (let [grouped (group-by #(= 'exports (first %)) externs)
+         exports (->> (get grouped true)
+                   (map (comp vec rest))
+                   (remove empty?)
+                   set)
+         exported (filter exports (get grouped false))]
      (reduce
        (fn [m xs]
-         ;; TODO: limit to the exports
          (if-not (= 'exports (first xs))
            (let [sym (last xs)]
              (cond-> m
                (seq xs) (assoc sym (merge (meta sym) {:ns *goog-ns* :name sym}))))
            m))
-       {} externs))))
+       {} exported))))
 
 (defmethod parsed->defs :default
   ([externs _]
