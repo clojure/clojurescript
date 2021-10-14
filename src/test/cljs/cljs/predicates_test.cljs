@@ -8,7 +8,7 @@
 
 (ns cljs.predicates-test
   (:require [cljs.test :as test :refer-macros [deftest is]])
-  (:import [goog.math Long Integer]))
+  (:import [goog.math Integer]))
 
 (def pred-val-table
   (let [uuid (uuid "00000000-0000-0000-0000-000000000000")]
@@ -41,9 +41,15 @@
   (let [posint 10e10
         negint -10e10
         neg0   (/ ##-Inf)
-        natl   (Long.getZero)
-        posl   (Long.fromNumber posint)
-        negl   (Long.fromNumber negint)
+        ;; NOTE: we must go through a var because in self-parity tests
+        ;; we cannot simply import goog.module namespaces if cljs.core
+        ;; depends on the type - that's because cljs.core was *separately
+        ;; compiled* already bundling goog.modules. In many cases this is
+        ;; not an issue, but it is an issue if internally we use the type
+        ;; to make instanceof assertions - which we do for Long
+        natl   (.getZero LongImpl)
+        posl   (.fromNumber LongImpl posint)
+        negl   (.fromNumber LongImpl negint)
         nati   Integer.ZERO
         posi   (Integer.fromNumber posint)
         negi   (Integer.fromNumber negint)]
