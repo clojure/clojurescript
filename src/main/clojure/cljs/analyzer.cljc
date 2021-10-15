@@ -812,6 +812,12 @@
     (or (contains? global-exports (symbol module))
         (contains? global-exports (name module)))))
 
+(defn goog-module-dep?
+  [module]
+  (let [[module _] (lib&sublib module)
+        module-type (get-in @env/*compiler* [:js-dependency-index (str module) :module])]
+    (= :goog module-type)))
+
 (defn confirm-var-exists
   ([env prefix suffix]
    (let [warn (confirm-var-exist-warning env prefix suffix)]
@@ -1010,6 +1016,12 @@
   (str "node$module$" (munge (string/replace (str name) #"[.\/]" #?(:clj "\\$"
                                                                     :cljs "$$")))))
 
+(defn munge-goog-module-lib
+  ([name]
+   (str "goog$module$" (munge (string/replace (str name) #"[.\/]" #?(:clj "\\$" :cljs "$$")))))
+  ([ns name]
+   (str (munge ns) "." (munge-goog-module-lib name))))
+
 (defn munge-global-export [name]
   (str "global$module$" (munge (string/replace (str name) #"[.\/]" #?(:clj "\\$"
                                                                       :cljs "$$")))))
@@ -1031,6 +1043,7 @@
 
 (defn ns->module-type [ns]
   (cond
+    (goog-module-dep? ns) :goog-module
     (js-module-exists? ns) :js
     (node-module-dep? ns) :node
     (dep-has-global-exports? ns) :global))
@@ -1071,6 +1084,12 @@
      :name    (symbol (str current-ns) (str (munge-node-lib full-ns) "." (name sym)))
      :op      :js-var
      :foreign true}))
+
+(defmethod resolve* :goog-module
+  [env sym full-ns current-ns]
+  {:name (symbol (str current-ns) (str (munge-goog-module-lib full-ns) "." (name sym)))
+   :ns current-ns
+   :op :var})
 
 (defmethod resolve* :global
   [env sym full-ns current-ns]
@@ -1134,6 +1153,15 @@
                        (munge-global-export (resolve-ns-alias env ns)))
                :op :js-var
                :ns current-ns})))
+
+(defn resolve-import
+  "goog.modules are deterministically assigned to a property of the namespace,
+   we cannot expect the reference will be globally available, so we resolve to
+   namespace local reference."
+  [env import]
+  (if (goog-module-dep? import)
+    (symbol (munge-goog-module-lib (-> env :ns :name) import))
+    import))
 
 ;; core.async calls `macroexpand-1` manually with an ill-formed
 ;; :locals map. Normally :locals maps symbols maps, but
@@ -1207,7 +1235,13 @@
              ;; check if prefix is some existing def
              (if-let [resolved (resolve-var env prefix nil false)]
                (update resolved :name #(symbol (str % "." suffix)))
-               (let [idx (.lastIndexOf s ".")
+               ;; glib imports (i.e. (:import [goog.module ModuleLoader])
+               ;; are always just dotted symbols after the recursion
+               (let [s   (str
+                           (cond->> s
+                             (goog-module-dep? sym)
+                             (resolve-import env)))
+                     idx (.lastIndexOf (str s) ".")
                      pre (subs s 0 idx)
                      suf (subs s (inc idx))]
                  {:op   :var

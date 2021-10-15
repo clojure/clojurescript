@@ -9,8 +9,8 @@
 (ns cljs.loader
   (:require [goog.object :as gobj]
             [goog.html.legacyconversions :as legacy])
-  (:import [goog.module ModuleLoader]
-           [goog.module ModuleManager]))
+  (:import [goog.module ModuleManager]
+           [goog.module ModuleLoader]))
 
 (def module-infos MODULE_INFOS) ;; set by compiler
 (def module-uris

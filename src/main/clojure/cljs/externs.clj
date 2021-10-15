@@ -16,7 +16,6 @@
            [com.google.javascript.jscomp.parsing Config$JsDocParsing]
            [com.google.javascript.rhino
             Node Token JSTypeExpression JSDocInfo$Visibility]
-           [java.nio.charset StandardCharsets]
            [java.util.logging Level]))
 
 (def ^:dynamic *ignore-var* false)
@@ -26,7 +25,10 @@
 ;; ------------------------------------------------------------------------------
 ;; Externs Parsing
 
-(defn annotate [props ty]
+(defn annotate
+  "Given a sequential list of properties [foo core baz] representing segments
+  of the namespace, annotate the last symbol with the type information."
+  [props ty]
   (when (seq props)
     (conj
       (into [] (butlast props))
@@ -35,7 +37,8 @@
 (defn get-tag [^JSTypeExpression texpr]
   (when-let [root (.getRoot texpr)]
     (if (.isString root)
-      (symbol (.getString root))(if-let [child (.. root getFirstChild)]
+      (symbol (.getString root))
+      (if-let [child (.. root getFirstChild)]
         (if (.isString child)
           (symbol (.. child getString)))))))
 
@@ -97,17 +100,26 @@
   (fn [^Node node]
     (.getToken node)))
 
-(defmethod parse-extern-node Token/VAR [node]
+;; handle named function case (i.e. goog.modules)
+;; function foo {}, the entire function is the node
+(defmethod parse-extern-node Token/FUNCTION [^Node node]
+  (when (> (.getChildCount node) 0)
+    (let [ty (get-var-info node)]
+      (doto
+        (cond-> (parse-extern-node (.getFirstChild node))
+          ty (-> first (annotate ty) vector))))))
+
+(defmethod parse-extern-node Token/VAR [^Node node]
   (when (> (.getChildCount node) 0)
     (let [ty (get-var-info node)]
       (cond-> (parse-extern-node (.getFirstChild node))
         ty (-> first (annotate ty) vector)))))
 
-(defmethod parse-extern-node Token/EXPR_RESULT [node]
+(defmethod parse-extern-node Token/EXPR_RESULT [^Node node]
   (when (> (.getChildCount node) 0)
     (parse-extern-node (.getFirstChild node))))
 
-(defmethod parse-extern-node Token/ASSIGN [node]
+(defmethod parse-extern-node Token/ASSIGN [^Node node]
   (when (> (.getChildCount node) 0)
     (let [ty  (get-var-info node)
           lhs (cond-> (first (parse-extern-node (.getFirstChild node)))
@@ -120,13 +132,24 @@
             lhs))
         [lhs]))))
 
-(defmethod parse-extern-node Token/NAME [node]
-  (let [lhs (map symbol (string/split (.getQualifiedName node) #"\."))]
-    (if (> (.getChildCount node) 0)
-      (let [externs (parse-extern-node (.getFirstChild node))]
-        (conj (map (fn [ext] (concat lhs ext)) externs)
-          lhs))
-      [lhs])))
+;; JavaScript name
+;; function foo {}, in this case the `foo` name node
+;; {"foo": bar}, in this case the `bar` name node
+(defmethod parse-extern-node Token/NAME [^Node node]
+  (if (= Token/STRING_KEY (-> node .getParent .getToken))
+    ;; if we are inside an object literal we are done
+    []
+    ;; also check .getString - goog.module defs won't have qualified names
+    (let [name (or (.getQualifiedName node) (.getString node))
+          lhs  (when-not (string/blank? name)
+                 (map symbol (string/split name #"\.")))]
+      (if (seq lhs)
+        (if (> (.getChildCount node) 0)
+          (let [externs (parse-extern-node (.getFirstChild node))]
+            (conj (map (fn [ext] (concat lhs ext)) externs)
+              lhs))
+          [lhs])
+        []))))
 
 (defmethod parse-extern-node Token/GETPROP [node]
   (when-not *ignore-var*
@@ -135,6 +158,8 @@
          (annotate props ty)
          props)])))
 
+;; JavaScript Object literal
+;; { ... }
 (defmethod parse-extern-node Token/OBJECTLIT [node]
   (when (> (.getChildCount node) 0)
     (loop [nodes (.children node)
@@ -144,8 +169,10 @@
         (recur (rest nodes)
           (concat externs (parse-extern-node (first nodes))))))))
 
-(defmethod parse-extern-node Token/STRING_KEY [node]
-  (let [lhs (map symbol (string/split (.getString node) #"\."))]
+;; Object literal string key node
+;; {"foo": bar} - the key and value together
+(defmethod parse-extern-node Token/STRING_KEY [^Node node]
+  (let [lhs [(-> node .getString symbol)]]
     (if (> (.getChildCount node) 0)
       (let [externs (parse-extern-node (.getFirstChild node))]
         (conj (map (fn [ext] (concat lhs ext)) externs)
@@ -154,7 +181,17 @@
 
 (defmethod parse-extern-node :default [node])
 
-(defn parse-externs [^SourceFile source-file]
+(defn parse-externs
+  "Returns a sequential collection of the form:
+
+    [[foo core first]
+     [foo core next]
+     [foo core baz last] ...]
+
+  Where the last symbol is annotated with var info via metadata. This simple
+  structure captures the nested form of Closure namespaces and aids
+  direct indexing."
+  [^SourceFile source-file]
   (binding [*source-file* (.getName source-file)]
     (let [^CompilerOptions compiler-options
           (doto (CompilerOptions.)
@@ -167,8 +204,13 @@
               compiler)
             (.init (list source-file) '() compiler-options))
           js-ast (JsAst. source-file)
-          ^Node root (.getAstRoot js-ast closure-compiler)]
-      (loop [nodes (.children root)
+          ^Node root (.getAstRoot js-ast closure-compiler)
+          nodes (.children root)]
+      (loop [nodes (cond-> nodes
+                     ;; handle goog.modules which won't have top-levels
+                     ;; need to look at internal children
+                     (= Token/MODULE_BODY (some-> nodes first .getToken))
+                     (-> first .children))
              externs []]
         (if (empty? nodes)
           externs
@@ -215,17 +257,42 @@
       (= (inc (count ns-segs)) (count var-segs))
       (= ns-segs (take (count ns-segs) var-segs)))))
 
-(defn parsed->defs [externs]
-  (let [ns-segs (into [] (map symbol (string/split (str *goog-ns*) #"\.")))]
-    (reduce
-      (fn [m xs]
-        ;; ignore definitions from other provided namespaces not under consideration
-        (if (ns-match? ns-segs xs)
-          (let [sym (last xs)]
-            (cond-> m
-              (seq xs) (assoc sym (merge (meta sym) {:ns *goog-ns* :name sym}))))
-          m))
-      {} externs)))
+(defmulti parsed->defs (fn [_ module-type] module-type))
+
+(defmethod parsed->defs :goog
+  ([externs _]
+   (let [grouped (group-by #(= 'exports (first %)) externs)
+         exports (->> (get grouped true)
+                   (map (comp vec rest))
+                   (remove empty?)
+                   set)
+         exported (filter exports (get grouped false))]
+     (reduce
+       (fn [m xs]
+         (let [sym (last xs)]
+           (cond-> m
+             (seq xs) (assoc sym (merge (meta sym) {:ns *goog-ns* :name sym})))))
+       {} exported))))
+
+(defmethod parsed->defs :default
+  ([externs _]
+   (let [ns-segs (into [] (map symbol (string/split (str *goog-ns*) #"\.")))]
+     (reduce
+       (fn [m xs]
+         ;; ignore definitions from other provided namespaces not under consideration
+         (if (ns-match? ns-segs xs)
+           (let [sym (last xs)]
+             (cond-> m
+               (seq xs) (assoc sym (merge (meta sym) {:ns *goog-ns* :name sym}))))
+           m))
+       {} externs))))
+
+(defn resource->source-file
+  [resource]
+  (-> (SourceFile/builder)
+    (.withPath (.toPath (io/file (.getPath resource))))
+    (.withContent (io/input-stream resource))
+    (.build)))
 
 (defn analyze-goog-file
   ([f]
@@ -237,11 +304,8 @@
      (binding [*goog-ns* ns]
        {:name ns
         :defs (parsed->defs
-                (parse-externs
-                  (-> (SourceFile/builder)
-                    (.withPath (.toPath (io/file (.getPath rsrc))))
-                    (.withContent (io/input-stream rsrc))
-                    (.build))))}))))
+                (parse-externs (resource->source-file rsrc))
+                (:module desc))}))))
 
 (comment
   (require '[clojure.java.io :as io]

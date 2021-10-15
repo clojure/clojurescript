@@ -2284,6 +2284,10 @@ reduces them without incurring seq initialization"
        (not (identical? n js/Infinity))
        (== (js/parseFloat n) (js/parseInt n 10))))
 
+(def
+  ^{:doc "INTERNAL: do not use"}
+  LongImpl goog.math.Long)
+
 (defn int?
   "Return true if x satisfies integer? or is an instance of goog.math.Integer
    or goog.math.Long."
