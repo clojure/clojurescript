@@ -815,8 +815,14 @@
 (defn goog-module-dep?
   [module]
   (let [[module _] (lib&sublib module)
-        module-type (get-in @env/*compiler* [:js-dependency-index (str module) :module])]
-    (= :goog module-type)))
+        module-str (str module)
+        options    (compiler-options)]
+    ;; CLJS-3330: flag for loading some old things in the old way to give time
+    ;; for library authors to migrate
+    (if (and (:global-goog-object&array options)
+             (#{"goog.object" "goog.array"} module-str))
+      false
+      (= :goog (get-in @env/*compiler* [:js-dependency-index module-str :module])))))
 
 (defn confirm-var-exists
   ([env prefix suffix]
