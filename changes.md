@@ -1,3 +1,15 @@
+## 1.10.891
+
+### Changes
+* Update Google Closure Compiler `v20210808`
+* Update Google Closure Library `0.0-20211011-0726fdeb`
+* CLJS-3330: Flag for legacy loading of goog.object & goog.array
+
+### Fixes
+* CLJS-3056: runtime namespace load order is independent from ordering in ns macro :require form
+* CLJS-3074: Resolve :warning-handlers compiler option when symbols
+* CLJS-3317: PersistentVector invoke does not align with Clojure
+
 ## 1.10.879
 
 ### Changes
