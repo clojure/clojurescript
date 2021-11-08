@@ -54,6 +54,27 @@ jobs:
           WebKit/WebKitBuild/Release/bin/jsc builds/out-adv/core-advanced-test.js | tee test-out.txt
           grep -qxF '0 failures, 0 errors.' test-out.txt
 
+    # Runtime Tests
+  runtime-windows-test:
+    name: Runtime Windows Tests
+    runs-on: windows-2019
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: DeLaGuardo/setup-clojure@3.5
+        with:
+          cli: '1.10.1.763'
+
+      - name: Build tests
+        run: clojure -M:runtime.test.build
+        shell: powershell
+
+      - name: Run tests
+        run: |
+          node builds/out-adv/core-advanced-test.js | tee test-out.txt
+          findstr "0 failures, 0 errors." test-out.txt
+        shell: powershell
+
   # Self-host Tests
   self-host-test:
     name: Self-host Tests

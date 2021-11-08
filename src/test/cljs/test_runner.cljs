@@ -56,7 +56,11 @@
             [cljs.extend-to-native-test]))
 
 (set! *print-newline* false)
-(set-print-fn! js/print)
+
+;; When testing Windows we default to Node.js
+(if (exists? js/print)
+  (set-print-fn! js/print)
+  (enable-console-print!))
 
 (run-tests
   'cljs.apply-test
