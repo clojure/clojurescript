@@ -61,37 +61,19 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - uses: DeLaGuardo/setup-clojure@3.1
+      - uses: DeLaGuardo/setup-clojure@3.5
         with:
-          tools-deps: '1.10.1.763'
-
-      - name: Cache maven
-        uses: actions/cache@v2
-        env:
-          cache-name: cache-maven
-        with:
-          path: ~/.m2
-          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/deps.edn') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ env.cache-name }}-
-
-      - name: Cache gitlibs
-        uses: actions/cache@v2
-        env:
-          cache-name: cache-gitlibs
-        with:
-          path: ~/.gitlibs
-          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/deps.edn') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ env.cache-name }}-
+          cli: '1.10.1.763'
 
       - name: Build tests
         run: clojure -M:runtime.test.build
+        shell: powershell
 
       - name: Run tests
         run: |
           node builds/out-adv/core-advanced-test.js | tee test-out.txt
           grep -qxF '0 failures, 0 errors.' test-out.txt
+        shell: powershell
 
   # Self-host Tests
   self-host-test:
