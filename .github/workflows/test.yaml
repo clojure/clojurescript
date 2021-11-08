@@ -72,7 +72,7 @@ jobs:
       - name: Run tests
         run: |
           node builds/out-adv/core-advanced-test.js | tee test-out.txt
-          grep -qxF "0 failures, 0 errors." test-out.txt
+          findstr "0 failures, 0 errors." test-out.txt
         shell: powershell
 
   # Self-host Tests
