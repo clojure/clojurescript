@@ -16,7 +16,8 @@
            [com.google.javascript.jscomp.parsing Config$JsDocParsing]
            [com.google.javascript.rhino
             Node Token JSTypeExpression JSDocInfo$Visibility]
-           [java.util.logging Level]))
+           [java.util.logging Level]
+           [java.net URL]))
 
 (def ^:dynamic *ignore-var* false)
 (def ^:dynamic *source-file* nil)
@@ -288,9 +289,9 @@
        {} externs))))
 
 (defn resource->source-file
-  [resource]
+  [^URL resource]
   (-> (SourceFile/builder)
-    (.withPath (.toPath (io/file (.getPath resource))))
+    (.withPath (.getPath resource))
     (.withContent (io/input-stream resource))
     (.build)))
 
@@ -312,6 +313,8 @@
            '[cljs.closure :as closure]
            '[clojure.pprint :refer [pprint]]
            '[cljs.js-deps :as js-deps])
+
+  (resource->source-file (io/resource "goog/dom/dom.js"))
 
   (pprint
     (get-in (analyze-goog-file "goog/dom/dom.js")
