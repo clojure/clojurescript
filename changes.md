@@ -6,6 +6,7 @@
 * CLJS-3330: Flag for legacy loading of goog.object & goog.array
 
 ### Fixes
+* CLJS-3324: hash-map behavior differs from Clojure
 * CLJS-3056: runtime namespace load order is independent from ordering in ns macro :require form
 * CLJS-3074: Resolve :warning-handlers compiler option when symbols
 * CLJS-3317: PersistentVector invoke does not align with Clojure
