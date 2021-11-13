@@ -1874,3 +1874,7 @@
             (for [e s :when (and (sequential? e) (every? (fn [x] x) e))]
               e))
           [[]]))))
+
+(deftest test-cljs-3333
+  (defonce not-native 17)   ;; Intentionally matching a core name
+  (is (== 17 not-native)))

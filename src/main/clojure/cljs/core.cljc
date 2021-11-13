@@ -618,8 +618,11 @@
   "defs name to have the root value of init iff the named var has no root value,
   else init is unevaluated"
   [x init]
-  `(when-not (exists? ~x)
-     (def ~x ~init)))
+  (core/let [qualified (if (namespace x)
+                         x
+                         (symbol (core/str (core/-> &env :ns :name)) (name x)))]
+    `(when-not (exists? ~qualified)
+       (def ~x ~init))))
 
 (core/defn destructure [bindings]
   (core/let [bents (partition 2 bindings)
