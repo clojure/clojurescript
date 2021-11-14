@@ -72,6 +72,12 @@
   (with-out-str
     (run! println lines)))
 
+(defn equiv-modulo-newlines
+  "Returns whether strings are equivalent, disregarding differences in
+  embedded system-dependent newlines."
+  [s & more]
+  (== 1 (count (group-by string/split-lines (list* s more)))))
+
 (defmethod clojure.test/assert-expr 'thrown-with-cause-msg? [msg form]
   ;; (is (thrown-with-cause-msg? c re expr))
   ;; Asserts that evaluating expr throws an exception of class c.

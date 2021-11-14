@@ -14,6 +14,7 @@
             [cljs.compiler :as comp]
             [cljs.compiler-tests :as comp-tests :refer [compile-form-seq emit]]
             [cljs.env :as env]
+            [cljs.test-util :refer [equiv-modulo-newlines]]
             [clojure.string :as string]
             [clojure.test :as test :refer [deftest is testing]]))
 
@@ -77,7 +78,7 @@
                      `(let [~local true]
                         (and true (or ~local false))))
           code     (with-out-str (emit ast))]
-      (is (= code
+      (is (equiv-modulo-newlines code
             (string/replace
               "(function (){var $SYM = true;\nreturn ((true) && ((($SYM) || (false))));\n})()"
               "$SYM" (str local)))))))
