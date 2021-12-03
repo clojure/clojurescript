@@ -1,3 +1,10 @@
+## 1.10.896
+
+### Fixes
+* CLJS-3336: REGRESSION: Cannot require `goog`
+* CLJS-3337: REPL, Regression for :reload
+* Fix Windows path issue in cljs.externs
+
 ## 1.10.891
 
 ### Changes
