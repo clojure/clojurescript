@@ -13,7 +13,7 @@ Latest stable release: 1.10.891
 [Leiningen](http://github.com/technomancy/leiningen/) dependency information:
 
 ```
-[org.clojure/clojurescript "1.10.891"]
+[org.clojure/clojurescript "1.10.896"]
 ```
 
 [Maven](http://maven.apache.org) dependency information:
@@ -22,7 +22,7 @@ Latest stable release: 1.10.891
 <dependency>
   <groupId>org.clojure</groupId>
   <artifactId>clojurescript</artifactId>
-  <version>1.10.891</version>
+  <version>1.10.896</version>
 </dependency>
 ```
 
