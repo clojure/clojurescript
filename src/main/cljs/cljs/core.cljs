@@ -1008,7 +1008,7 @@
     (bit-xor (-hash o) 0)
 
     (number? o)
-    (if (js/isFinite o)
+    (if ^boolean (js/isFinite o)
       (js-mod (Math/floor o) 2147483647)
       (case o
         ##Inf
