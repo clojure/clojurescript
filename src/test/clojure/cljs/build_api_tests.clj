@@ -744,9 +744,9 @@
                                           :optimizations    :none
                                           :target           :nodejs
                                           :install-deps     true
-                                          :npm-deps         {:react        "15.6.1"
-                                                             :react-dom    "15.6.1"
-                                                             :react-select "3.1.0"}
+                                          :npm-deps         {:react        "16.13.0"
+                                                             :react-dom    "16.13.0"
+                                                             :react-select "5.2.1"}
                                           :foreign-libs     [{:file (.getPath (io/file "src" "test" "cljs_build" "cljs_3235" "foreign.js"))
                                                               :provides ["some-foreign"]
                                                               :global-exports '{some-foreign globalLib}}]
