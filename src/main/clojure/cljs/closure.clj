@@ -2889,7 +2889,12 @@
                                           (when (or ana/*verbose* (:verbose opts))
                                             (util/debug-prn "Ignoring JS module" url "based on the file extension"))
                                           (assoc js :source ""))
-                                        (assoc js :source (deps/-source js opts))))))
+                                        (if-let [src (deps/-source js opts)]
+                                          (assoc js :source src)
+                                          (throw
+                                            (ex-info (str "Could not get source for JS module")
+                                              {:js-module lib
+                                               :clojure.error/phase :compilation})))))))
                              (map (fn [js]
                                     (if (:preprocess js)
                                       (preprocess-js js opts)
