@@ -23,11 +23,11 @@
 (defn preprocess-jsx [ijs _]
   (assoc ijs :source (clojure.string/replace
                        (:source ijs)
-                       (re-pattern (str "\\(\n"
-                                        "\\s*<svg width=\"200px\" height=\"200px\" className=\"center\">\n"
-                                        "\\s*<circle cx=\"100px\" cy=\"100px\" r=\"100px\" fill=\\{this.props.color\\}>\n"
-                                        "\\s*</circle>\n"
-                                        "\\s*</svg>\n"
+                       (re-pattern (str "\\(\\R"
+                                        "\\s*<svg width=\"200px\" height=\"200px\" className=\"center\">\\R"
+                                        "\\s*<circle cx=\"100px\" cy=\"100px\" r=\"100px\" fill=\\{this.props.color\\}>\\R"
+                                        "\\s*</circle>\\R"
+                                        "\\s*</svg>\\R"
                                         "\\s*\\)"))
                        (str " React.createElement(\"svg\", {width:\"200px\", height:\"200px\", className:\"center\"}, "
                             "React.createElement(\"circle\", {cx:\"100px\", cy:\"100px\", r:\"100px\", fill:this.props.color})"
