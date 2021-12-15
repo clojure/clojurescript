@@ -973,7 +973,7 @@
   (if (core/symbol? x)
     (core/let [x     (core/cond-> (:name (cljs.analyzer/resolve-var &env x))
                        (= "js" (namespace x)) name)
-               segs  (string/split (core/str (string/replace (core/str x) "/" ".")) #"\.")
+               segs  (string/split (core/str (string/replace-first (core/str x) "/" ".")) #"\.")
                n     (count segs)
                syms  (map
                        #(vary-meta (symbol "js" (string/join "." %))

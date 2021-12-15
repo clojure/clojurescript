@@ -1878,3 +1878,8 @@
 (deftest test-cljs-3333
   (defonce not-native 17)   ;; Intentionally matching a core name
   (is (== 17 not-native)))
+
+(deftest test-cljs-3334
+  (is (exists? /))
+  (is (exists? cljs.core//))
+  (is (not (exists? cljs.core-test//))))
