@@ -1618,11 +1618,11 @@
                              {:ns         (or ns-name 'cljs.user)
                               :macros-ns  (:macros-ns opts)
                               :provides   [ns-name]
-                              :requires   (cond-> (distinct deps)
-                                            (get-in @env/*compiler* [:options :emit-constants])
-                                            (conj ana/constants-ns-sym)
-                                            (not= ns-name 'cljs.core)
-                                            (conj 'cljs.core))
+                              :requires   (if (= ns-name 'cljs.core)
+                                            (vec (distinct deps))
+                                            (cond-> (conj (vec (distinct deps)) 'cljs.core)
+                                              (get-in @env/*compiler* [:options :emit-constants])
+                                              (conj ana/constants-ns-sym)))
                               :file        dest
                               :out-file    (.toString ^File dest)
                               :source-file src}
