@@ -49,8 +49,8 @@
                    '[(ns foo.core
                        (:import [goog.module ModuleLoader]))])
           aenv   (assoc (ana/empty-env) :ns (ana/get-namespace cenv 'foo.core))]
-      (is (= '{:name foo.core.goog$module$goog$module$ModuleLoader
-               :ns goog.module ;; a bit odd, but doesn't matter, for emission we just :name
+      (is (= '{:name foo.core/goog$module$goog$module$ModuleLoader
+               :ns foo.core
                :op :var}
             (env/with-compiler-env cenv
               (ana/resolve-var aenv 'ModuleLoader)))))))
