@@ -5,6 +5,7 @@
             [cljs.build-api-tests]
             [cljs.closure-tests]
             [cljs.compiler-tests]
+            [cljs.compiler.glib-module-test]
             [cljs.externs-infer-tests]
             [cljs.externs-parsing-tests]
             [cljs.instant-tests]
@@ -26,6 +27,7 @@
           'cljs.build-api-tests
           'cljs.closure-tests
           'cljs.compiler-tests
+          'cljs.compiler.glib-module-test
           'cljs.externs-infer-tests
           'cljs.externs-parsing-tests
           'cljs.instant-tests
