@@ -2798,7 +2798,8 @@
                       pkg-jsons
                       (let [export-pkg-json
                             (io/file
-                              (.getCanonicalPath (io/file (trim-package-json path) export))
+                              (trim-package-json path)
+                              (trim-relative export)
                               "package.json")]
                         (cond-> pkg-jsons
                           (.exists export-pkg-json)
