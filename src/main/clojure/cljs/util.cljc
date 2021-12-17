@@ -40,7 +40,7 @@
                            (if (== n Integer/MIN_VALUE)
                              0
                              (Math/abs n)))]
-           (str synthethetic-version-prefix 
+           (str synthethetic-version-prefix
                 (qualifier (reduce unchecked-add-int (map file-hash (file-seq (main-src-directory)))))))))
 
 (defn ^String clojurescript-version
@@ -390,14 +390,18 @@
       (str (string/join ", " (pop xs)) " and " (peek xs)))))
 
 (defn module-file-seq
+  "Return a seq of all files in `node_modules` ending in `.js` or `.json` that are
+   not in an internally nested `node_modules` dir."
   ([] (module-file-seq (io/file "node_modules")))
   ([dir]
    (let [fseq (tree-seq
                 (fn [^File f]
+                  ;; ignore embedded node_modules, the user did not install
+                  ;; these
                   (and (. f (isDirectory))
-                    (not (boolean
-                           (re-find #"node_modules[\\\/].*[\\\/]node_modules"
-                             (.getPath f))))))
+                       (not (boolean
+                              (re-find #"node_modules[\\\/].*[\\\/]node_modules"
+                                (.getPath f))))))
                 (fn [^File d]
                   (seq (. d (listFiles))))
                 dir)]
