@@ -2766,20 +2766,58 @@
        []))))
 
 (defn- node-file-seq->libs-spec*
+  "Given a sequence of non-nested node_module paths where the extension ends in
+  `.js/.json`, return lib-spec maps for each path containing at least :file,
+   :module-type, and :provides."
   [module-fseq opts]
   (letfn [(package-json? [path]
-            (boolean (re-find #"node_modules[/\\](@[^/\\]+?[/\\])?[^/\\]+?[/\\]package\.json$" path)))]
-    (let [pkg-jsons (into {}
-                      (comp
-                        (map #(.getAbsolutePath %))
-                        (filter package-json?)
-                        (map (fn [path]
-                               [path (json/read-str (slurp path))])))
-                      module-fseq)
-          trim-package-json (fn [s]
-                              (if (string/ends-with? s "package.json")
-                                (subs s 0 (- (count s) 12))
-                                s))]
+            (= "package.json" (.getName (io/file path))))
+
+          (top-level-package-json? [path]
+            (boolean (re-find #"node_modules[/\\](@[^/\\]+?[/\\])?[^/\\]+?[/\\]package\.json$" path)))
+
+          ;; the path sans the package.json part
+          ;; i.e. some_lib/package.json -> some_lib
+          (trim-package-json [s]
+            (if (string/ends-with? s "package.json")
+              (subs s 0 (- (count s) 12))
+              s))
+
+          (trim-relative [path]
+            (cond-> path
+              (string/starts-with? path "./")
+              (subs 2)))
+
+          (add-exports [pkg-jsons]
+            (reduce-kv
+              (fn [pkg-jsons path {:strs [exports] :as pkg-json}]
+                (reduce-kv
+                  (fn [pkg-jsons export _]
+                    ;; NOTE: ignore "." exports for now
+                    (if (= "." export)
+                      pkg-jsons
+                      (let [export-pkg-json
+                            (io/file
+                              (.getCanonicalPath (io/file (trim-package-json path) export))
+                              "package.json")]
+                        (cond-> pkg-jsons
+                          (.exists export-pkg-json)
+                          (assoc
+                            (.getAbsolutePath export-pkg-json)
+                            (json/read-str (slurp export-pkg-json)))))))
+                  pkg-jsons exports))
+              pkg-jsons pkg-jsons))]
+    (let [
+          ;; a map of all the *top-level* package.json paths and their exports
+          ;; to the package.json contents as EDN
+          pkg-jsons (add-exports
+                      (into {}
+                        (comp
+                          (map #(.getAbsolutePath %))
+                          (filter top-level-package-json?)
+                          (map (fn [path]
+                                 [path (json/read-str (slurp path))])))
+                        module-fseq))]
       (into []
         (comp
           (map #(.getAbsolutePath %))
@@ -2787,6 +2825,8 @@
                  (merge
                    {:file path
                     :module-type :es6}
+                   ;; if the file is *not* a package.json, then compute what
+                   ;; namespaces it :provides to ClojureScript
                    (when-not (package-json? path)
                      (let [pkg-json-main (some
                                            (fn [[pkg-json-path {:as pkg-json :strs [name]}]]
@@ -2795,13 +2835,13 @@
                                                (when-not (nil? entry)
                                                  ;; should be the only edge case in
                                                  ;; the package.json main field - Antonio
-                                                 (let [entry (cond-> entry
-                                                              (string/starts-with? entry "./")
-                                                              (subs 2))
+                                                 (let [entry (trim-relative entry)
                                                        entry-path (-> pkg-json-path
                                                                      (string/replace \\ \/)
                                                                      trim-package-json
                                                                      (str entry))]
+                                                   ;; find a package.json entry point that matches
+                                                   ;; the `path`
                                                    (some (fn [candidate]
                                                            (when (= candidate (string/replace path \\ \/))
                                                              name))
