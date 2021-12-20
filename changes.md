@@ -1,3 +1,19 @@
+## 1.10.914
+
+### Fixes
+* CLJS-3339: cljs.core/hash should type hint call to js/isFinite
+* CLJS-3333: defonce expansion non-hygienic with respect to core names
+* CLJS-3334: exists? evaluates to true for cljs.user//
+* CLJS-3341: Revert dependency issue in dep order patch
+
+### Changes
+* CLJS-3332: Cannot require `@firebase/auth`
+* CLJS-3335: CI, test-and-or-code-gen-pass fails on Windows
+* CLJS-3440: CI, Compiler tests fail test-cljs-3235 regarding react-select
+* CLJS-3342: Run CI compiler unit tests on Windows
+* CLJS-3338: Missing CI test coverage
+* CLJS-3343: Failing js module processing test on Windows
+
 ## 1.10.896
 
 ### Fixes
