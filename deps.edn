@@ -28,3 +28,4 @@
   :uberjar               {:extra-deps {com.github.seancorfield/depstar {:mvn/version "2.0.193"}}
                           :exec-fn hf.depstar/uberjar
                           :exec-args {:aot true}}}}
+
