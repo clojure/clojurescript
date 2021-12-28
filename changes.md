@@ -1,3 +1,8 @@
+## 1.11.4
+
+### Fixes
+* CLJS-3345: package.json exports can be a dupe of main
+
 ## 1.10.914
 
 ### Fixes
