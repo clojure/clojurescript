@@ -2791,22 +2791,26 @@
           (add-exports [pkg-jsons]
             (reduce-kv
               (fn [pkg-jsons path {:strs [exports] :as pkg-json}]
-                (reduce-kv
-                  (fn [pkg-jsons export _]
-                    ;; NOTE: ignore "." exports for now
-                    (if (= "." export)
-                      pkg-jsons
-                      (let [export-pkg-json
-                            (io/file
-                              (trim-package-json path)
-                              (trim-relative export)
-                              "package.json")]
-                        (cond-> pkg-jsons
-                          (.exists export-pkg-json)
-                          (assoc
-                            (.getAbsolutePath export-pkg-json)
-                            (json/read-str (slurp export-pkg-json)))))))
-                  pkg-jsons exports))
+                ;; "exports" can just be a dupe of "main", i.e. a string - ignore
+                ;; https://nodejs.org/api/packages.html#main-entry-point-export
+                (if (string? exports)
+                  pkg-jsons
+                  (reduce-kv
+                    (fn [pkg-jsons export _]
+                      ;; NOTE: ignore "." exports for now
+                      (if (= "." export)
+                        pkg-jsons
+                        (let [export-pkg-json
+                              (io/file
+                                (trim-package-json path)
+                                (trim-relative export)
+                                "package.json")]
+                          (cond-> pkg-jsons
+                            (.exists export-pkg-json)
+                            (assoc
+                              (.getAbsolutePath export-pkg-json)
+                              (json/read-str (slurp export-pkg-json)))))))
+                    pkg-jsons exports)))
               pkg-jsons pkg-jsons))]
     (let [
           ;; a map of all the *top-level* package.json paths and their exports
