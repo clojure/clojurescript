@@ -11733,7 +11733,7 @@ reduces them without incurring seq initialization"
   (with-meta
     (persistent!
       (reduce-kv (fn [acc k v] (assoc! acc k (f v)))
-                 (if (instance? IEditableCollection m)
+                 (if (implements? IEditableCollection m)
                    (transient m)
                    (transient {}))
                  m))
