@@ -3244,12 +3244,14 @@
                        #?(:clj  (list (process-rewrite-form
                                         specs))
                           :cljs (list specs)))
+        {:keys [as-aliases] args :libspecs} (nses/elide-aliases-from-ns-specs args)
         {excludes :excludes core-renames :renames} (parse-ns-excludes env args)
         core-renames (reduce (fn [m [original renamed]]
                                (assoc m renamed (symbol "cljs.core" (str original))))
                        {} core-renames)
         deps         (atom [])
-        aliases      (atom {:fns {} :macros {}})
+        ;; as-aliases can only be used *once* because they are about the reader
+        aliases      (atom {:fns as-aliases :macros as-aliases})
         spec-parsers {:require        (partial parse-require-spec env false deps aliases)
                       :require-macros (partial parse-require-spec env true deps aliases)
                       :use            (comp (partial parse-require-spec env false deps aliases)
@@ -3280,7 +3282,8 @@
           {} (remove (fn [[r]] (= r :refer-clojure)) args))]
     (set! *cljs-ns* name)
     (let [require-info
-          {:name           name
+          {:as-aliases     as-aliases
+           :name           name
            :excludes       excludes
            :use-macros     use-macros
            :require-macros require-macros
