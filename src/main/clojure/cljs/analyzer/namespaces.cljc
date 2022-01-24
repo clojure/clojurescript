@@ -56,8 +56,10 @@
              :libspecs   []}]
     (reduce
       (fn [{:keys [as-aliases] :as ret} [spec-key & libspecs]]
-        (let [{:keys [as-aliases libspecs]} (elide-aliases-from-libspecs libspecs as-aliases)]
-          (cond-> ret
-            (not (empty? as-aliases)) (update :as-aliases merge as-aliases)
-            (not (empty? libspecs))   (update :libspecs conj (list* spec-key libspecs)))))
+        (if-not (= :refer-clojure spec-key)
+          (let [{:keys [as-aliases libspecs]} (elide-aliases-from-libspecs libspecs as-aliases)]
+            (cond-> ret
+              (not (empty? as-aliases)) (update :as-aliases merge as-aliases)
+              (not (empty? libspecs))   (update :libspecs conj (list* spec-key libspecs))))
+          (update ret :libspecs conj (list* spec-key libspecs))))
       ret ns-specs)))

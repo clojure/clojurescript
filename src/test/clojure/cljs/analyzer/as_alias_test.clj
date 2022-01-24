@@ -65,9 +65,16 @@
         (is (= '{:as-aliases {} :libspecs [(:require foo.core bar.core woz.core)]}
                (ana-nses/elide-aliases-from-ns-specs
                  '((:require foo.core bar.core woz.core)))))
-        (is (= '{:as-aliases {}, :libspecs [(:require [foo.core] [bar.core] [woz.core])]}
+        (is (= '{:as-aliases {} :libspecs [(:require [foo.core] [bar.core] [woz.core])]}
                (ana-nses/elide-aliases-from-ns-specs
-                 '((:require [foo.core] [bar.core] [woz.core])))))))))
+                 '((:require [foo.core] [bar.core] [woz.core]))))))
+      (testing ":refer-clojure is ignored"
+        (is (= '{:as-aliases {}
+                 :libspecs [(:refer-clojure :exclude [first])
+                            (:require foo.core bar.core woz.core)]}
+              (ana-nses/elide-aliases-from-ns-specs
+                '((:refer-clojure :exclude [first])
+                  (:require foo.core bar.core woz.core)))))))))
 
 (comment
 
