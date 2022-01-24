@@ -72,9 +72,16 @@
         (is (= '{:as-aliases {}
                  :libspecs [(:refer-clojure :exclude [first])
                             (:require foo.core bar.core woz.core)]}
-              (ana-nses/elide-aliases-from-ns-specs
-                '((:refer-clojure :exclude [first])
-                  (:require foo.core bar.core woz.core)))))))))
+               (ana-nses/elide-aliases-from-ns-specs
+                 '((:refer-clojure :exclude [first])
+                   (:require foo.core bar.core woz.core))))))
+      (testing ":reload/:reload-all is ignored"
+        (is (= '{:as-aliases {},
+                 :libspecs [(:refer-clojure :exclude [first])
+                            (:require foo.core bar.core woz.core :reload-all)]}
+               (ana-nses/elide-aliases-from-ns-specs
+                 '((:refer-clojure :exclude [first])
+                   (:require foo.core bar.core woz.core :reload-all)))))))))
 
 (comment
 

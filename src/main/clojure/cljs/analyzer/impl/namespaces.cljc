@@ -13,7 +13,10 @@
    libspec with :as-alias elided. If the libspec was *only* :as-alias do not
    return it."
   [libspec]
-  (if (symbol? libspec)
+  ;; ignore simple requires (symbols) and
+  ;; REPL stuff (keywords, i.e. :reload)
+  (if (or (symbol? libspec)
+          (keyword? libspec))
     {:libspec libspec}
     (let [[lib & spec :as libspec] libspec
           [pre-spec [_ alias & post-spec :as post]] (split-with (complement #{:as-alias}) spec)]
