@@ -7,7 +7,7 @@
 ;; You must not remove this notice, or any other, from this software.
 
 (ns cljs.analyzer.as-alias-test
-  (:require [cljs.analyzer.namespaces :as ana-nses]
+  (:require [cljs.analyzer.impl.namespaces :as ana-nses]
             [cljs.env :as env]
             [clojure.test :as test :refer [deftest testing is]]))
 

@@ -6,7 +6,7 @@
 ;; the terms of this license.
 ;; You must not remove this notice, or any other, from this software.
 
-(ns cljs.analyzer.namespaces)
+(ns cljs.analyzer.impl.namespaces)
 
 (defn check-and-remove-as-alias
   "Given a libspec return a map of :as-alias alias, if was present. Return the
