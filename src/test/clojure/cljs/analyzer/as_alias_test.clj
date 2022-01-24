@@ -17,13 +17,19 @@
 (deftest test-check-and-remove-as-alias
   (let [cenv (env/default-compiler-env)]
     (env/with-compiler-env cenv
-      (is (= '{:as-alias {bar bar.core}}
-              (ana-nses/check-and-remove-as-alias '[bar.core :as-alias bar])))
-      (is (= '{:as-alias {bar bar.core}
-               :libspec  [bar.core :as boo]}
-              (ana-nses/check-and-remove-as-alias '[bar.core :as-alias bar :as boo])))
-      (is (thrown? Throwable
-            (ana-nses/check-and-remove-as-alias '[bar.core :as-alias :bar]))))))
+      (testing "check-and-remove-as-alias basic tests"
+        (is (= '{:as-alias {bar bar.core}}
+               (ana-nses/check-and-remove-as-alias '[bar.core :as-alias bar])))
+        (is (= '{:as-alias {bar bar.core}
+                 :libspec  [bar.core :as boo]}
+               (ana-nses/check-and-remove-as-alias '[bar.core :as-alias bar :as boo])))
+        (is (thrown? Throwable
+              (ana-nses/check-and-remove-as-alias '[bar.core :as-alias :bar]))))
+      (testing "check-and-remove-as-alias should not elide simple specs"
+        (is (= '{:libspec bar.core}
+               (ana-nses/check-and-remove-as-alias 'bar.core)))
+        (is (= '{:libspec [bar.core]}
+               (ana-nses/check-and-remove-as-alias '[bar.core])))))))
 
 (deftest test-eliad-aliases-from-libspecs
   (let [cenv (env/default-compiler-env)]

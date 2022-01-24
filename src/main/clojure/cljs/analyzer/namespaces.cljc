@@ -12,15 +12,18 @@
   "Given a libspec return a map of :as-alias alias, if was present. Return the
    libspec with :as-alias elided. If the libspec was *only* :as-alias do not
    return it."
-  [[lib & spec :as libspec]]
-  (let [[pre-spec [_ alias & post-spec :as post]] (split-with (complement #{:as-alias}) spec)]
-    (if (seq post)
-      (let [libspec' (into [lib] (concat pre-spec post-spec))]
-        (assert (symbol? alias)
-          (str ":as-alias must be followed by a symbol, got: " alias))
-        (cond-> {:as-alias {alias lib}}
-          (> (count libspec') 1) (assoc :libspec libspec')))
-      {:libspec libspec})))
+  [libspec]
+  (if (symbol? libspec)
+    {:libspec libspec}
+    (let [[lib & spec :as libspec] libspec
+          [pre-spec [_ alias & post-spec :as post]] (split-with (complement #{:as-alias}) spec)]
+      (if (seq post)
+        (let [libspec' (into [lib] (concat pre-spec post-spec))]
+          (assert (symbol? alias)
+            (str ":as-alias must be followed by a symbol, got: " alias))
+          (cond-> {:as-alias {alias lib}}
+            (> (count libspec') 1) (assoc :libspec libspec')))
+        {:libspec libspec}))))
 
 (defn check-as-alias-duplicates
   [as-aliases new-as-aliases]
