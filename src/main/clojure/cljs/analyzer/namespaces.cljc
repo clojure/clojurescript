@@ -59,5 +59,5 @@
         (let [{:keys [as-aliases libspecs]} (elide-aliases-from-libspecs libspecs as-aliases)]
           (cond-> ret
             (not (empty? as-aliases)) (update :as-aliases merge as-aliases)
-            (not (empty? libspecs))   (update :libspecs conj (list spec-key libspecs)))))
+            (not (empty? libspecs))   (update :libspecs conj (list* spec-key libspecs)))))
       ret ns-specs)))

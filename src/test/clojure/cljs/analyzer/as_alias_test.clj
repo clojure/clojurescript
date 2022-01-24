@@ -57,9 +57,17 @@
         (ana-nses/elide-aliases-from-ns-specs
           '((:require-macros [blah.core :as-alias blah]
               [lala.core :as-alias lala :as tralala])
-            (:require [foo.core :as-alias foo]
+            (:require
+              [foo.core :as-alias foo]
               [bar.core :as-alias bar]
-              [woz.core :as woz])))))))
+              [woz.core :as woz]))))
+      (testing "Proper handling of ns-spec edgecases"
+        (is (= '{:as-aliases {} :libspecs [(:require foo.core bar.core woz.core)]}
+               (ana-nses/elide-aliases-from-ns-specs
+                 '((:require foo.core bar.core woz.core)))))
+        (is (= '{:as-aliases {}, :libspecs [(:require [foo.core] [bar.core] [woz.core])]}
+               (ana-nses/elide-aliases-from-ns-specs
+                 '((:require [foo.core] [bar.core] [woz.core])))))))))
 
 (comment
 
