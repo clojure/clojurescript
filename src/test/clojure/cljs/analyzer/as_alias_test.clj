@@ -7,8 +7,7 @@
 ;; You must not remove this notice, or any other, from this software.
 
 (ns cljs.analyzer.as-alias-test
-  (:require [cljs.analyzer :as ana]
-            [cljs.analyzer.namespaces :as ana-nses]
+  (:require [cljs.analyzer.namespaces :as ana-nses]
             [cljs.env :as env]
             [clojure.test :as test :refer [deftest testing is]]))
 
@@ -31,7 +30,7 @@
         (is (= '{:libspec [bar.core]}
                (ana-nses/check-and-remove-as-alias '[bar.core])))))))
 
-(deftest test-eliad-aliases-from-libspecs
+(deftest test-elide-aliases-from-libspecs
   (let [cenv (env/default-compiler-env)]
     (env/with-compiler-env cenv
       (is (= '{:as-aliases {foo foo.core
@@ -49,14 +48,21 @@
                 [woz.core :as-alias woz :as wozc]
                 [foo.impl :as-alias foo])))))))
 
+(deftest test-elide-aliases-from-ns-specs
+  (let [cenv (env/default-compiler-env)]
+    (env/with-compiler-env cenv
+      (is (= '{:as-aliases {blah blah.core, foo foo.core, bar bar.core},
+               :libspecs [(:require-macros [[lala.core :as-lias lala :as tralala]])
+                          (:require [[woz.core :as woz]])]})
+        (ana-nses/elide-aliases-from-ns-specs
+          '((:require-macros [blah.core :as-alias blah]
+              [lala.core :as-alias lala :as tralala])
+            (:require [foo.core :as-alias foo]
+              [bar.core :as-alias bar]
+              [woz.core :as woz])))))))
+
 (comment
 
   (test/run-tests)
 
-  (let [cenv (env/default-compiler-env)]
-    (ana-nses/elide-aliases-from-ns-specs
-      '((:require-macros [blah.core :as-alias blah])
-        (:require [foo.core :as-alias foo]
-          [bar.core :as-alias bar]
-          [woz.core :as woz]))))
   )
