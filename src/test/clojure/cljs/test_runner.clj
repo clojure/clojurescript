@@ -1,5 +1,6 @@
 (ns cljs.test-runner
   (:require [cljs.analyzer-api-tests]
+            [cljs.analyzer.as-alias-test]
             [cljs.analyzer-pass-tests]
             [cljs.analyzer-tests]
             [cljs.build-api-tests]
@@ -22,6 +23,7 @@
   (let [{:keys [fail error]}
         (run-tests
           'cljs.analyzer-api-tests
+          'cljs.analyzer.as-alias-test
           'cljs.analyzer-pass-tests
           'cljs.analyzer-tests
           'cljs.build-api-tests
