@@ -3103,7 +3103,7 @@
   (if (pos? (count old))
     (let [deep-merge-keys
           [:use-macros :require-macros :rename-macros
-           :uses :requires :renames :imports]]
+           :uses :requires :renames :imports :as-aliases]]
       #?(:clj
          (when *check-alias-dupes*
            (check-duplicate-aliases env old new)))
