@@ -1143,7 +1143,8 @@
                (fn []
                  (let [input (binding [*ns* (create-ns ana/*cljs-ns*)
                                        reader/resolve-symbol ana/resolve-symbol
-                                       reader/*data-readers* tags/*cljs-data-readers*
+                                       reader/*data-readers* (merge tags/*cljs-data-readers*
+                                                               (ana/load-data-readers))
                                        reader/*alias-map*
                                        (apply merge
                                          ((juxt :requires :require-macros :as-aliases)
@@ -1510,7 +1511,8 @@ itself (not its value) is returned. The reader macro #'x expands to (var x)."}})
             (let [rdr (readers/source-logging-push-back-reader pbr)]
               (dotimes [_ (dec (:line v))] (readers/read-line rdr))
               (binding [reader/*alias-map*    identity
-                        reader/*data-readers* tags/*cljs-data-readers*]
+                        reader/*data-readers* (merge tags/*cljs-data-readers*
+                                                (ana/load-data-readers))]
                 (-> (reader/read {:read-cond :allow :features #{:cljs}} rdr)
                   meta :source)))))))))
 

@@ -2976,52 +2976,9 @@
             opts js-modules)))
       opts)))
 
-(defn- load-data-reader-file [mappings ^java.net.URL url]
-  (with-open [rdr (readers/input-stream-push-back-reader (.openStream url))]
-    (binding [*file* (.getFile url)]
-      (let [new-mappings (reader/read {:eof nil :read-cond :allow} rdr)]
-        (when (not (map? new-mappings))
-          (throw (ex-info (str "Not a valid data-reader map")
-                   {:url url
-                    :clojure.error/phase :compilation})))
-        (reduce
-          (fn [m [k v]]
-            (when (not (symbol? k))
-              (throw (ex-info (str "Invalid form in data-reader file")
-                       {:url url
-                        :form k
-                        :clojure.error/phase :compilation})))
-            (when (and (contains? mappings k)
-                    (not= (mappings k) v))
-              (throw (ex-info "Conflicting data-reader mapping"
-                       {:url url
-                        :conflict k
-                        :mappings m
-                        :clojure.error/phase :compilation})))
-            (assoc m k v))
-          mappings
-          new-mappings)))))
-
-(defn get-data-readers*
-  "returns a merged map containing all data readers defined by libraries
-   on the classpath."
-  ([]
-   (get-data-readers* (. (Thread/currentThread) (getContextClassLoader))))
-  ([classloader]
-   (let [data-reader-urls (enumeration-seq (. classloader (getResources "data_readers.cljc")))]
-     (reduce load-data-reader-file {} data-reader-urls))))
-
-(def get-data-readers (memoize get-data-readers*))
-
 (defn load-data-readers! [compiler]
-  (let [data-readers (get-data-readers)
-        nses (map (comp symbol namespace) (vals data-readers))]
-    (swap! compiler update-in [:cljs.analyzer/data-readers] merge (get-data-readers))
-    (doseq [ns nses]
-      (try
-        (locking ana/load-mutex
-          (require ns))
-        (catch Throwable _)))))
+  (swap! compiler update-in [:cljs.analyzer/data-readers] merge
+    (ana/load-data-readers)))
 
 (defn add-externs-sources [opts]
   (cond-> opts
