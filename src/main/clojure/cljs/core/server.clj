@@ -91,7 +91,8 @@
                       (when (try
                               (let [[form s] (binding [*ns* (create-ns ana/*cljs-ns*)
                                                        reader/resolve-symbol ana/resolve-symbol
-                                                       reader/*data-readers* tags/*cljs-data-readers*
+                                                       reader/*data-readers* (merge tags/*cljs-data-readers*
+                                                                               (ana/load-data-readers))
                                                        reader/*alias-map*
                                                        (apply merge
                                                          ((juxt :requires :require-macros)

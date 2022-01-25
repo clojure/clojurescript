@@ -11,3 +11,15 @@
 (def custom-identity identity)
 
 (assert (= 1 #test/custom-identity 1))
+
+(defn custom-form-cljs 
+  "a clojure and clojurescript function - in both cases targeting only cljs. 
+  
+  returns a clojurescript form (from :clj branch, when compiling) 
+  and executes js from :cljs branch when using cljs.reader/read"
+  [x]
+  #?(:clj `(js/Array.of ~x)
+     :cljs (js/Array.of x)))
+
+#?(:cljs
+   (def result #test/custom-form"foo"))

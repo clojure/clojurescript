@@ -619,6 +619,65 @@
    (def load-mutex (Object.)))
 
 #?(:clj
+   (defn- load-data-reader-file [mappings ^java.net.URL url]
+     (with-open [rdr (readers/input-stream-push-back-reader (.openStream url))]
+       (binding [*file* (.getFile url)]
+         (let [new-mappings (reader/read {:eof nil :read-cond :allow :features #{:cljs}} rdr)]
+           (when (not (map? new-mappings))
+             (throw (ex-info (str "Not a valid data-reader map")
+                      {:url                 url
+                       :clojure.error/phase :compilation})))
+           (reduce
+             (fn [m [k v]]
+               (when (not (symbol? k))
+                 (throw (ex-info (str "Invalid form in data-reader file")
+                          {:url                 url
+                           :form                k
+                           :clojure.error/phase :compilation})))
+               (when (and (contains? mappings k)
+                       (not= (mappings k) v))
+                 (throw (ex-info "Conflicting data-reader mapping"
+                          {:url                 url
+                           :conflict            k
+                           :mappings            m
+                           :clojure.error/phase :compilation})))
+               (assoc m k v))
+             mappings
+             new-mappings))))))
+
+#?(:clj
+   (defn get-data-readers*
+     "returns a merged map containing all data readers defined by libraries
+      on the classpath."
+     ([]
+      (get-data-readers* (. (Thread/currentThread) (getContextClassLoader))))
+     ([^ClassLoader classloader]
+      (let [data-reader-urls (enumeration-seq (. classloader (getResources "data_readers.cljc")))]
+        (reduce load-data-reader-file {} data-reader-urls)))))
+
+#?(:clj
+   (def get-data-readers (memoize get-data-readers*)))
+
+#?(:clj
+   (defn load-data-readers* []
+     (let [data-readers (get-data-readers)
+           nses (map (comp symbol namespace) (vals data-readers))]
+       (doseq [ns nses]
+         (try
+           (locking load-mutex
+             (require ns))
+           (catch Throwable _)))
+       (->> data-readers
+            (map (fn [[tag reader-fn]]
+                   [tag
+                    (-> reader-fn find-var var-get
+                        (with-meta {:sym reader-fn}))]))
+            (into {})))))
+
+#?(:clj 
+   (def load-data-readers (memoize load-data-readers*)))
+
+#?(:clj
    (defn load-core []
      (when (not @-cljs-macros-loaded)
        (reset! -cljs-macros-loaded true)
@@ -4310,6 +4369,7 @@
              (resolve-var (assoc @env/*compiler* :ns (get-namespace *cljs-ns*))
                sym)))))
 
+
 #?(:clj
    (defn forms-seq*
      "Seq of Clojure/ClojureScript forms from rdr, a java.io.Reader. Optionally
@@ -4324,7 +4384,8 @@
                      {:read-cond :allow :features #{:cljs}}))
             pbr (readers/indexing-push-back-reader
                   (PushbackReader. rdr) 1 filename)
-            data-readers tags/*cljs-data-readers*
+            data-readers (merge tags/*cljs-data-readers*
+                           (load-data-readers))
             forms-seq_
             (fn forms-seq_ []
               (lazy-seq
@@ -4352,7 +4413,8 @@
       (let [rdr (io/reader f)
             pbr (readers/indexing-push-back-reader
                   (PushbackReader. rdr) 1 filename)
-            data-readers tags/*cljs-data-readers*
+            data-readers (merge tags/*cljs-data-readers*
+                           (load-data-readers))
             forms-seq*
             (fn forms-seq* []
               (lazy-seq

@@ -456,7 +456,11 @@
         cenv (env/default-compiler-env)]
     (test/delete-out-files out)
     (build/build (build/inputs (io/file inputs "data_readers_test")) opts cenv)
-    (is (contains? (-> @cenv ::ana/data-readers) 'test/custom-identity))))
+    (is (contains? (-> @cenv ::ana/data-readers) 'test/custom-identity))
+    (is (true? (boolean (re-find #"Array\.of\(\"foo\"\)"
+                          (slurp (io/file 
+                                   out ;"data-readers-test-out"
+                                   "data_readers_test" "core.js"))))))))
 
 (deftest test-data-readers-records
   (let [out (.getPath (io/file (test/tmp-dir) "data-readers-test-records-out"))
