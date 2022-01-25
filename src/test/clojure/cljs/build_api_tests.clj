@@ -821,7 +821,7 @@
 (deftest test-cljs-3346-as-alias
   (testing "Test that using :as-alias does not load the namespace, and that
             a namespace that does not exist on file can be used."
-    (let [out (.getPath (io/file #_(test/tmp-dir) "cljs-3346-as-alias-out"))]
+    (let [out (.getPath (io/file (test/tmp-dir) "cljs-3346-as-alias-out"))]
       (test/delete-out-files out)
       (test/delete-node-modules)
       (spit (io/file "package.json") "{}")
