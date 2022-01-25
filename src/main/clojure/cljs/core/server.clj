@@ -95,7 +95,7 @@
                                                                                (ana/load-data-readers))
                                                        reader/*alias-map*
                                                        (apply merge
-                                                         ((juxt :requires :require-macros)
+                                                         ((juxt :requires :require-macros :as-aliases)
                                                            (ana/get-namespace ana/*cljs-ns*)))]
                                                (reader/read+string {:eof EOF :read-cond :allow :features #{:cljs}}
                                                  in-reader))]
