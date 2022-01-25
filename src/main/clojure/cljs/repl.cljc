@@ -1146,7 +1146,7 @@
                                        reader/*data-readers* tags/*cljs-data-readers*
                                        reader/*alias-map*
                                        (apply merge
-                                         ((juxt :requires :require-macros)
+                                         ((juxt :requires :require-macros :as-aliases)
                                            (ana/get-namespace ana/*cljs-ns*)))]
                                (try
                                  (read request-prompt request-exit)

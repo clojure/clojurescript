@@ -14,6 +14,7 @@
                                      no-warn with-warning-handlers wrapping-errors]]
              [cljs.env.macros :refer [ensure]]))
   #?(:clj  (:require [cljs.analyzer.impl :as impl]
+                     [cljs.analyzer.impl.namespaces :as nses]
                      [cljs.analyzer.passes.and-or :as and-or]
                      [cljs.env :as env :refer [ensure]]
                      [cljs.externs :as externs]
@@ -27,6 +28,7 @@
                      [clojure.tools.reader :as reader]
                      [clojure.tools.reader.reader-types :as readers])
      :cljs (:require [cljs.analyzer.impl :as impl]
+                     [cljs.analyzer.impl.namespaces :as nses]
                      [cljs.analyzer.passes.and-or :as and-or]
                      [cljs.env :as env]
                      [cljs.reader :as edn]
@@ -3101,7 +3103,7 @@
   (if (pos? (count old))
     (let [deep-merge-keys
           [:use-macros :require-macros :rename-macros
-           :uses :requires :renames :imports]]
+           :uses :requires :renames :imports :as-aliases]]
       #?(:clj
          (when *check-alias-dupes*
            (check-duplicate-aliases env old new)))
@@ -3141,13 +3143,15 @@
                          #?(:clj  (rewrite-cljs-aliases
                                     (if metadata (next args) args))
                             :cljs (if (some? metadata) (next args) args)))
+          {:keys [as-aliases] args :libspecs} (nses/elide-aliases-from-ns-specs args)
           name         (vary-meta name merge metadata)
           {excludes :excludes core-renames :renames} (parse-ns-excludes env args)
           core-renames (reduce (fn [m [original renamed]]
                                  (assoc m renamed (symbol "cljs.core" (str original))))
                          {} core-renames)
           deps         (atom [])
-          aliases      (atom {:fns {} :macros {}})
+          ;; as-aliases can only be used *once* because they are about the reader
+          aliases      (atom {:fns as-aliases :macros as-aliases})
           spec-parsers {:require        (partial parse-require-spec env false deps aliases)
                         :require-macros (partial parse-require-spec env true deps aliases)
                         :use            (comp (partial parse-require-spec env false deps aliases)
@@ -3196,7 +3200,8 @@
                               spec-map)) [require-macros use-macros])])]
       (set! *cljs-ns* name)
       (let [ns-info
-            {:name           name
+            {:as-aliases     as-aliases
+             :name           name
              :doc            (or docstring mdocstr)
              :excludes       excludes
              :use-macros     use-macros
@@ -3239,12 +3244,14 @@
                        #?(:clj  (list (process-rewrite-form
                                         specs))
                           :cljs (list specs)))
+        {:keys [as-aliases] args :libspecs} (nses/elide-aliases-from-ns-specs args)
         {excludes :excludes core-renames :renames} (parse-ns-excludes env args)
         core-renames (reduce (fn [m [original renamed]]
                                (assoc m renamed (symbol "cljs.core" (str original))))
                        {} core-renames)
         deps         (atom [])
-        aliases      (atom {:fns {} :macros {}})
+        ;; as-aliases can only be used *once* because they are about the reader
+        aliases      (atom {:fns as-aliases :macros as-aliases})
         spec-parsers {:require        (partial parse-require-spec env false deps aliases)
                       :require-macros (partial parse-require-spec env true deps aliases)
                       :use            (comp (partial parse-require-spec env false deps aliases)
@@ -3275,7 +3282,8 @@
           {} (remove (fn [[r]] (= r :refer-clojure)) args))]
     (set! *cljs-ns* name)
     (let [require-info
-          {:name           name
+          {:as-aliases     as-aliases
+           :name           name
            :excludes       excludes
            :use-macros     use-macros
            :require-macros require-macros
@@ -4324,7 +4332,7 @@
                                      reader/*data-readers* data-readers
                                      reader/*alias-map*
                                      (apply merge
-                                       ((juxt :requires :require-macros)
+                                       ((juxt :requires :require-macros :as-aliases)
                                          (get-namespace *cljs-ns*)))
                                      reader/resolve-symbol resolve-symbol]
                              (reader/read opts pbr))]
