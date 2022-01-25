@@ -817,3 +817,27 @@
       (.delete (io/file "package.json"))
       (test/delete-node-modules)
       (test/delete-out-files out))))
+
+(deftest test-cljs-3346-as-alias
+  (testing "Test that using :as-alias does not load the namespace, and that
+            a namespace that does not exist on file can be used."
+    (let [out (.getPath (io/file #_(test/tmp-dir) "cljs-3346-as-alias-out"))]
+      (test/delete-out-files out)
+      (test/delete-node-modules)
+      (spit (io/file "package.json") "{}")
+      (let [{:keys [inputs opts]} {:inputs (str (io/file "src" "test" "cljs_build"))
+                                   :opts {:main 'cljs-3346-as-alias.core
+                                          :output-dir out
+                                          :optimizations :none
+                                          :closure-warnings {:check-types :off}}}
+            cenv (env/default-compiler-env)]
+        (build/build (build/inputs (io/file inputs "cljs_3346_as_alias/core.cljs")) opts cenv))
+      (let [source (slurp (io/file out "cljs_3346_as_alias/core.js"))]
+        (is (true? (boolean (re-find #"goog.require\('cljs.core'\)" source))))
+        (is (false? (boolean (re-find #"goog.require\('clojure.set'\)" source))))
+        (is (false? (boolean (re-find #"goog.require\('made.up.lib'\)" source))))
+        (is (true? (boolean (re-find #"clojure\.set\/foo" source))))
+        (is (true? (boolean (re-find #"made\.up\.lib\/bar" source)))))
+      (.delete (io/file "package.json"))
+      (test/delete-node-modules)
+      (test/delete-out-files out))))
