@@ -7329,7 +7329,9 @@ reduces them without incurring seq initialization"
                         (== bitmap bit) nil
                         :else (BitmapIndexedNode. nil (bit-xor bitmap bit) (remove-pair arr idx))))
                 (key-test key key-or-nil)
-                (BitmapIndexedNode. nil (bit-xor bitmap bit) (remove-pair arr idx))
+                (if (== bitmap bit)
+                  nil
+                  (BitmapIndexedNode. nil (bit-xor bitmap bit) (remove-pair arr idx)))
                 :else inode)))))
 
   (inode-lookup [inode shift hash key not-found]
