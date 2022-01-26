@@ -8945,7 +8945,9 @@ reduces them without incurring seq initialization"
   (let [arr (if (and (instance? IndexedSeq keyvals) (zero? (.-i keyvals)))
               (.-arr keyvals)
               (into-array keyvals))]
-    (.createAsIfByAssoc PersistentArrayMap arr)))
+    (if (odd? (alength arr))
+      (throw (js/Error. (str "No value supplied for key: " (last arr))))
+      (.createAsIfByAssoc PersistentArrayMap arr))))
 
 (defn obj-map
   "keyval => key val
