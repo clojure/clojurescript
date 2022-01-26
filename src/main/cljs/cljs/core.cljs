@@ -8949,6 +8949,14 @@ reduces them without incurring seq initialization"
       (throw (js/Error. (str "No value supplied for key: " (last arr))))
       (.createAsIfByAssoc PersistentArrayMap arr))))
 
+(defn seq-to-map-for-destructuring
+  "Builds a map from a seq as described in
+  https://clojure.org/reference/special_forms#keyword-arguments"
+  [s]
+  (if (next s)
+    (.createAsIfByAssoc PersistentArrayMap (to-array s))
+    (if (seq s) (first s) (.-EMPTY PersistentArrayMap))))
+
 (defn obj-map
   "keyval => key val
   Returns a new object map with supplied mappings."
