@@ -7063,35 +7063,67 @@ reduces them without incurring seq initialization"
       (let [cnt (/ (alength arr) 2)]
         (PersistentArrayMap. nil cnt arr nil)))))
 
+(defn key-test [key other]
+  (cond
+    (identical? key other) true
+    (keyword-identical? key other) true
+    :else (= key other)))
+
+(defn- ^boolean pam-dupes? [arr]
+  (loop [i 0]
+    (if (< i (alength arr))
+      (let [dupe? (loop [j 0]
+                    (if (< j i)
+                      (or
+                        (key-test (aget arr i) (aget arr j))
+                        (recur (+ 2 j)))
+                      false))]
+        (or dupe? (recur (+ 2 i))))
+      false)))
+
+(defn- pam-new-size [arr]
+  (loop [i 0 n 0]
+    (if (< i (alength arr))
+      (let [dupe? (loop [j 0]
+                    (if (< j i)
+                      (or
+                        (key-test (aget arr i) (aget arr j))
+                        (recur (+ 2 j)))
+                      false))]
+        (recur (+ 2 i) (if dupe? n (+ n 2))))
+      n)))
+
+(defn- pam-grow-seed-array [seed trailing]
+  (let [seed-cnt  (dec (alength seed))
+        extra-kvs (seq trailing)
+        ret       (make-array (+ seed-cnt (* 2 (count extra-kvs))))
+        ret       (array-copy seed 0 ret 0 seed-cnt)]
+    (loop [i seed-cnt extra-kvs extra-kvs]
+      (if extra-kvs
+        (let [kv (first extra-kvs)]
+          (aset ret i (-key kv))
+          (aset ret (inc i) (-val kv))
+          (recur (+ 2 seed-cnt) (next extra-kvs)))
+        ret))))
+
 (set! (.-createAsIfByAssoc PersistentArrayMap)
-  (fn [arr]
+  (fn [init]
     ;; check trailing element
-    (let [arrlen (alength arr)]
-      (if-not (== 1 (bit-and arrlen 1))
-        (let [ret (array)]
-          (loop [i 0]
-            (when (< i (alength arr))
-              (let [k   (aget arr i)
-                    v   (aget arr (inc i))
-                    idx (array-index-of ret k)]
-                (if (== idx -1)
-                  (doto ret (.push k) (.push v))
-                  (aset ret (inc idx) v)))
-              (recur (+ i 2))))
-          (PersistentArrayMap. nil (/ (alength ret) 2) ret nil))
-        ;; in case the final element is not a map but something conj-able
-        ;; for parity with Clojure implementation of CLJ-2603
-        (let [extra-kvs (into {} (aget arr (dec arrlen)))
-              seed-cnt  (dec arrlen)
-              ret       (make-array (+ seed-cnt (* 2 (count extra-kvs))))
-              ret       (array-copy arr 0 ret 0 seed-cnt)]
-          (loop [i seed-cnt extra-kvs (seq extra-kvs)]
-            (if extra-kvs
-              (let [kv (first extra-kvs)]
-                (aset ret i (-key kv))
-                (aset ret (inc i) (-val kv))
-                (recur (+ 2 seed-cnt) (next extra-kvs)))
-              ret)))))))
+    (let [len           (alength init)
+          has-trailing? (== 1 (bit-and len  1))]
+      (if-not (or has-trailing? (pam-dupes? init))
+        (PersistentArrayMap. nil (/ len 2) init nil)
+        (.createAsIfByAssocComplexPath PersistentArrayMap init has-trailing?)))))
+
+(set! (.-createAsIfByAssocComplexPath PersistentArrayMap)
+  (fn [init ^boolean has-trailing?]
+    (let [init (if has-trailing?
+                 (pam-grow-seed-array init
+                   ;; into {} in case the final element is not a map but something conj-able
+                   ;; for parity with Clojure implementation of CLJ-2603
+                   (into {} (aget init (dec (alength init)))))
+                 init)]
+      (PersistentArrayMap. nil (/ (alength init) 2) init nil))))
 
 (es6-iterable PersistentArrayMap)
 
@@ -7191,12 +7223,6 @@ reduces them without incurring seq initialization"
 (deftype Box [^:mutable val])
 
 (declare create-inode-seq create-array-node-seq reset! create-node atom deref)
-
-(defn key-test [key other]
-  (cond
-    (identical? key other) true
-    (keyword-identical? key other) true
-    :else (= key other)))
 
 (defn- mask [hash shift]
   (bit-and (bit-shift-right-zero-fill hash shift) 0x01f))

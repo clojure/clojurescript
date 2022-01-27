@@ -186,6 +186,14 @@
     (is (= 1 (f 1 2))))
   (let []))
 
+(deftest test-pam-dupes?
+  (is (false? (#'pam-dupes? #js [:a 1 :b 2 :c 3])))
+  (is (true? (#'pam-dupes? #js [:a 1 :b 2 :a 3]))))
+
+(deftest test-pam-new-size
+  (is (== 6 (#'pam-new-size #js [:a 1 :b 2 :c 3])))
+  (is (== 4 (#'pam-new-size #js [:a 1 :b 2 :a 3]))))
+
 (deftest singleton-map-in-destructure-context
   (let [sample-map {:a 1 :b 2}
         {:keys [a] :as m1} (list sample-map)]
@@ -219,9 +227,5 @@
 (comment
 
   (cljs.test/run-tests)
-
-  (let [add  (fn [& {:keys [a b]}] (+ a b))
-        addn (fn [n & {:keys [a b]}] (+ n a b))]
-    (add {:a 1 :b 2}))
 
   )
