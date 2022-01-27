@@ -674,7 +674,7 @@
                         (with-meta {:sym reader-fn}))]))
             (into {})))))
 
-#?(:clj 
+#?(:clj
    (def load-data-readers (memoize load-data-readers*)))
 
 #?(:clj
@@ -4369,6 +4369,12 @@
              (resolve-var (assoc @env/*compiler* :ns (get-namespace *cljs-ns*))
                sym)))))
 
+(defn get-aliases
+  "Get all alias maps for a namespace."
+  [ns]
+  (apply merge
+    ((juxt :requires :require-macros :as-aliases)
+     (get-namespace ns))))
 
 #?(:clj
    (defn forms-seq*
@@ -4391,10 +4397,7 @@
               (lazy-seq
                 (let [form (binding [*ns* (create-ns *cljs-ns*)
                                      reader/*data-readers* data-readers
-                                     reader/*alias-map*
-                                     (apply merge
-                                       ((juxt :requires :require-macros :as-aliases)
-                                         (get-namespace *cljs-ns*)))
+                                     reader/*alias-map* (get-aliases *cljs-ns*)
                                      reader/resolve-symbol resolve-symbol]
                              (reader/read opts pbr))]
                   (if (identical? form eof-sentinel)

@@ -93,10 +93,7 @@
                                                        reader/resolve-symbol ana/resolve-symbol
                                                        reader/*data-readers* (merge tags/*cljs-data-readers*
                                                                                (ana/load-data-readers))
-                                                       reader/*alias-map*
-                                                       (apply merge
-                                                         ((juxt :requires :require-macros :as-aliases)
-                                                           (ana/get-namespace ana/*cljs-ns*)))]
+                                                       reader/*alias-map* (ana/get-aliases ana/*cljs-ns*)]
                                                (reader/read+string {:eof EOF :read-cond :allow :features #{:cljs}}
                                                  in-reader))]
                                 (try
