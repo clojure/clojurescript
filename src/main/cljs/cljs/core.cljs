@@ -7122,8 +7122,32 @@ reduces them without incurring seq initialization"
                    ;; into {} in case the final element is not a map but something conj-able
                    ;; for parity with Clojure implementation of CLJ-2603
                    (into {} (aget init (dec (alength init)))))
-                 init)]
-      (PersistentArrayMap. nil (/ (alength init) 2) init nil))))
+                 init)
+          n    (pam-new-size init)
+          len  (alength init)]
+      (if (< n len)
+        (let [nodups (make-array n)]
+          (loop [i 0 m 0]
+            (if (< i len)
+              (let [dupe? (loop [j 0]
+                            (if (< j m)
+                              (or
+                                (key-test (aget init i) (aget init j))
+                                (recur (+ 2 j)))
+                              false))]
+                (if-not dupe?
+                  (let [j (loop [j (- len 2)]
+                            (if (>= j i)
+                              (if (key-test (aget init i) (aget init j))
+                                j
+                                (recur (- j 2)))
+                              j))]
+                    (aset nodups m (aget init i))
+                    (aset nodups (inc m) (aget init (inc j)))
+                    (recur (+ 2 i) (+ 2 m)))
+                  (recur (+ 2 i) m)))))
+          (PersistentArrayMap. nil (/ (alength nodups) 2) nodups nil))
+        (PersistentArrayMap. nil (/ (alength init) 2) init nil)))))
 
 (es6-iterable PersistentArrayMap)
 
