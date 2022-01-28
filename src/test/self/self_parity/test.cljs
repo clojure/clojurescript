@@ -285,6 +285,7 @@
                  [clojure.data-test]
                  [clojure.datafy-test]
                  [clojure.edn]
+                 [clojure.math-test]
                  [clojure.walk-test]
                  [cljs.macro-test]
                  [cljs.letfn-test]
@@ -332,6 +333,7 @@
              'clojure.data-test
              'clojure.datafy-test
              'clojure.edn
+             'clojure.math-test
              'clojure.walk-test
              'cljs.letfn-test
              'cljs.reducers-test
