@@ -186,8 +186,8 @@
 
 (defn- alias-map
   [compiler cljs-ns]
-  (->> (merge (get-in compiler [::ana/namespaces cljs-ns :requires])
-         (get-in compiler [::ana/namespaces cljs-ns :require-macros]))
+  (->> (env/with-compiler-env compiler
+         (ana/get-aliases cljs-ns))
     (remove (fn [[k v]] (symbol-identical? k v)))
     (into {})))
 
