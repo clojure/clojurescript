@@ -135,7 +135,7 @@
   using a supplied read-file-fn, calling back upon first successful
   read, otherwise calling back with nil. Before calling back, first
   attempts to read AOT artifacts (JavaScript and cache edn)."
-  [[filename & more-filenames] read-file-fn cb]
+  [[filename & more-filenames] macros read-file-fn cb]
   (if filename
     (read-file-fn
       filename
@@ -144,8 +144,9 @@
           (let [source-cb-value {:lang   (filename->lang filename)
                                  :file   filename
                                  :source source}]
-            (if (or (string/ends-with? filename ".cljs")
-                    (string/ends-with? filename ".cljc"))
+            (if (and (not macros)
+                     (or (string/ends-with? filename ".cljs")
+                         (string/ends-with? filename ".cljc")))
               (read-file-fn
                 (replace-extension filename ".js")
                 (fn [javascript-source]
@@ -160,7 +161,7 @@
                           (cb source-cb-value))))
                     (cb source-cb-value))))
               (cb source-cb-value)))
-          (read-some more-filenames read-file-fn cb))))
+          (read-some more-filenames macros read-file-fn cb))))
     (cb nil)))
 
 (defn filenames-to-try
@@ -192,17 +193,6 @@
        'cljs.tools.reader
        'clojure.walk}) name))
 
-;; An atom to keep track of things we've already loaded
-(def loaded (atom #{}))
-
-(defn load?
-  "Determines whether the given namespace should be loaded."
-  [name macros]
-  (let [do-not-load (or (@loaded [name macros])
-                        (skip-load? name macros))]
-    (swap! loaded conj [name macros])
-    (not do-not-load)))
-
 (defn make-load-fn
   "Makes a load function that will read from a sequence of src-paths
   using a supplied read-file-fn. It returns a cljs.js-compatible
@@ -212,10 +202,10 @@
   with the source of the library (as string)."
   [src-paths read-file-fn]
   (fn [{:keys [name macros path]} cb]
-    (if (load? name macros)
+    (if-not (skip-load? name macros)
       (if (re-matches #"^goog/.*" path)
         (load-goog name cb)
-        (read-some (filenames-to-try src-paths macros path) read-file-fn cb))
+        (read-some (filenames-to-try src-paths macros path) macros read-file-fn cb))
       (cb {:source ""
            :lang   :js}))))
 
