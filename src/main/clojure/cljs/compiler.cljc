@@ -335,6 +335,9 @@
            (not (js/isFinite x))
            (emits (if (pos? x) "Infinity" "-Infinity"))
 
+           (and (zero? x) (neg? (/ x)))
+           (emits "(-0)")
+
            :else (emits "(" x ")"))))
 
 #?(:clj
