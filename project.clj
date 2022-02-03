@@ -11,7 +11,7 @@
   :dependencies [[org.clojure/clojure "1.10.0"]
                  [org.clojure/spec.alpha "0.1.143"]
                  [org.clojure/core.specs.alpha "0.1.24"]
-                 [org.clojure/data.json "0.2.6"]
+                 [org.clojure/data.json "2.4.0"]
                  [org.clojure/tools.reader "1.3.3"]
                  [org.clojure/test.check "1.1.1" :scope "test"]
                  [com.cognitect/transit-clj "0.8.309"]
