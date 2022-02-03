@@ -12025,6 +12025,66 @@ reduces them without incurring seq initialization"
   [x]
   (instance? goog.Uri x))
 
+(defn ^boolean NaN?
+  "Returns true if num is NaN, else false"
+  [val]
+  (js/isNaN val))
+
+(defn ^:private parsing-err
+  "Construct message for parsing for non-string parsing error"
+  [val]
+  (str "Expected string, got: " (if (nil? val) "nil" (goog/typeOf val))))
+
+(defn ^number parse-long
+  "Parse string of decimal digits with optional leading -/+ and return an
+  integer value, or nil if parse fails"
+  [s]
+  (if (string? s)
+    (and (re-matches #"[+-]?\d+" s)
+         (let [i (js/parseInt s)]
+           (when (and (<= i js/Number.MAX_SAFE_INTEGER)
+                      (>= i js/Number.MIN_SAFE_INTEGER))
+             i)))
+    (throw (js/Error. (parsing-err s)))))
+
+(defn ^number parse-double
+  "Parse string with floating point components and return a floating point value,
+  or nil if parse fails.
+  Grammar: https://docs.oracle.com/javase/8/docs/api/java/lang/Double.html#valueOf-java.lang.String-"
+  [s]
+  (if (string? s)
+    (cond
+      ^boolean (re-matches #"[\x00-\x20]*[+-]?NaN[\x00-\x20]*" s) ##NaN
+      ^boolean (re-matches
+                #"[\x00-\x20]*[+-]?(Infinity|((\d+\.?\d*|\.\d+)([eE][+-]?\d+)?)[dDfF]?)[\x00-\x20]*"
+                s) (js/parseFloat s)
+      :default nil)
+    (throw (js/Error. (parsing-err s)))))
+
+(def ^:private uuid-regex
+  #"^[0-9a-zA-Z][0-9a-zA-Z][0-9a-zA-Z][0-9a-zA-Z][0-9a-zA-Z][0-9a-zA-Z][0-9a-zA-Z][0-9a-zA-Z]-[0-9a-zA-Z][0-9a-zA-Z][0-9a-zA-Z][0-9a-zA-Z]-[0-9a-zA-Z][0-9a-zA-Z][0-9a-zA-Z][0-9a-zA-Z]-[0-9a-zA-Z][0-9a-zA-Z][0-9a-zA-Z][0-9a-zA-Z]-[0-9a-zA-Z][0-9a-zA-Z][0-9a-zA-Z][0-9a-zA-Z][0-9a-zA-Z][0-9a-zA-Z][0-9a-zA-Z][0-9a-zA-Z][0-9a-zA-Z][0-9a-zA-Z][0-9a-zA-Z][0-9a-zA-Z]$")
+
+(defn parse-uuid
+  "Parse a string representing a UUID and return a UUID instance,
+  or nil if parse fails.
+  Grammar: https://docs.oracle.com/javase/8/docs/api/java/util/UUID.html#toString--"
+  [s]
+  (if (string? s)
+    (when ^boolean (re-matches uuid-regex s)
+      (uuid s))
+    (throw (js/Error. (parsing-err s)))))
+
+(defn parse-boolean
+  "Parse strings \"true\" or \"false\" and return a boolean, or nil if invalid. Note that this explicitly
+  excludes strings with different cases, or space characters."
+  [s]
+  (if (string? s)
+    (case s
+      "true" true
+      "false" false
+      nil)
+    (throw (js/Error. (parsing-err s)))))
+
 (defn- maybe-enable-print! []
   (cond
     (exists? js/console)
