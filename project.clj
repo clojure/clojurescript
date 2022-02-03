@@ -14,7 +14,7 @@
                  [org.clojure/data.json "2.4.0"]
                  [org.clojure/tools.reader "1.3.3"]
                  [org.clojure/test.check "1.1.1" :scope "test"]
-                 [com.cognitect/transit-clj "0.8.309"]
+                 [com.cognitect/transit-clj "1.0.324"]
                  [org.clojure/google-closure-library "0.0-20211011-0726fdeb"]
                  [com.google.javascript/closure-compiler-unshaded "v20210808"]]
   :profiles {:1.6 {:dependencies [[org.clojure/clojure "1.6.0"]]}
