@@ -10944,6 +10944,49 @@ reduces them without incurring seq initialization"
   (reduce #(proc %2) nil coll)
   nil)
 
+(defn iteration
+  "Creates a seqable/reducible via repeated calls to step,
+  a function of some (continuation token) 'k'. The first call to step
+  will be passed initk, returning 'ret'. Iff (somef ret) is true,
+  (vf ret) will be included in the iteration, else iteration will
+  terminate and vf/kf will not be called. If (kf ret) is non-nil it
+  will be passed to the next step call, else iteration will terminate.
+  This can be used e.g. to consume APIs that return paginated or batched data.
+   step - (possibly impure) fn of 'k' -> 'ret'
+   :somef - fn of 'ret' -> logical true/false, default 'some?'
+   :vf - fn of 'ret' -> 'v', a value produced by the iteration, default 'identity'
+   :kf - fn of 'ret' -> 'next-k' or nil (signaling 'do not continue'), default 'identity'
+   :initk - the first value passed to step, default 'nil'
+  It is presumed that step with non-initk is unreproducible/non-idempotent.
+  If step with initk is unreproducible it is on the consumer to not consume twice."
+  {:added "1.11"}
+  [step & {:keys [somef vf kf initk]
+           :or {vf identity
+                kf identity
+                somef some?
+                initk nil}}]
+  (reify
+    ISeqable
+    (-seq [_]
+      ((fn next [ret]
+         (when (somef ret)
+           (cons (vf ret)
+             (when-some [k (kf ret)]
+               (lazy-seq (next (step k)))))))
+       (step initk)))
+    IReduce
+    (-reduce [_ rf init]
+      (loop [acc init
+             ret (step initk)]
+        (if (somef ret)
+          (let [acc (rf acc (vf ret))]
+            (if (reduced? acc)
+              @acc
+              (if-some [k (kf ret)]
+                (recur acc (step k))
+                acc)))
+          acc)))))
+
 (defprotocol IEncodeJS
   (-clj->js [x] "Recursively transforms clj values to JavaScript")
   (-key->js [x] "Transforms map keys to valid JavaScript keys. Arbitrary keys are

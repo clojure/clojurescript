@@ -9,6 +9,11 @@
 (ns cljs.seqs-test
   (:refer-clojure :exclude [iter])
   (:require [cljs.test :refer-macros [deftest testing is]]
+            [clojure.test.check :as tc]
+            [clojure.test.check.clojure-test :refer-macros [defspec]]
+            [clojure.test.check.generators :as gen]
+            [clojure.test.check.properties :as prop :include-macros true]
+            [clojure.test.check.random :as random]
             [clojure.string :as s]
             [clojure.set :as set]))
 
@@ -237,3 +242,98 @@
     (is (true? (js-iterable? (js/Set.))))
     (is (false? (js-iterable? 1)))
     (is (false? (js-iterable? nil)))))
+
+(deftest test-iteration-opts
+  (let [genstep (fn [steps]
+                  (fn [k] (swap! steps inc) (inc k)))
+        test (fn [expect & iteropts]
+               (is (= expect
+                     (let [nsteps (atom 0)
+                           iter (apply iteration (genstep nsteps) iteropts)
+                           ret (doall (seq iter))]
+                       {:ret ret :steps @nsteps})
+                     (let [nsteps (atom 0)
+                           iter (apply iteration (genstep nsteps) iteropts)
+                           ret (into [] iter)]
+                       {:ret ret :steps @nsteps}))))]
+    (test {:ret [1 2 3 4]
+           :steps 5}
+      :initk 0 :somef #(< % 5))
+    (test {:ret [1 2 3 4 5]
+           :steps 5}
+      :initk 0 :kf (fn [ret] (when (< ret 5) ret)))
+    (test {:ret ["1"]
+           :steps 2}
+      :initk 0 :somef #(< % 2) :vf str))
+
+  ;; kf does not stop on false
+  (let [iter #(iteration (fn [k]
+                           (if (boolean? k)
+                             [10 :boolean]
+                             [k k]))
+                :vf second
+                :kf (fn [[k v]]
+                      (cond
+                        (= k 3) false
+                        (< k 14) (inc k)))
+                :initk 0)]
+    (is (= [0 1 2 3 :boolean 11 12 13 14]
+          (into [] (iter))
+          (seq (iter))))))
+
+(deftest test-iteration
+  ;; equivalence to es6-iterator-seq
+  (let [arr #js [1 nil 3 true false 4 6 nil 7]]
+    (is (= (let [iter (es6-iterator arr)]
+             (vec (iteration (fn [_] (.next iter))
+                    :somef #(not (.-done %))
+                    :vf #(.-value %))))
+          (let [iter (es6-iterator arr)]
+            (vec (es6-iterator-seq iter))))))
+
+  ;; paginated API
+  (let [items 12 pgsize 5
+        src (vec (repeatedly items #(random-uuid)))
+        api (fn [tok]
+              (let [tok (or tok 0)]
+                (when (< tok items)
+                  {:tok (+ tok pgsize)
+                   :ret (subvec src tok (min (+ tok pgsize) items))})))]
+    (is (= src
+          (mapcat identity (iteration api :kf :tok :vf :ret))
+          (into [] cat (iteration api :kf :tok :vf :ret)))))
+
+  (let [src [:a :b :c :d :e]
+        api (fn [k]
+              (let [k (or k 0)]
+                (if (< k (count src))
+                  {:item (nth src k)
+                   :k (inc k)})))]
+    (is (= [:a :b :c]
+          (vec (iteration api
+                 :somef (comp #{:a :b :c} :item)
+                 :kf :k
+                 :vf :item))
+          (vec (iteration api
+                 :kf #(some-> % :k #{0 1 2})
+                 :vf :item))))))
+
+(defn- make-rng [seed]
+  (atom (random/make-random seed)))
+
+(defn- next-long [rng]
+  (let [[r1 r2] (random/split @rng)]
+    (reset! rng r2)
+    (long (random/rand-long r1))))
+
+(defspec iteration-seq-equals-reduce 1000
+  (prop/for-all [initk gen/small-integer
+                 seed gen/small-integer]
+    (let [src (fn []
+                (let [rng (make-rng seed)]
+                  (iteration #(unchecked-add % (next-long rng))
+                    :somef (complement #(zero? (mod % 1000)))
+                    :vf str
+                    :initk initk)))]
+      (= (into [] (src))
+        (into [] (seq (src)))))))
