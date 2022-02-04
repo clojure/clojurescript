@@ -128,7 +128,7 @@ The opts map may have the following keys:
   :gen      a map from spec names to generator overrides
   :replace  a map from var-name symbols to replacement fns
 
-:spec overrides registered fn-specs with specs your provide. Use
+:spec overrides registered fn-specs with specs you provide. Use
 :spec overrides to provide specs for libraries that do not have
 them, or to constrain your own use of a fn to a subset of its
 spec'ed contract.
