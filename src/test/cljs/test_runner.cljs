@@ -20,6 +20,7 @@
             [cljs.reader-test]
             [cljs.binding-test]
             [cljs.ns-test]
+            [clojure.set-test]
             [clojure.string-test]
             [clojure.data-test]
             [clojure.datafy-test]
@@ -73,6 +74,7 @@
   'cljs.hashing-test
   'cljs.core-test
   'cljs.reader-test
+  'clojure.set-test
   'clojure.string-test
   'clojure.data-test
   'clojure.datafy-test
