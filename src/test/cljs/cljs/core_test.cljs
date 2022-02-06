@@ -1282,8 +1282,8 @@
            [5 4]))
     (is (= (transduce (halt-when #{1} (fn [ret input] (conj ret input))) conj [] [5 4 1 2 3])
            [5 4 1]))
-    (is (= (into [] (halt-when #{1} (fn [ret in] (conj! ret in)))  [2 3 1]))
-        [2 3 1])))
+    (is (= (into [] (halt-when #{1} (fn [ret in] (conj! ret in))) [2 3 1])
+          [2 3 1]))))
 
 (deftest test-cljs-1839
   (let [x #js {:foo (fn [])}
