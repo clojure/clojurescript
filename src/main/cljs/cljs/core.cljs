@@ -1951,7 +1951,8 @@ reduces them without incurring seq initialization"
         xs)))
 
 (defn get
-  "Returns the value mapped to key, not-found or nil if key not present."
+  "Returns the value mapped to key, not-found or nil if key not present
+  in associative collection, set, string, array, or ILookup instance."
   ([o k]
     (when-not (nil? o)
       (cond
