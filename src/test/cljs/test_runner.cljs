@@ -45,6 +45,7 @@
             [cljs.map-entry-test]
             [cljs.metadata-test]
             [cljs.npm-deps-test]
+            [cljs.other-functions-test]
             [cljs.predicates-test]
             [cljs.tagged-literals-test]
             [cljs.test-test]
@@ -99,6 +100,7 @@
   'cljs.map-entry-test
   'cljs.metadata-test
   'cljs.npm-deps-test
+  'cljs.other-functions-test
   'cljs.pprint-test
   'cljs.predicates-test
   'cljs.syntax-quote-test

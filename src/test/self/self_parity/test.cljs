@@ -305,6 +305,7 @@
                  [cljs.map-entry-test]
                  [cljs.set-equiv-test]
                  [cljs.syntax-quote-test]
+                 [cljs.other-functions-test]
                  [cljs.predicates-test]
                  [cljs.test-test]
                  [static.core-test]
@@ -355,6 +356,7 @@
              'cljs.map-entry-test
              'cljs.set-equiv-test
              'cljs.syntax-quote-test
+             'cljs.other-functions-test
              'cljs.predicates-test
              'cljs.test-test
              'static.core-test
