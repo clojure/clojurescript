@@ -11575,11 +11575,15 @@ reduces them without incurring seq initialization"
       (garray/defaultCompare uuid (.-uuid other))
       (throw (js/Error. (str "Cannot compare " this " to " other))))))
 
-(defn uuid [s]
+(defn uuid
+  "Returns a UUID consistent with the string s."
+  [s]
   (assert (string? s))
   (UUID. (.toLowerCase s) nil))
 
-(defn random-uuid []
+(defn random-uuid
+  "Returns a pseudo-randomly generated UUID instance (i.e. type 4)."
+  []
   (letfn [(hex [] (.toString (rand-int 16) 16))]
     (let [rhex (.toString (bit-or 0x8 (bit-and 0x3 (rand-int 16))) 16)]
       (uuid
@@ -11593,6 +11597,7 @@ reduces them without incurring seq initialization"
              (hex) (hex) (hex) (hex))))))
 
 (defn uuid?
+  "Return true if x is a UUID."
   [x] (implements? IUUID x))
 
 ;;; ExceptionInfo
