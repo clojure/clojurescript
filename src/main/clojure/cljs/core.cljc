@@ -1319,7 +1319,8 @@
       'js/Function "function"})
 
 (core/defmacro reify
-  "reify is a macro with the following structure:
+  "reify creates an object implementing a protocol.
+  reify is a macro with the following structure:
 
  (reify options* specs*)
 
