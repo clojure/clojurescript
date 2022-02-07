@@ -5262,7 +5262,11 @@ reduces them without incurring seq initialization"
        (reduce conj to from)))
   ([to xform from]
      (if (implements? IEditableCollection to)
-       (-with-meta (persistent! (transduce xform conj! (transient to) from)) (meta to))
+       (let [tm (meta to)
+             rf (fn
+                  ([coll] (-> (persistent! coll) (-with-meta tm)))
+                  ([coll v] (conj! coll v)))]
+         (transduce xform rf (transient to) from))
        (transduce xform conj to from))))
 
 (defn mapv

@@ -387,6 +387,15 @@
   (testing "CLJS-2258"
     (is (= ["1"] (sequence (map str) (eduction [1]))))))
 
+(deftest test-into+halt-when
+  (is (= :anomaly (into [] (comp (filter some?) (halt-when #{:anomaly}))
+                    [1 2 3 :anomaly 4])))
+  (is (= {:anomaly         :oh-no!,
+          :partial-results [1 2]}
+        (into []
+          (halt-when :anomaly #(assoc %2 :partial-results %1))
+          [1 2 {:anomaly :oh-no!} 3 4]))))
+
 (deftest test-obj-equiv
   (testing "Object equiv method"
     (is (.equiv :foo :foo))
@@ -1282,7 +1291,7 @@
            [5 4]))
     (is (= (transduce (halt-when #{1} (fn [ret input] (conj ret input))) conj [] [5 4 1 2 3])
            [5 4 1]))
-    (is (= (into [] (halt-when #{1} (fn [ret in] (conj! ret in))) [2 3 1])
+    (is (= (into [] (halt-when #{1} (fn [ret in] (conj ret in))) [2 3 1])
           [2 3 1]))))
 
 (deftest test-cljs-1839
