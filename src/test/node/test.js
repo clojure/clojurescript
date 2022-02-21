@@ -1,1 +1,0 @@
-var objectAssign = require("object-assign");
