@@ -210,7 +210,7 @@
     :watch :watch-error-fn :watch-fn :install-deps :process-shim :rename-prefix :rename-prefix-namespace
     :closure-variable-map-in :closure-property-map-in :closure-variable-map-out :closure-property-map-out
     :stable-names :ignore-js-module-exts :opts-cache :aot-cache :elide-strict :fingerprint :spec-skip-macros
-    :nodejs-rt :target-fn :deps-cmd :bundle-cmd :global-goog-object&array})
+    :nodejs-rt :target-fn :deps-cmd :bundle-cmd :global-goog-object&array :node-modules-dirs})
 
 (def string->charset
   {"iso-8859-1" StandardCharsets/ISO_8859_1
@@ -2739,29 +2739,31 @@
      (when env/*compiler*
        (:options @env/*compiler*))))
   ([modules opts]
-   (let [node-modules (io/file "node_modules")]
-     (if (and (not (empty? modules)) (.exists node-modules) (.isDirectory node-modules))
-       (let [modules (into #{} (map name) modules)
-             deps-file (io/file (util/output-directory opts) "cljs$node_modules.js")
-             old-contents (when (.exists deps-file)
-                            (slurp deps-file))
-             new-contents (let [sb (StringBuffer.)]
-                            (run! #(.append sb (str "require('" % "');\n")) modules)
-                            (str sb))]
-         (util/mkdirs deps-file)
-         (if (or (not= old-contents new-contents)
-                 (nil? env/*compiler*)
-                 (nil? (::transitive-dep-set @env/*compiler*)))
-           (do
-             (spit deps-file new-contents)
-             (let [transitive-js (node-inputs [{:file (.getAbsolutePath deps-file)}] opts)]
-               (when-not (nil? env/*compiler*)
-                 (swap! env/*compiler* update-in [::transitive-dep-set]
-                   assoc modules transitive-js))
-               transitive-js))
-           (when-not (nil? env/*compiler*)
-             (get-in @env/*compiler* [::transitive-dep-set modules]))))
-       []))))
+   (->> (or (:node-modules-dirs opts) ["node_modules"])
+        (map io/file)
+        (mapcat (fn [dir]
+                  (when (and (seq modules) (.exists dir) (.isDirectory dir))
+                    (let [modules (into #{} (map name) modules)
+                          deps-file (io/file (util/output-directory opts) "cljs$node_modules.js")
+                          old-contents (when (.exists deps-file)
+                                         (slurp deps-file))
+                          new-contents (let [sb (StringBuffer.)]
+                                         (run! #(.append sb (str "require('" % "');\n")) modules)
+                                         (str sb))]
+                      (util/mkdirs deps-file)
+                      (if (or (not= old-contents new-contents)
+                              (nil? env/*compiler*)
+                              (nil? (::transitive-dep-set @env/*compiler*)))
+                        (do
+                          (spit deps-file new-contents)
+                          (let [transitive-js (node-inputs [{:file (.getAbsolutePath deps-file)}] opts)]
+                            (when-not (nil? env/*compiler*)
+                              (swap! env/*compiler* update-in [::transitive-dep-set]
+                                     assoc modules transitive-js))
+                            transitive-js))
+                        (when-not (nil? env/*compiler*)
+                          (get-in @env/*compiler* [::transitive-dep-set modules])))))))
+        (filterv identity))))
 
 (defn- node-file-seq->libs-spec*
   "Given a sequence of non-nested node_module paths where the extension ends in
@@ -2869,13 +2871,38 @@
 
 (def node-file-seq->libs-spec (memoize node-file-seq->libs-spec*))
 
+(defn module-file-seq-1 [dir]
+  [dir]
+  (let [fseq (tree-seq
+              (fn [^File f]
+                (and (. f (isDirectory))
+                     (not (boolean
+                           (re-find #"node_modules[\\\/].*[\\\/]node_modules"
+                                    (.getPath f))))))
+              (fn [^File d]
+                (seq (. d (listFiles))))
+              dir)]
+    (filter (fn [^File f]
+              (let [path (.getPath f)]
+                (or (.endsWith path ".json")
+                    (.endsWith path ".js"))))
+            fseq)))
+
+(defn node-path-modules [opts]
+  (map io/file (or (:node-modules-dirs opts) [(io/file "node_modules")])))
+
+(defn module-file-seq [opts]
+  "Return a seq of all files in `node_modules` ending in `.js` or `.json` that are
+   not in an internally nested `node_modules` dir."
+  (mapcat module-file-seq-1 (node-path-modules opts)))
+
 (defn index-node-modules-dir
   ([]
    (index-node-modules-dir
      (when env/*compiler*
        (:options @env/*compiler*))))
   ([opts]
-   (let [module-fseq (util/module-file-seq)]
+   (let [module-fseq (module-file-seq opts)]
      (node-file-seq->libs-spec module-fseq opts))))
 
 (defn preprocess-js
