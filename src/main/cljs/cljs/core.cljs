@@ -11584,13 +11584,19 @@ reduces them without incurring seq initialization"
 (defn random-uuid
   "Returns a pseudo-randomly generated UUID instance (i.e. type 4)."
   []
-  (letfn [(quad-hex [] (.toString (rand-int 65536) 16))]
+  (letfn [(quad-hex []
+            (let [unpadded-hex (.toString (rand-int 65536) 16)]
+              (case (count unpadded-hex)
+                1 (str "000" unpadded-hex)
+                2 (str "00" unpadded-hex)
+                3 (str "0" unpadded-hex)
+                unpadded-hex)))]
     (let [ver-tripple-hex (.toString (bit-or 0x4000 (bit-and 0x0fff (rand-int 65536))) 16)
           res-tripple-hex (.toString (bit-or 0x8000 (bit-and 0x3fff (rand-int 65536))) 16)]
       (uuid
-        (str (quad-hex) (quad-hex) "-" (quad-hex) "-" 
-         ver-tripple-hex "-" res-tripple-hex "-"
-         (quad-hex) (quad-hex) (quad-hex))))))
+        (str (quad-hex) (quad-hex) "-" (quad-hex) "-"
+             ver-tripple-hex "-" res-tripple-hex "-"
+             (quad-hex) (quad-hex) (quad-hex))))))
 
 (defn uuid?
   "Return true if x is a UUID."
