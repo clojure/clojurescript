@@ -2712,6 +2712,11 @@ reduces them without incurring seq initialization"
   "Returns a number one less than num."
   [x] (- x 1))
 
+(defn ^number abs
+  {:doc "Returns the absolute value of a."
+   :added "1.11.10"}
+  [a] (Math/abs a))
+
 (defn ^number max
   "Returns the greatest of the nums."
   ([x] x)
