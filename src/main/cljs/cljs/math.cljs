@@ -598,8 +598,8 @@
 
 (defn ^number get-exponent
   {:doc "Returns the exponent of d.
-  If d is ##NaN, ##Inf, ##-Inf => Double/MAX_EXPONENT + 1
-  If d is zero or subnormal => Double/MIN_EXPONENT - 1
+  If d is ##NaN, ##Inf, ##-Inf => max_Float64_exponent + 1
+  If d is zero or subnormal => min_Float64_exponent - 1
   See: https://docs.oracle.com/javase/8/docs/api/java/lang/Math.html#getExponent-double-"
    :added "1.11.10"}
   [d]
@@ -637,8 +637,8 @@
   {:doc "Returns the size of an ulp (unit in last place) for d.
   If d is ##NaN => ##NaN
   If d is ##Inf or ##-Inf => ##Inf
-  If d is zero => Double/MIN_VALUE
-  If d is +/- Double/MAX_VALUE => 2^971
+  If d is zero => Number/MIN_VALUE
+  If d is +/- Number/MAX_VALUE => 2^971
   See: https://docs.oracle.com/javase/8/docs/api/java/lang/Math.html#ulp-double-"
    :added "1.11.10"}
   [d]
@@ -744,11 +744,11 @@
   the second argument. If the arguments are equal, the second is returned.
   If either arg is #NaN => #NaN
   If both arguments are signed zeros => direction
-  If start is +-Double/MIN_VALUE and direction would cause a smaller magnitude
+  If start is +-Number/MIN_VALUE and direction would cause a smaller magnitude
     => zero with sign matching start
   If start is ##Inf or ##-Inf and direction would cause a smaller magnitude
-    => Double/MAX_VALUE with same sign as start
-  If start is equal to +=Double/MAX_VALUE and direction would cause a larger magnitude
+    => Number/MAX_VALUE with same sign as start
+  If start is equal to +=Number/MAX_VALUE and direction would cause a larger magnitude
     => ##Inf or ##-Inf with sign matching start
   See: https://docs.oracle.com/javase/8/docs/api/java/lang/Math.html#nextAfter-double-double-"
    :added "1.11.10"}
@@ -791,7 +791,7 @@
   {:doc "Returns the adjacent double of d in the direction of ##Inf.
   If d is ##NaN => ##NaN
   If d is ##Inf => ##Inf
-  If d is zero => Double/MIN_VALUE
+  If d is zero => Number/MIN_VALUE
   See: https://docs.oracle.com/javase/8/docs/api/java/lang/Math.html#nextUp-double-"
    :added "1.11.10"}
   [d]
@@ -816,8 +816,8 @@
 (defn ^number next-down
   {:doc "Returns the adjacent double of d in the direction of ##-Inf.
   If d is ##NaN => ##NaN
-  If d is ##Inf => Double/MAX_VALUE
-  If d is zero => -Double/MIN_VALUE
+  If d is ##Inf => Number/MAX_VALUE
+  If d is zero => -Number/MIN_VALUE
   See: https://docs.oracle.com/javase/8/docs/api/java/lang/Math.html#nextDown-double-"
    :added "1.11.10"}
   [d]
@@ -846,7 +846,7 @@
 
 (defn ^number scalb
   {:doc "Returns d * 2^scaleFactor, scaling by a factor of 2. If the exponent
-  is between Double/MIN_EXPONENT and Double/MAX_EXPONENT, the answer is exact.
+  is between min_Float64_exponent and max_Float64_exponent.
   scaleFactor is an integer
   If d is ##NaN => ##NaN
   If d is ##Inf or ##-Inf => ##Inf or ##-Inf respectively
