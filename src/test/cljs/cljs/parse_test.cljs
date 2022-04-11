@@ -80,7 +80,15 @@
   (are [s] ;; throw on invalid type (not string)
     (try (parse-uuid s) (is false) (catch :default _ (is true)))
     123
-    nil))
+    nil)
+  ;; parse the nil uuid
+  (is (parse-uuid "00000000-0000-0000-0000-000000000000"))
+  ;; parse a version 1 UUID
+  (is (parse-uuid "123e4567-e89b-12d3-a456-426614174000"))
+  ;; parse a version 2 UUID
+  (is (parse-uuid "123e4567-e89b-22d3-a456-426614174000"))
+  ;; ensure that bad characters are invalid
+  (is (nil? (parse-uuid "123e4567-eg9b-12d3-a456-426614174000"))))
 
 (deftest test-parse-boolean
   (is (identical? true (parse-boolean "true")))
