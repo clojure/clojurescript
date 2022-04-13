@@ -1499,7 +1499,8 @@
 (core/defn- add-ifn-methods [type type-sym [f & meths :as form]]
   (core/let [meths    (map #(adapt-ifn-params type %) meths)
              this-sym (with-meta 'self__ {:tag type})
-             argsym   (gensym "args")]
+             argsym   (gensym "args")
+             max-ifn-arity 20]
     (concat
       [`(set! ~(extend-prefix type-sym 'call) ~(with-meta `(fn ~@meths) (meta form)))
        `(set! ~(extend-prefix type-sym 'apply)
@@ -1507,7 +1508,11 @@
              `(fn ~[this-sym argsym]
                 (this-as ~this-sym
                   (.apply (.-call ~this-sym) ~this-sym
-                    (.concat (array ~this-sym) (cljs.core/aclone ~argsym)))))
+                    (.concat (array ~this-sym)
+                      (if (> (.-length ~argsym) ~max-ifn-arity)
+                        (doto (.slice ~argsym 0 ~max-ifn-arity)
+                          (.push (.slice ~argsym ~max-ifn-arity)))
+                        ~argsym)))))
              (meta form)))]
       (ifn-invoke-methods type type-sym form))))
 

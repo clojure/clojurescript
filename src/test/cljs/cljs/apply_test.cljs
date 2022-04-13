@@ -42,14 +42,11 @@
   (is (= '(1 2 3 4)) (apply meta-f 1 2 3 4 []))
   (is (= '(1 2 3 4 5)) (apply meta-f 1 2 3 4 5 []))
   (is (= (range 1 8)) (apply meta-f 1 2 3 4 5 [6 7]))
-  ;; Currently: 20 is not seqable :(
-  #_(is (= (range 21) (apply meta-f (range 21)))
+  (is (= (range 21) (apply meta-f (range 21)))
         "Should properly call the last IFn arity with 20 args with last being a seq")
-  ;; Currently: Tries to call arity 21. Fault at .apply of the deftype proto
-  ;; Though, it could probably also be caught right by apply
-  #_(is (= (range 22) (apply meta-f (range 22)))
+  (is (= (range 22) (apply meta-f (range 22)))
         "Should properly call the last IFn arity with 20 args with last being a seq")
-  #_(is (= (range 22) (.apply meta-f nil (to-array (range 22))))
+  (is (= (range 22) (.apply meta-f nil (to-array (range 22))))
         ".apply should also handle >20 arguments"))
 
 (deftest multi-arity-test
