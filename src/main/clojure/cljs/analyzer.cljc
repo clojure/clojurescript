@@ -2554,7 +2554,10 @@
          known-num-fields (:num-fields ctor-var)
          argc (count args)]
      (when (and (not (-> ctor meta :internal-ctor))
-                (some? known-num-fields) (not= known-num-fields argc))
+                (some? known-num-fields)
+                (not (or (= known-num-fields argc)
+                         (and (:record ctor-var)
+                              (= (+ 2 known-num-fields) argc)))))
        (warning :fn-arity env {:argc argc :ctor ctor}))
      {:env env :op :new :form form :class ctorexpr :args argexprs
       :children [:class :args]

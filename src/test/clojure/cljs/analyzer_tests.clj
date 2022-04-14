@@ -1492,3 +1492,23 @@
         '[(ns test.foo
             (:import goog))]))
     (is (= {} (get-in @cenv [::ana/namespaces 'test.foo :imports])))))
+
+(deftest test-cljs-3371
+  (let [ws (atom [])]
+    (ana/with-warning-handlers [(collecting-warning-handler ws)]
+      (env/with-compiler-env @test-cenv
+        (analyze (ana/empty-env)
+                 '(do
+                    (defrecord Foo [a])
+                    (Foo. nil)
+                    (Foo. nil nil nil)))))
+    (is (empty? @ws)))
+  (let [ws (atom [])]
+    (ana/with-warning-handlers [(collecting-warning-handler ws)]
+      (env/with-compiler-env @test-cenv
+        (analyze (ana/empty-env)
+                 '(do
+                    (defrecord Foo [a])
+                    (Foo. nil nil)))))
+    (is (= 1 (count @ws)))
+    (is (string/starts-with? (first @ws) "Wrong number of args (2) passed to Foo"))))
