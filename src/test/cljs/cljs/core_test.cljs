@@ -312,6 +312,16 @@
       (is (= :parent (multi-with-h :child)))
 )))
 
+(def tmph (make-hierarchy))
+(defmulti fooz (fn [a b] (keyword b)) :hierarchy #'tmph)
+(defmethod fooz :a [a b] a)
+(defmethod fooz :b [a b] b)
+(prefer-method fooz :a :b)
+
+(deftest test-cljs-3367-backward-conflict-prefers
+  (testing "CLJS-3367: Verify no backward conflict in prefer-method"
+    (is (some? (prefer-method fooz :a :b)))))
+
 (deftest test-transducers
   (testing "Testing transducers"
     (is (= (sequence (map inc) (array 1 2 3)) '(2 3 4)))
