@@ -11490,7 +11490,7 @@ reduces them without incurring seq initialization"
         prefer-table method-cache cached-hierarchy default-dispatch-val)))
 
   (-prefer-method [mf dispatch-val-x dispatch-val-y]
-    (when (prefers* dispatch-val-x dispatch-val-y prefer-table)
+    (when (prefers* dispatch-val-y dispatch-val-x  prefer-table)
       (throw (js/Error. (str "Preference conflict in multimethod '" name "': " dispatch-val-y
                    " is already preferred to " dispatch-val-x))))
     (swap! prefer-table
