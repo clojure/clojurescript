@@ -2385,6 +2385,8 @@
                 line (get-line name env)
                 col (get-col name env)
                 shadow (handle-symbol-local name (get-in env [:locals name]))
+                shadow (when (nil? shadow)
+                         (get-in env [:js-globals name]))
                 be {:name name
                     :line line
                     :column col
