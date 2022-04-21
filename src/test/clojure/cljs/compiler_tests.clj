@@ -365,6 +365,14 @@
         ns-info (env/ensure (comp/emit-source input output "cljs" {}))]
     (is (= 'foo.foo (:ns ns-info)))))
 
+(deftest test-3368-global-shadowing
+  (testing "Let binding which use JS global names should get shadowed"
+    (let [code (env/with-compiler-env (env/default-compiler-env)
+                 (compile-form-seq
+                   '[(defn foo []
+                       (let [window js/window]
+                         window))]))]
+      (is (re-find #"window__\$1" code)))))
 
 ;; CLJS-1225
 

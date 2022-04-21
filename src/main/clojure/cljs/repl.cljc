@@ -1113,7 +1113,7 @@
                ana/*fn-invoke-direct* (and static-fns fn-invoke-direct)
                *repl-opts* opts]
        (try
-         (let [env {:context :expr :locals {}}
+         (let [env (assoc (ana/empty-env) :context :expr)
                special-fns (merge default-special-fns special-fns)
                is-special-fn? (set (keys special-fns))
                request-prompt (Object.)
