@@ -2171,9 +2171,8 @@
 (defn fn-name-var [env locals name]
   (when (some? name)
     (let [ns       (-> env :ns :name)
-          shadow   (handle-symbol-local name (get locals name))
-          shadow   (when (nil? shadow)
-                     (get-in env [:js-globals name]))
+          shadow   (or (handle-symbol-local name (get locals name))
+                       (get-in env [:js-globals name]))
           fn-scope (:fn-scope env)
           name-var {:name name
                     :op :binding
