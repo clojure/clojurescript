@@ -1514,15 +1514,31 @@
                              else-tag #{else-tag})]
               (into then-tag else-tag))))))))
 
-(defn infer-invoke [env {f :fn :keys [args] :as e}]
-  (let [me (assoc (find-matching-method f args) :op :fn-method)]
+(defn js-var? [ast]
+  (= :js-var (:op ast)))
+
+(defn js-var-fn? [fn-ast]
+  (js-var? (:info fn-ast)))
+
+(defn fn-ast->tag
+  [{:keys [info] :as fn-ast}]
+  (cond
+    ;; ClojureScript Fn
+    (:fn-var info)      (:ret-tag info)
+    ;; Global foreign JS Fn inferred via externs
+    (:js-fn-var info)   (:ret-tag info)
+    ;; Node foreign JS *var*, we cannot distinguish between properties
+    ;; and functions from such libs at this time, we cannot possibly
+    ;; know the returns so break the leading prefix (start with raw 'js tag)
+    (js-var-fn? fn-ast) 'js
+    :else               (when (= 'js (:ns info)) 'js)))
+
+(defn infer-invoke [env {fn-ast :fn :keys [args] :as e}]
+  (let [me (assoc (find-matching-method fn-ast args) :op :fn-method)]
     (if-some [ret-tag (infer-tag env me)]
       ret-tag
-      (let [{:keys [info]} f]
-        (if-some [ret-tag (if (or (true? (:fn-var info))
-                                  (true? (:js-fn-var info)))
-                            (:ret-tag info)
-                            (when (= 'js (:ns info)) 'js))]
+      (let []
+        (if-some [ret-tag (fn-ast->tag fn-ast)]
           ret-tag
           impl/ANY_SYM)))))
 
