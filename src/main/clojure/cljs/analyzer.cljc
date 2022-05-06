@@ -1568,6 +1568,7 @@
                     (infer-tag env init)
                     (infer-tag env (:info ast)))
         (:host-field :host-call)
+                  impl/ANY_SYM
         :js       impl/ANY_SYM
         nil)))
 
