@@ -1441,16 +1441,16 @@
   (register-constant! env sym)
   {:op :const :val sym :env env :form sym :tag 'cljs.core/Keyword})
 
-(defn get-tag [e]
-  (if-some [tag (-> e :form meta :tag)]
+(defn get-tag [ast]
+  (if-some [tag (-> ast :form meta :tag)]
     tag
-    (if-some [tag (-> e :tag)]
+    (if-some [tag (-> ast :tag)]
       tag
-      (-> e :info :tag))))
+      (-> ast :info :tag))))
 
-(defn find-matching-method [f params]
+(defn find-matching-method [fn-ast params]
   ;; if local fn, need to look in :info
-  (let [methods (or (:methods f) (-> f :info :methods))
+  (let [methods (or (:methods fn-ast) (-> fn-ast :info :methods))
         c       (count params)]
     (some
       (fn [m]
@@ -1476,21 +1476,21 @@
 
 (declare infer-tag)
 
-(defn unwrap-quote [{:keys [op] :as expr}]
+(defn unwrap-quote [{:keys [op] :as ast}]
   (if #?(:clj (= op :quote)
          :cljs (keyword-identical? op :quote))
-    (:expr expr)
-    expr))
+    (:expr ast)
+    ast))
 
-(defn infer-if [env e]
-  (let [{:keys [op form]} (unwrap-quote (:test e))
-        then-tag (infer-tag env (:then e))]
+(defn infer-if [env ast]
+  (let [{:keys [op form]} (unwrap-quote (:test ast))
+        then-tag (infer-tag env (:then ast))]
     (if (and #?(:clj (= op :const)
                 :cljs (keyword-identical? op :const))
              (not (nil? form))
              (not (false? form)))
       then-tag
-      (let [else-tag (infer-tag env (:else e))]
+      (let [else-tag (infer-tag env (:else ast))]
         (cond
           (or #?(:clj (= then-tag else-tag)
                  :cljs (symbol-identical? then-tag else-tag))
@@ -1533,7 +1533,7 @@
     (js-var-fn? fn-ast) 'js
     :else               (when (= 'js (:ns info)) 'js)))
 
-(defn infer-invoke [env {fn-ast :fn :keys [args] :as e}]
+(defn infer-invoke [env {fn-ast :fn :keys [args] :as ast}]
   (let [me (assoc (find-matching-method fn-ast args) :op :fn-method)]
     (if-some [ret-tag (infer-tag env me)]
       ret-tag
@@ -1545,28 +1545,28 @@
 (defn infer-tag
   "Given env, an analysis environment, and e, an AST node, return the inferred
    type of the node"
-  [env e]
-    (if-some [tag (get-tag e)]
+  [env ast]
+    (if-some [tag (get-tag ast)]
       tag
-      (case (:op e)
+      (case (:op ast)
         :recur    impl/IGNORE_SYM
         :throw    impl/IGNORE_SYM
-        :let      (infer-tag env (:body e))
-        :loop     (infer-tag env (:body e))
-        :do       (infer-tag env (:ret e))
-        :fn-method (infer-tag env (:body e))
-        :def      (infer-tag env (:init e))
-        :invoke   (infer-invoke env e)
-        :if       (infer-if env e)
-        :const    (case (:form e)
+        :let      (infer-tag env (:body ast))
+        :loop     (infer-tag env (:body ast))
+        :do       (infer-tag env (:ret ast))
+        :fn-method (infer-tag env (:body ast))
+        :def      (infer-tag env (:init ast))
+        :invoke   (infer-invoke env ast)
+        :if       (infer-if env ast)
+        :const    (case (:form ast)
                     true impl/BOOLEAN_SYM
                     false impl/BOOLEAN_SYM
                     impl/ANY_SYM)
-        :quote    (infer-tag env (:expr e))
+        :quote    (infer-tag env (:expr ast))
         (:var :local :js-var :binding)
-                  (if-some [init (:init e)]
+                  (if-some [init (:init ast)]
                     (infer-tag env init)
-                    (infer-tag env (:info e)))
+                    (infer-tag env (:info ast)))
         (:host-field :host-call)
                   impl/ANY_SYM
         :js       impl/ANY_SYM
