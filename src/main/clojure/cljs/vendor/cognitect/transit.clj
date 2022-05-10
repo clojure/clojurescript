@@ -124,13 +124,13 @@
      (stringRep [_ sym] (nsed-name sym))
      (getVerboseHandler [_] nil))
 
-   cognitect.transit.WithMeta
+   cljs.vendor.cognitect.transit.WithMeta
    (reify WriteHandler
      (tag [_ _] "with-meta")
      (rep [_ o]
        (TransitFactory/taggedValue "array"
-         [(.-value ^cognitect.transit.WithMeta o)
-          (.-meta ^cognitect.transit.WithMeta o)]))
+         [(.-value ^cljs.vendor.cognitect.transit.WithMeta o)
+          (.-meta ^cljs.vendor.cognitect.transit.WithMeta o)]))
      (stringRep [_ _] nil)
      (getVerboseHandler [_] nil))})
 

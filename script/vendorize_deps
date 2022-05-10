@@ -26,5 +26,8 @@ rm -rf transit-clj
 TRANSIT_FILE=`mktemp /tmp/transit.clj.XXXXXXXXXXX`
 sed -e 's/ns cognitect.transit/ns cljs.vendor.cognitect.transit/' vendor/cognitect/transit.clj > $TRANSIT_FILE
 mv $TRANSIT_FILE vendor/cognitect/transit.clj
+TRANSIT_FILE=`mktemp /tmp/transit.clj.XXXXXXXXXXX`
+sed -e 's/cognitect.transit.WithMeta/cljs.vendor.cognitect.transit.WithMeta/' vendor/cognitect/transit.clj > $TRANSIT_FILE
+mv $TRANSIT_FILE vendor/cognitect/transit.clj
 
 # git clone -b "v$TREADER_RELEASE" --depth 1 git@github.com:clojure/tools.reader.git
