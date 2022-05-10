@@ -11,7 +11,7 @@
   (:require [clojure.java.io :as io]
             [clojure.string :as string]
             [clojure.set :as set]
-            [clojure.data.json :as json]
+            [cljs.vendor.clojure.data.json :as json]
             [clojure.tools.reader :as reader]
             [clojure.tools.reader.reader-types :as readers]
             [cljs.tagged-literals :as tags]

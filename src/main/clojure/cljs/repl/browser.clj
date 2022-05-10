@@ -12,7 +12,7 @@
             [clojure.java.browse :as browse]
             [clojure.string :as string]
             [clojure.edn :as edn]
-            [clojure.data.json :as json]
+            [cljs.vendor.clojure.data.json :as json]
             [cljs.util :as util]
             [cljs.closure :as cljsc]
             [cljs.repl :as repl]

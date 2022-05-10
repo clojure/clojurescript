@@ -542,7 +542,7 @@ goog.events.getProxy/f<@http://localhost:9000/out/goog/events/events.js:276:16"
 
 (comment
   (require '[cljs.closure :as cljsc]
-           '[clojure.data.json :as json]
+           '[cljs.vendor.clojure.data.json :as json]
            '[cljs.source-map :as sm]
            '[clojure.pprint :as pp])
 

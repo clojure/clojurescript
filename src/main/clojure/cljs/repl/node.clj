@@ -16,7 +16,7 @@
             [cljs.repl.bootstrap :as bootstrap]
             [cljs.cli :as cli]
             [cljs.closure :as closure]
-            [clojure.data.json :as json])
+            [cljs.vendor.clojure.data.json :as json])
   (:import [java.net Socket]
            [java.lang StringBuilder]
            [java.io File BufferedReader BufferedWriter IOException]

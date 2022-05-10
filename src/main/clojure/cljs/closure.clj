@@ -20,7 +20,7 @@
             [clojure.reflect]
             [clojure.set :as set]
             [clojure.string :as string]
-            [clojure.data.json :as json]
+            [cljs.vendor.clojure.data.json :as json]
             [clojure.tools.reader :as reader]
             [clojure.tools.reader.reader-types :as readers]
             [cljs.module-graph :as module-graph])

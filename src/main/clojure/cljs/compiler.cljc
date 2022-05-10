@@ -17,7 +17,7 @@
                     [cljs.source-map :as sm]
                     [cljs.tagged-literals :as tags]
                     [cljs.util :as util]
-                    [clojure.data.json :as json]
+                    [cljs.vendor.clojure.data.json :as json]
                     [clojure.java.io :as io]
                     [clojure.set :as set]
                     [clojure.string :as string]

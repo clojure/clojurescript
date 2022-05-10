@@ -77,8 +77,8 @@
 #?(:clj
    (def transit-read-opts
      (try
-       (require '[cognitect.transit])
-       (when-some [ns (find-ns 'cognitect.transit)]
+       (require '[cljs.vendor.cognitect.transit])
+       (when-some [ns (find-ns 'cljs.vendor.cognitect.transit)]
          (let [read-handler     @(ns-resolve ns 'read-handler)
                read-handler-map @(ns-resolve ns 'read-handler-map)]
            {:handlers
@@ -91,8 +91,8 @@
 #?(:clj
    (def transit-write-opts
      (try
-       (require '[cognitect.transit])
-       (when-some [ns (find-ns 'cognitect.transit)]
+       (require '[cljs.vendor.cognitect.transit])
+       (when-some [ns (find-ns 'cljs.vendor.cognitect.transit)]
          (let [write-handler     @(ns-resolve ns 'write-handler)
                write-handler-map @(ns-resolve ns 'write-handler-map)]
            {:handlers
@@ -112,8 +112,8 @@
    (def transit
      (delay
        (try
-         (require '[cognitect.transit])
-         (when-some [ns (find-ns 'cognitect.transit)]
+         (require '[cljs.vendor.cognitect.transit])
+         (when-some [ns (find-ns 'cljs.vendor.cognitect.transit)]
            {:writer @(ns-resolve ns 'writer)
             :reader @(ns-resolve ns 'reader)
             :write  @(ns-resolve ns 'write)
