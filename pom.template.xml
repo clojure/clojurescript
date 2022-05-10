@@ -25,7 +25,7 @@
         <dependency>
             <groupId>org.clojure</groupId>
             <artifactId>clojure</artifactId>
-            <version>1.8.0</version>
+            <version>1.10.0</version>
         </dependency>
         <dependency>
             <groupId>com.google.javascript</groupId>
@@ -269,7 +269,7 @@
             <plugin>
                 <groupId>com.theoryinpractise</groupId>
                 <artifactId>clojure-maven-plugin</artifactId>
-                <version>1.3.13</version>
+                <version>1.8.3</version>
                 <configuration>
                     <temporaryOutputDirectory>false</temporaryOutputDirectory>
                 </configuration>
@@ -281,34 +281,11 @@
                             <goal>compile</goal>
                         </goals>
                         <configuration>
-                            <compileDeclaredNamespaceOnly>true</compileDeclaredNamespaceOnly>
+                            <cleanAOTNamespaces>true</cleanAOTNamespaces>
                             <namespaces>
-                                <namespace>cljs.util</namespace>
-                                <namespace>cljs.env</namespace>
-                                <namespace>cljs.js-deps</namespace>
-                                <namespace>cljs.core</namespace>
-                                <namespace>cljs.source-map.base64</namespace>
-                                <namespace>cljs.source-map.base64-vlq</namespace>
-                                <namespace>cljs.source-map</namespace>
-                                <namespace>cljs.analyzer</namespace>
-                                <namespace>cljs.analyzer.utils</namespace>
-                                <namespace>cljs.compiler</namespace>
-                                <namespace>cljs.closure</namespace>
-                                <namespace>cljs.tagged-literals</namespace>
-                                <namespace>cljs.test</namespace>
-                                <namespace>cljs.analyzer.api</namespace>
-                                <namespace>cljs.build.api</namespace>
-                                <namespace>cljs.compiler.api</namespace>
-                                <namespace>cljs.spec.alpha</namespace>
-                                <namespace>cljs.spec.test.alpha</namespace>
-                                <namespace>cljs.spec.gen.alpha</namespace>
-                                <namespace>cljs.repl</namespace>
-                                <namespace>cljs.repl.browser</namespace>
-                                <namespace>cljs.repl.node</namespace>
-                                <namespace>cljs.repl.reflect</namespace>
-                                <namespace>cljs.repl.server</namespace>
-                                <namespace>cljs.main</namespace>
-                                <namespace>cljs.cli</namespace>
+                                <namespace>!clojure.tools.reader.*</namespace>
+                                <namespace>!clojure.data.json.*</namespace>
+                                <namespace>!cognitect.transit.*</namespace>
                             </namespaces>
                         </configuration>
                     </execution>
