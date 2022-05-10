@@ -1,6 +1,6 @@
 {:paths ["src/main/clojure" "src/main/cljs" "resources"]
  :deps
- {com.google.javascript/closure-compiler-unshaded {:mvn/version "v20210808"}
+ {com.google.javascript/closure-compiler-unshaded {:mvn/version "v20220502"}
   com.cognitect/transit-clj {:mvn/version "1.0.329"}
   org.clojure/clojure {:mvn/version "1.10.0"}
   org.clojure/core.specs.alpha {:mvn/version "0.1.24"}
@@ -28,4 +28,3 @@
   :uberjar               {:extra-deps {com.github.seancorfield/depstar {:mvn/version "2.0.193"}}
                           :exec-fn hf.depstar/uberjar
                           :exec-args {:aot true}}}}
-
