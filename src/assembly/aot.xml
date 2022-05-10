@@ -8,11 +8,14 @@
     <fileSet>
       <directory>target/classes</directory>
         <outputDirectory>/</outputDirectory>
+          <!-- Excluding these class files leads to class loader failure on deftypes -->
+          <!--
           <excludes>
             <exclude>clojure/data/**</exclude>
             <exclude>clojure/tools/**</exclude>
             <exclude>cognitect/**</exclude>
           </excludes>
+          -->
     </fileSet>
   </fileSets>
   <files>
