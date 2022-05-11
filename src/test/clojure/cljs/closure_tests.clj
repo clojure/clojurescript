@@ -10,7 +10,7 @@
   (:refer-clojure :exclude [compile])
   (:use cljs.closure clojure.test)
   (:require [cljs.build.api :as build]
-            [clojure.data.json :as json]
+            [cljs.vendor.clojure.data.json :as json]
             [clojure.java.shell :as sh]
             [cljs.closure :as closure]
             [cljs.js-deps :as deps]

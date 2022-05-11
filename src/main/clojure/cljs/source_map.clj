@@ -9,7 +9,7 @@
 (ns cljs.source-map
   (:require [clojure.java.io :as io]
             [clojure.string :as string]
-            [clojure.data.json :as json]
+            [cljs.vendor.clojure.data.json :as json]
             [clojure.set :as set]
             [cljs.source-map.base64-vlq :as base64-vlq]))
 
@@ -104,7 +104,7 @@
             (sorted-map)))))
 
 (defn decode-reverse
-  "Convert a v3 source map JSON object into a nested sorted map 
+  "Convert a v3 source map JSON object into a nested sorted map
    organized as file, line, and column. Note this source map
    maps from *original* source location to generated source location."
   ([source-map]
@@ -345,11 +345,11 @@
 
 (comment
   ;; INSTRUCTIONS:
-  
+
   ;; switch into samples/hello
   ;; run repl to start clojure
   ;; build with
-  
+
   (require '[cljs.closure :as cljsc])
   (cljsc/build "src"
     {:optimizations :simple

@@ -15,7 +15,7 @@
             [cljs.env :as env]
             [cljs.test-util :as test]
             [cljs.util :as util]
-            [clojure.data.json :as json]
+            [cljs.vendor.clojure.data.json :as json]
             [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.java.shell :as sh]
@@ -458,7 +458,7 @@
     (build/build (build/inputs (io/file inputs "data_readers_test")) opts cenv)
     (is (contains? (-> @cenv ::ana/data-readers) 'test/custom-identity))
     (is (true? (boolean (re-find #"Array\.of\(\"foo\"\)"
-                          (slurp (io/file 
+                          (slurp (io/file
                                    out ;"data-readers-test-out"
                                    "data_readers_test" "core.js"))))))))
 
