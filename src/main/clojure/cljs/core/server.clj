@@ -8,8 +8,8 @@
 
 (ns cljs.core.server
   (:refer-clojure :exclude [with-bindings resolve-fn prepl io-prepl])
-  (:require [clojure.tools.reader.reader-types :as readers]
-            [clojure.tools.reader :as reader]
+  (:require [cljs.vendor.clojure.tools.reader.reader-types :as readers]
+            [cljs.vendor.clojure.tools.reader :as reader]
             [cljs.env :as env]
             [cljs.closure :as closure]
             [cljs.analyzer :as ana]

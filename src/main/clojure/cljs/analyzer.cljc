@@ -25,8 +25,8 @@
                      [clojure.java.io :as io]
                      [clojure.set :as set]
                      [clojure.string :as string]
-                     [clojure.tools.reader :as reader]
-                     [clojure.tools.reader.reader-types :as readers])
+                     [cljs.vendor.clojure.tools.reader :as reader]
+                     [cljs.vendor.clojure.tools.reader.reader-types :as readers])
      :cljs (:require [cljs.analyzer.impl :as impl]
                      [cljs.analyzer.impl.namespaces :as nses]
                      [cljs.analyzer.passes.and-or :as and-or]

@@ -21,8 +21,6 @@
             [clojure.set :as set]
             [clojure.string :as string]
             [cljs.vendor.clojure.data.json :as json]
-            [clojure.tools.reader :as reader]
-            [clojure.tools.reader.reader-types :as readers]
             [cljs.module-graph :as module-graph])
   (:import [java.lang ProcessBuilder]
            [java.io

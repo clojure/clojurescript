@@ -9,8 +9,8 @@
 (ns cljs.core.macros
   (:refer-clojure :exclude [alias])
   (:require [clojure.java.io :as io]
-            [clojure.tools.reader :as reader]
-            [clojure.tools.reader.reader-types :as readers]
+            [cljs.vendor.clojure.tools.reader :as reader]
+            [cljs.vendor.clojure.tools.reader.reader-types :as readers]
             [cljs.env :as env]
             [cljs.analyzer :as ana]
             [cljs.repl :refer [source]])

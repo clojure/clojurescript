@@ -21,7 +21,7 @@
                     [clojure.java.io :as io]
                     [clojure.set :as set]
                     [clojure.string :as string]
-                    [clojure.tools.reader :as reader])
+                    [cljs.vendor.clojure.tools.reader :as reader])
      :cljs (:require [cljs.analyzer :as ana]
                      [cljs.analyzer.impl :as ana.impl]
                      [cljs.env :as env]
