@@ -30,4 +30,13 @@ TRANSIT_FILE=`mktemp /tmp/transit.clj.XXXXXXXXXXX`
 sed -e 's/cognitect.transit.WithMeta/cljs.vendor.cognitect.transit.WithMeta/' vendor/cognitect/transit.clj > $TRANSIT_FILE
 mv $TRANSIT_FILE vendor/cognitect/transit.clj
 
-# git clone -b "v$TREADER_RELEASE" --depth 1 git@github.com:clojure/tools.reader.git
+rm -rf tools.reader
+rm -rf vendor/clojure/tools
+git clone -b "v$TREADER_RELEASE" --depth 1 git@github.com:clojure/tools.reader.git
+mkdir -p vendor/clojure/tools
+mv tools.reader/src/main/clojure/clojure/tools/* vendor/clojure/tools/
+rm -rf tools.reader
+
+echo "rewriting tool.reader namespaces"
+find vendor/clojure/tools -name '*.clj' -print0 | xargs -0 sed -iBAK 's/clojure.tools/cljs.vendor.clojure.tools/g'
+find vendor/clojure/tools -name '*BAK' -delete
