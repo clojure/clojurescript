@@ -278,7 +278,7 @@
                         <configuration>
                             <cleanAOTNamespaces>true</cleanAOTNamespaces>
                             <namespaces>
-                                <namespace>!clojure.tools.reader.*</namespace>
+                                <namespace>!cljs.vendor.bridge</namespace>
                             </namespaces>
                         </configuration>
                     </execution>
