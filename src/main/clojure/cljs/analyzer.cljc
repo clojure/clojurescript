@@ -45,11 +45,6 @@
                    [java.net URL]
                    [java.util.regex Pattern])))
 
-;; bridge clojure.tools.reader, tools.reader is a dep of ClojureScript for
-;; bootstrapping anyway, so will always be on the classpath
-#?(:clj
-   (load "vendor/bridge"))
-
 #?(:clj (set! *warn-on-reflection* true))
 
 ;; User file-local compiler flags
