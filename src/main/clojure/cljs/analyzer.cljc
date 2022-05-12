@@ -45,6 +45,10 @@
                    [java.net URL]
                    [java.util.regex Pattern])))
 
+;; bridge clojure.tools.reader if on classpath
+#?(:clj
+   (load "vendor/bridge"))
+
 #?(:clj (set! *warn-on-reflection* true))
 
 ;; User file-local compiler flags
@@ -4395,6 +4399,14 @@
     ((juxt :requires :require-macros :as-aliases)
      (get-namespace ns))))
 
+(defn get-bridged-alias-map
+  "Returns clojure.tools.reader/*alias-map* for bridging"
+  []
+  (try
+    @(ns-resolve 'clojure.tools.reader '*alias-map*)
+    (catch Throwable t
+      nil)))
+
 #?(:clj
    (defn forms-seq*
      "Seq of Clojure/ClojureScript forms from rdr, a java.io.Reader. Optionally
@@ -4795,7 +4807,7 @@
                          *unchecked-arrays* false])
                *cljs-ns* 'cljs.user
                *cljs-file* nil
-               reader/*alias-map* (or reader/*alias-map* {})]
+               reader/*alias-map* (or (get-bridged-alias-map) reader/*alias-map* {})]
        (loop [ns nil forms forms last-ast nil]
          (if (some? forms)
            (let [form (first forms)
@@ -4853,7 +4865,7 @@
                 (if (or skip-cache (not cache) (requires-analysis? res cache output-dir opts))
                   (binding [*cljs-ns* 'cljs.user
                             *cljs-file* path
-                            reader/*alias-map* (or reader/*alias-map* {})]
+                            reader/*alias-map* (or (get-bridged-alias-map) reader/*alias-map* {})]
                     (when (or *verbose* (:verbose opts))
                       (util/debug-prn "Analyzing" (str res)))
                     (let [env (assoc (empty-env) :build-options opts)
