@@ -26,7 +26,7 @@
 * CLJS-3352: Self-host negative zero emitted as positive zero
 * CLJS-3319: make PersistentHashMap release inodes correctly
 
-### Enhancemnets
+### Enhancements
 * CLJS-3348: Implement new functions for parity with Clojure 1.11
 * CLJS-3353: Add the new iteration function introduced in Clojure 1.11
 * CLJS-3347: Create clojure.math namespace
