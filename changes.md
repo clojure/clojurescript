@@ -1,4 +1,4 @@
-## 1.11.52
+## 1.11.54
 
 ### Changes
 * use `require` instead of `load` for `cljs.vendor.bridge`, addresses issue
