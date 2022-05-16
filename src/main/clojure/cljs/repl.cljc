@@ -1057,7 +1057,7 @@
   ;; bridge clojure.tools.reader to satisfy the old contract
   (when (and (find-ns 'clojure.tools.reader)
              (not (find-ns 'cljs.vendor.bridge)))
-    (clojure.core/load "vendor/bridge"))
+    (require 'cljs.vendor.bridge))
   (doseq [[unknown-opt suggested-opt] (util/unknown-opts (set (keys opts)) (set/union known-repl-opts cljsc/known-opts))]
     (when suggested-opt
       (println (str "WARNING: Unknown option '" unknown-opt "'. Did you mean '" suggested-opt "'?"))))

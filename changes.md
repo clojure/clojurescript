@@ -1,3 +1,9 @@
+## 1.11.52
+
+### Changes
+* use `require` instead of `load` for `cljs.vendor.bridge`, addresses issue
+  reported by Bruce Hauman wrt. Figwheel
+
 ## 1.11.51
 
 ### Changes
