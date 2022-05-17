@@ -4395,13 +4395,14 @@
     ((juxt :requires :require-macros :as-aliases)
      (get-namespace ns))))
 
-(defn get-bridged-alias-map
-  "Returns clojure.tools.reader/*alias-map* for bridging"
-  []
-  (try
-    @(ns-resolve 'clojure.tools.reader '*alias-map*)
-    (catch Throwable t
-      nil)))
+#?(:clj
+   (defn get-bridged-alias-map
+     "Returns clojure.tools.reader/*alias-map* for bridging"
+     []
+     (try
+       @(ns-resolve 'clojure.tools.reader '*alias-map*)
+       (catch Throwable t
+         nil))))
 
 #?(:clj
    (defn forms-seq*
@@ -4803,7 +4804,7 @@
                          *unchecked-arrays* false])
                *cljs-ns* 'cljs.user
                *cljs-file* nil
-               reader/*alias-map* (or (get-bridged-alias-map) reader/*alias-map* {})]
+               reader/*alias-map* (or #?(:clj (get-bridged-alias-map)) reader/*alias-map* {})]
        (loop [ns nil forms forms last-ast nil]
          (if (some? forms)
            (let [form (first forms)
