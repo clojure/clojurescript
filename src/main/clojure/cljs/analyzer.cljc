@@ -2556,6 +2556,19 @@
      :tag (:tag expr)
      :children [:expr]}))
 
+(def js-prim-ctor->tag
+  '{js/Object object
+    js/String string
+    js/Array array
+    js/Number number
+    js/Function function
+    js/Boolean boolean})
+
+(defn prim-ctor?
+  "Test whether a tag is a constructor for a JS primitive"
+  [t]
+  (contains? js-prim-ctor->tag t))
+
 (defmethod parse 'new
   [_ env [_ ctor & args :as form] _ _]
   (disallowing-recur
@@ -2577,14 +2590,12 @@
        (warning :fn-arity env {:argc argc :ctor ctor}))
      {:env env :op :new :form form :class ctorexpr :args argexprs
       :children [:class :args]
-      :tag (let [name (-> ctorexpr :info :name)]
-             (or ('{js/Object object
-                    js/String string
-                    js/Array  array
-                    js/Number number
-                    js/Function function
-                    js/Boolean boolean} name)
-                 name))})))
+      :tag (let [tag (-> ctorexpr :info :tag)]
+             (if (and (js-tag? tag)
+                      (not (prim-ctor? tag)))
+               'js ; some foreign thing, drop the prefix
+               (let [name (-> ctorexpr :info :name)]
+                 (or (js-prim-ctor->tag name) name))))})))
 
 (defmethod parse 'set!
   [_ env [_ target val alt :as form] _ _]
