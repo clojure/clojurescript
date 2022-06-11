@@ -1,3 +1,9 @@
+## 1.11.57
+
+### Fixes
+* CLJS-3377: Objects created from required JS constructor are not correctly hinted
+* get-bridged-alias-map is not needed in self-hosted
+
 ## 1.11.54
 
 ### Changes
