@@ -47,7 +47,10 @@
   (is (= (range 22) (apply meta-f (range 22)))
         "Should properly call the last IFn arity with 20 args with last being a seq")
   (is (= (range 22) (.apply meta-f nil (to-array (range 22))))
-        ".apply should also handle >20 arguments"))
+        ".apply should also handle >20 arguments")
+  (let [ctor #(.apply meta-f nil (js-arguments))] ; CLJS-3382
+    (is (= '(1 2 3) (.apply ctor nil #js [1 2 3])))
+    (is (= (range 30) (.apply ctor nil (to-array (range 30)))))))
 
 (deftest multi-arity-test
   (is (= 2 (apply (fn ([a] a) ([a b] b)) 1 [2])))
