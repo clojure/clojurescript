@@ -1507,12 +1507,13 @@
           ~(with-meta
              `(fn ~[this-sym argsym]
                 (this-as ~this-sym
-                  (.apply (.-call ~this-sym) ~this-sym
-                    (.concat (array ~this-sym)
-                      (if (> (.-length ~argsym) ~max-ifn-arity)
-                        (doto (.slice ~argsym 0 ~max-ifn-arity)
-                          (.push (.slice ~argsym ~max-ifn-arity)))
-                        ~argsym)))))
+                  (let [args# (cljs.core/aclone ~argsym)]
+                    (.apply (.-call ~this-sym) ~this-sym
+                      (.concat (array ~this-sym)
+                        (if (> (.-length args#) ~max-ifn-arity)
+                          (doto (.slice args# 0 ~max-ifn-arity)
+                            (.push (.slice args# ~max-ifn-arity)))
+                          args#))))))
              (meta form)))]
       (ifn-invoke-methods type type-sym form))))
 
