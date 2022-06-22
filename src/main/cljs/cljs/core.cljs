@@ -11562,7 +11562,7 @@ reduces them without incurring seq initialization"
 
   IEquiv
   (-equiv [_ other]
-    (and (instance? UUID other) (identical? uuid (.-uuid other))))
+    (and (implements? IUUID other) (identical? uuid (.-uuid other))))
 
   IPrintWithWriter
   (-pr-writer [_ writer _]
