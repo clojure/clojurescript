@@ -1,3 +1,9 @@
+## 1.11.60
+
+### Fixes
+* broaden scope of UUID equiv to implementers of protocol rather than concrete type
+* CLJS-3382: Fix regression in .apply after CLJS-3024
+
 ## 1.11.57
 
 ### Fixes
