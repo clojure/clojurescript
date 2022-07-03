@@ -495,7 +495,7 @@ present"
                    (merge
                      (select-keys env-opts
                        (cond-> closure/known-opts
-                         repl? (conj :browser-repl)))
+                         (not repl?) (disj :browser-repl)))
                      options
                      (when main-ns
                        {:main main-ns})) opts
