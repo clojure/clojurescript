@@ -5329,7 +5329,12 @@ reduces them without incurring seq initialization"
   {:added "1.2"
    :static true}
   ([m ks]
-     (reduce get m ks))
+   (loop [m m
+          ks (seq ks)]
+     (if (nil? ks)
+       m
+       (recur (get m (first ks))
+         (next ks)))))
   ([m ks not-found]
      (loop [sentinel lookup-sentinel
             m m
