@@ -127,6 +127,8 @@
     (is (= 1 (get-in {:foo 1 :bar 2} [:foo])))
     (is (= 2 (get-in {:foo {:bar 2}} [:foo :bar])))
     (is (= 1 (get-in [{:foo 1}, {:foo 2}] [0 :foo])))
+    (let [v (reduced 42)]
+      (is (= v (get-in {:foo v} [:foo]))))
     (is (= 4 (get-in [{:foo 1 :bar [{:baz 1}, {:buzz 2}]}, {:foo 3 :bar [{:baz 3}, {:buzz 4}]}]
                [1 :bar 1 :buzz]))))
   )
