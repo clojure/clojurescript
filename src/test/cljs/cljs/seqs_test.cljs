@@ -8,7 +8,7 @@
 
 (ns cljs.seqs-test
   (:refer-clojure :exclude [iter])
-  (:require [cljs.test :refer-macros [deftest testing is]]
+  (:require [cljs.test :refer-macros [deftest testing are is]]
             [clojure.test.check :as tc]
             [clojure.test.check.clojure-test :refer-macros [defspec]]
             [clojure.test.check.generators :as gen]
@@ -96,6 +96,32 @@
       (is (nil? (empty 1)))
       (is (nil? (empty "abc")))
       (is (nil? (empty #js [1 2 3]))))))
+
+(deftest test-empty?
+  (are [x] (empty? x)
+       nil
+       ()
+       (lazy-seq nil)    ; => ()
+       []
+       {}
+       #{}
+       ""
+       (into-array [])
+       (transient [])
+       (transient #{})
+       (transient {}))
+
+  (are [x] (not (empty? x))
+       '(1 2)
+       (lazy-seq [1 2])
+       [1 2]
+       {:a 1 :b 2}
+       #{1 2}
+       "abc"
+       (into-array [1 2])
+       (transient [1])
+       (transient #{1})
+       (transient {1 2})))
 
 (deftest test-distinct
   (testing "Testing distinct? & distinct"

@@ -2130,10 +2130,18 @@ reduces them without incurring seq initialization"
           ret)))))
 
 (defn empty?
-  "Returns true if coll has no items - same as (not (seq coll)).
-  Please use the idiom (seq x) rather than (not (empty? x))"
-  [coll] (or (nil? coll)
-             (not (seq coll))))
+  "Returns true if coll has no items. To check the emptiness of a seq,
+  please use the idiom (seq x) rather than (not (empty? x))"
+  [coll]
+  (cond
+    (nil? coll)
+    true
+
+    (satisfies? ICounted coll)
+    (zero? (-count coll))
+
+    :else
+    (not (seq coll))))
 
 (defn coll?
   "Returns true if x satisfies ICollection"
