@@ -265,7 +265,7 @@
   (when (contains? opts :pseudo-names)
     (set! (.generatePseudoNames compiler-options) (:pseudo-names opts)))
 
-  (when-let [lang-key (:language-in opts :ecmascript5)]
+  (when-let [lang-key (:language-in opts :ecmascript-next)]
     (.setLanguageIn compiler-options (lang-key->lang-mode lang-key)))
 
   (when-let [lang-key (:language-out opts)]
