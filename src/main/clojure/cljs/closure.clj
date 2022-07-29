@@ -2851,7 +2851,8 @@
                                                          (cond-> [entry-path]
                                                            (not (or (string/ends-with? entry-path ".js")
                                                                     (string/ends-with? entry-path ".json")))
-                                                           (into [(str entry-path ".js") (str entry-path "/index.js") (str entry-path ".json")])))))))
+                                                           (into [(str entry-path ".js") (str entry-path "/index.js") (str entry-path ".json")
+                                                                  (string/replace entry-path #"\.cjs$" ".js")])))))))
                                            pkg-jsons)]
                        {:provides (let [module-rel-name (-> (subs path (.lastIndexOf path "node_modules"))
                                                             (string/replace \\ \/)
