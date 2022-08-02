@@ -3269,8 +3269,9 @@
                ~(if variadic?
                   `(let [args-arr# (array)]
                      (copy-arguments args-arr#)
-                     (let [argseq# (new ^::ana/no-resolve cljs.core/IndexedSeq
-                                        (.slice args-arr# ~maxfa) 0 nil)]
+                     (let [argseq# (when (< ~maxfa (alength args-arr#))
+                                     (new ^::ana/no-resolve cljs.core/IndexedSeq
+                                          (.slice args-arr# ~maxfa) 0 nil))]
                        (. ~rname
                           (~'cljs$core$IFn$_invoke$arity$variadic
                            ~@(dest-args maxfa)

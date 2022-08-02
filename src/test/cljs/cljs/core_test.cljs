@@ -1142,8 +1142,8 @@
     (is (nil? (seq xs)))
     (is (= (rest xs) ()))
     (is (= (pr-str xs) "()"))
-    (is (= (foo-1284 0) [0 ()]))
-    (is (= (pr-str (foo-1284 0)) "[0 ()]"))
+    (is (= (foo-1284 0) [0 nil]))
+    (is (= (pr-str (foo-1284 0)) "[0 nil]"))
     (is (zero? (count ys)))
     (is (= (transduce (map inc) conj [] ys) []))))
 
@@ -1922,3 +1922,10 @@
       {1 1 3 3}     (update-keys (hash-map 0 1 2 3) inc)
       {1 1 3 3}     (update-keys (array-map 0 1 2 3) inc)
       {1 1 3 3}     (update-keys (sorted-map 2 3 0 1) inc))))
+
+(defn cljs-3386-test-fn
+  ([x] x) ([_ _ & zs] zs))
+
+(deftest test-cljs-3386
+  (is (nil? (cljs-3386-test-fn 1 2)))
+  (is (= '(3 4) (cljs-3386-test-fn 1 2 3 4))))
