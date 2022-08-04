@@ -5,7 +5,7 @@ jobs:
   # Runtime Tests
   runtime-test:
     name: Runtime Tests
-    runs-on: macos-10.15
+    runs-on: macos-12
     steps:
       - uses: actions/checkout@v2
 
