@@ -60,7 +60,8 @@
    ".cljs" "text/x-clojure"
    ".cljc" "text/x-clojure"
    ".edn" "text/x-clojure"
-   ".map" "application/json"})
+   ".map" "application/json"
+   ".wasm" "application/wasm"})
 
 (def mime-type->encoding
   {"text/html" "UTF-8"
@@ -84,7 +85,8 @@
 
    "text/javascript" "UTF-8"
    "text/x-clojure" "UTF-8"
-   "application/json" "UTF-8"})
+   "application/json" "UTF-8"
+   "application/wasm" "ISO-8859-1"})
 
 (defn- set-return-value-fn
   "Save the return value function which will be called when the next
@@ -206,7 +208,8 @@
           (let [mime-type (path->mime-type ext->mime-type path "text/plain")
                 encoding (mime-type->encoding mime-type "UTF-8")]
             (server/send-and-close conn 200 (slurp local-path :encoding encoding)
-                                   mime-type encoding (and gzip? (= "text/javascript" mime-type))))
+                                   mime-type encoding (and gzip? (or (= "text/javascript" mime-type)
+                                                                     (= "application/wasm" mime-type)))))
 
           ;; "/index.html" doesn't exist, provide our own
           (= path "/index.html")

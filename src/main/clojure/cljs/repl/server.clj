@@ -157,9 +157,12 @@
                     (cond->
                       [(status-line status)
                        "Server: ClojureScript REPL"
-                       (str "Content-Type: "
-                         content-type
-                         "; charset=" encoding)
+                       (if (not= content-type "application/wasm")
+                         (str "Content-Type: "
+                              content-type
+                              "; charset=" encoding)
+                         (str "Content-Type: "
+                              content-type))
                        (str "Content-Length: " content-length)]
                       gzip? (conj "Content-Encoding: gzip")
                       true (conj "")))]
