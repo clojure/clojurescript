@@ -388,3 +388,28 @@
       1 (first xs)
       2 (str (first xs) " and " (second xs))
       (str (string/join ", " (pop xs)) " and " (peek xs)))))
+
+(defn module-file-seq-1 [dir]
+  [dir]
+  (let [fseq (tree-seq
+               (fn [^File f]
+                 (and (. f (isDirectory))
+                   (not (boolean
+                          (re-find #"node_modules[\\\/].*[\\\/]node_modules"
+                            (.getPath f))))))
+               (fn [^File d]
+                 (seq (. d (listFiles))))
+               dir)]
+    (filter (fn [^File f]
+              (let [path (.getPath f)]
+                (or (.endsWith path ".json")
+                  (.endsWith path ".js"))))
+      fseq)))
+
+(defn node-path-modules [opts]
+  (map io/file (or (:node-modules-dirs opts) [(io/file "node_modules")])))
+
+(defn module-file-seq [opts]
+  "Return a seq of all files in `node_modules` ending in `.js` or `.json` that are
+   not in an internally nested `node_modules` dir."
+  (mapcat module-file-seq-1 (node-path-modules opts)))

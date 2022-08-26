@@ -2871,38 +2871,13 @@
 
 (def node-file-seq->libs-spec (memoize node-file-seq->libs-spec*))
 
-(defn module-file-seq-1 [dir]
-  [dir]
-  (let [fseq (tree-seq
-              (fn [^File f]
-                (and (. f (isDirectory))
-                     (not (boolean
-                           (re-find #"node_modules[\\\/].*[\\\/]node_modules"
-                                    (.getPath f))))))
-              (fn [^File d]
-                (seq (. d (listFiles))))
-              dir)]
-    (filter (fn [^File f]
-              (let [path (.getPath f)]
-                (or (.endsWith path ".json")
-                    (.endsWith path ".js"))))
-            fseq)))
-
-(defn node-path-modules [opts]
-  (map io/file (or (:node-modules-dirs opts) [(io/file "node_modules")])))
-
-(defn module-file-seq [opts]
-  "Return a seq of all files in `node_modules` ending in `.js` or `.json` that are
-   not in an internally nested `node_modules` dir."
-  (mapcat module-file-seq-1 (node-path-modules opts)))
-
 (defn index-node-modules-dir
   ([]
    (index-node-modules-dir
      (when env/*compiler*
        (:options @env/*compiler*))))
   ([opts]
-   (let [module-fseq (module-file-seq opts)]
+   (let [module-fseq (util/module-file-seq opts)]
      (node-file-seq->libs-spec module-fseq opts))))
 
 (defn preprocess-js
