@@ -223,7 +223,7 @@
           (.substring s 0 index))))))
 
 (defn ^boolean blank?
-  "True is s is nil, empty, or contains only whitespace."
+  "True if s is nil, empty, or contains only whitespace."
   [s]
   (gstring/isEmptyOrWhitespace (gstring/makeSafe s)))
 
