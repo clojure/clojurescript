@@ -5540,7 +5540,7 @@ reduces them without incurring seq initialization"
            (recur nacc (inc i) arr)))
        acc))))
 
-(declare tv-editable-root tv-editable-tail TransientVector deref
+(declare tv-editable-root tv-editable-tail TransientVector
          pr-sequential-writer pr-writer chunked-seq)
 
 (defprotocol APersistentVector
@@ -7269,7 +7269,7 @@ reduces them without incurring seq initialization"
 
 (deftype Box [^:mutable val])
 
-(declare create-inode-seq create-array-node-seq reset! create-node atom deref)
+(declare create-inode-seq create-array-node-seq create-node)
 
 (defn- mask [hash shift]
   (bit-and (bit-shift-right-zero-fill hash shift) 0x01f))
