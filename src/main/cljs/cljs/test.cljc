@@ -396,6 +396,36 @@
              [(fn []
                 (clear-env!))]))))
 
+(defmacro run-test
+  "Runs a single test.
+
+  Because the intent is to run a single test, there is no check for the namespace test-ns-hook."
+  [test-symbol]
+  (let [test-var (ana-api/resolve &env test-symbol)]
+    (cond (nil? test-var)
+          `(cljs.core/*print-err-fn* "Unable to resolve" ~(str test-symbol) "to a test function.")
+          (not (:test test-var))
+          `(cljs.core/*print-err-fn* ~(str test-symbol) "is not a test")
+          :else
+          (let [ns (:ns test-var)]
+            `(let [env# (get-current-env)]
+               (run-block
+                (concat
+                 [(fn []
+                    (when (nil? env#)
+                      (set-env! (empty-env)))
+                    ~(when (ana-api/resolve &env 'cljs-test-once-fixtures)
+                       `(update-current-env! [:once-fixtures] assoc '~ns
+                                             ~(symbol (str ns) "cljs-test-once-fixtures")))
+                    ~(when (ana-api/resolve &env 'cljs-test-each-fixtures)
+                       `(update-current-env! [:each-fixtures] assoc '~ns
+                                             ~(symbol (str ns) "cljs-test-each-fixtures"))))]
+                 (test-vars-block
+                  [(var ~test-symbol)])
+                 [(fn []
+                    (when (nil? env#)
+                      (clear-env!)))])))))))
+
 ;; =============================================================================
 ;; Fixes
 
