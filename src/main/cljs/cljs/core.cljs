@@ -11691,6 +11691,43 @@ reduces them without incurring seq initialization"
   (when (instance? ExceptionInfo ex)
     (.-cause ex)))
 
+(defn Throwable->map
+  "Constructs a data representation for an Error with keys:
+    :cause - root cause message
+    :phase - error phase
+    :via - cause chain, with cause keys:
+             :type - exception class symbol
+             :message - exception message
+             :data - ex-data
+             :at - top stack element
+    :trace - root cause stack elements"
+  [o]
+  (let [base (fn [t]
+               (merge {:type (cond
+                               (instance? ExceptionInfo t) `ExceptionInfo
+                               (instance? js/Error t) (symbol "js" (.-name t))
+                               :else nil)}
+                 (when-let [msg (ex-message t)]
+                   {:message msg})
+                 (when-let [ed (ex-data t)]
+                   {:data ed})
+                 #_(let [st (extract-canonical-stacktrace t)]
+                     (when (pos? (count st))
+                       {:at st}))))
+        via  (loop [via [], t o]
+               (if t
+                 (recur (conj via t) (ex-cause t))
+                 via))
+        root (peek via)]
+    (merge {:via   (vec (map base via))
+            :trace nil #_(extract-canonical-stacktrace (or root o))}
+      (when-let [root-msg (ex-message root)]
+        {:cause root-msg})
+      (when-let [data (ex-data root)]
+        {:data data})
+      (when-let [phase (-> o ex-data :clojure.error/phase)]
+        {:phase phase}))))
+
 (defn comparator
   "Returns an JavaScript compatible comparator based upon pred."
   [pred]

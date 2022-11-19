@@ -702,6 +702,59 @@
   (is (= (str (ex-info "abc" {:x 1} "def")) "#error {:message \"abc\", :data {:x 1}, :cause \"def\"}"))
   (is (not (instance? cljs.core.ExceptionInfo (js/Error.)))))
 
+(deftest test-Throwable->map
+  (let [msg-0  "message-0"
+        data-0 {:a 0}
+        msg-1  "message-1"
+        data-1 {:b 1}
+        msg-2  "message-2"]
+    ;; Check ex-info style error
+    (let [ex (ex-info msg-0 data-0)
+          m  (Throwable->map ex)]
+      (is (= msg-0 (:cause m)))
+      (is (= data-0 (:data m)))
+      (is (nil? (:trace m)))
+      (let [via (:via m)]
+        (is (== 1 (count via)))
+        ;; Check via 0
+        (is (= `ExceptionInfo (:type (nth via 0))))
+        (is (= msg-0 (:message (nth via 0))))
+        (is (= data-0 (:data (nth via 0))))))
+    ;; Check plain js/Error style error
+    (let [ex (js/Error. msg-0)
+          m  (Throwable->map ex)]
+      (is (= msg-0 (:cause m)))
+      (is (nil? (:data m)))
+      (is (nil? (:trace m)))
+      (let [via (:via m)]
+        (is (== 1 (count via)))
+        ;; Check via 0
+        (is (= 'js/Error (:type (nth via 0))))
+        (is (= msg-0 (:message (nth via 0))))
+        (is (nil? (:data (nth via 0))))))
+    ;; Check ex-info style with chain ending in js/Error
+    (let [ex (ex-info msg-0 data-0
+               (ex-info msg-1 data-1
+                 (js/Error. msg-2)))
+          m  (Throwable->map ex)]
+      (is (= msg-2 (:cause m)))
+      (is (nil? (:data m)))
+      (is (nil? (:trace m)))
+      (let [via (:via m)]
+        (is (== 3 (count via)))
+        ;; Check via 0
+        (is (= `ExceptionInfo (:type (nth via 0))))
+        (is (= msg-0 (:message (nth via 0))))
+        (is (= data-0 (:data (nth via 0))))
+        ;; Check via 1
+        (is (= `ExceptionInfo (:type (nth via 1))))
+        (is (= msg-1 (:message (nth via 1))))
+        (is (= data-1 (:data (nth via 1))))
+        ;; Check via 2
+        (is (= 'js/Error (:type (nth via 2))))
+        (is (= msg-2 (:message (nth via 2))))
+        (is (nil? (:data (nth via 2))))))))
+
 (deftest test-2067
   (is (= 0 (reduce-kv
              (fn [x k _]
