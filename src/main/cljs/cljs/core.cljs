@@ -2086,7 +2086,7 @@ reduces them without incurring seq initialization"
 
 (defn with-meta
   "Returns an object of the same type and value as obj, with
-  map m as its metadata."
+  map meta as its metadata."
   [o meta]
   (if (js-fn? o)
     (MetaFn. o meta)
