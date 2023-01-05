@@ -267,12 +267,14 @@
 
 #?(:cljs
    (core/defmacro fn
-     "params => positional-params* , or positional-params* & next-param
+     "params => positional-params* , or positional-params* & rest-param
      positional-param => binding-form
-     next-param => binding-form
-     name => symbol
+     rest-param => binding-form
+     binding-form => name, or destructuring-form
 
-     Defines a function"
+     Defines a function
+
+     See https://clojure.org/reference/special_forms#fn for more information"
      {:forms '[(fn name? [params*] exprs*) (fn name? ([params*] exprs*) +)]}
      [& sigs]
      (core/let [name (if (core/symbol? (first sigs)) (first sigs) nil)
@@ -618,8 +620,11 @@
   "defs name to have the root value of init iff the named var has no root value,
   else init is unevaluated"
   [x init]
-  `(when-not (exists? ~x)
-     (def ~x ~init)))
+  (core/let [qualified (if (namespace x)
+                         x
+                         (symbol (core/str (core/-> &env :ns :name)) (name x)))]
+    `(when-not (exists? ~qualified)
+       (def ~x ~init))))
 
 (core/defn destructure [bindings]
   (core/let [bents (partition 2 bindings)
@@ -766,10 +771,15 @@
 
 (core/defmacro let
   "binding => binding-form init-expr
+  binding-form => name, or destructuring-form
+  destructuring-form => map-destructure-form, or seq-destructure-form
 
   Evaluates the exprs in a lexical context in which the symbols in
   the binding-forms are bound to their respective init-exprs or parts
-  therein."
+  therein.
+
+  See https://clojure.org/reference/special_forms#binding-forms for
+  more information about destructuring."
   [bindings & body]
   (assert-args let
      (vector? bindings) "a vector for its binding"
@@ -970,7 +980,7 @@
   (if (core/symbol? x)
     (core/let [x     (core/cond-> (:name (cljs.analyzer/resolve-var &env x))
                        (= "js" (namespace x)) name)
-               segs  (string/split (core/str (string/replace (core/str x) "/" ".")) #"\.")
+               segs  (string/split (core/str (string/replace-first (core/str x) "/" ".")) #"\.")
                n     (count segs)
                syms  (map
                        #(vary-meta (symbol "js" (string/join "." %))
@@ -1309,7 +1319,8 @@
       'js/Function "function"})
 
 (core/defmacro reify
-  "reify is a macro with the following structure:
+  "reify creates an object implementing a protocol.
+  reify is a macro with the following structure:
 
  (reify options* specs*)
 
@@ -1430,9 +1441,9 @@
   (core/let [psym       (resolve p)
              pfn-prefix (subs (core/str psym) 0
                           (clojure.core/inc (.indexOf (core/str psym) "/")))]
-    (cons `(goog.object/set ~psym ~type true)
+    (cons `(unchecked-set ~psym ~type true)
       (map (core/fn [[f & meths :as form]]
-             `(goog.object/set ~(symbol (core/str pfn-prefix f))
+             `(unchecked-set ~(symbol (core/str pfn-prefix f))
                 ~type ~(with-meta `(fn ~@meths) (meta form))))
         sigs))))
 
@@ -1488,15 +1499,21 @@
 (core/defn- add-ifn-methods [type type-sym [f & meths :as form]]
   (core/let [meths    (map #(adapt-ifn-params type %) meths)
              this-sym (with-meta 'self__ {:tag type})
-             argsym   (gensym "args")]
+             argsym   (gensym "args")
+             max-ifn-arity 20]
     (concat
       [`(set! ~(extend-prefix type-sym 'call) ~(with-meta `(fn ~@meths) (meta form)))
        `(set! ~(extend-prefix type-sym 'apply)
           ~(with-meta
              `(fn ~[this-sym argsym]
                 (this-as ~this-sym
-                  (.apply (.-call ~this-sym) ~this-sym
-                    (.concat (array ~this-sym) (cljs.core/aclone ~argsym)))))
+                  (let [args# (cljs.core/aclone ~argsym)]
+                    (.apply (.-call ~this-sym) ~this-sym
+                      (.concat (array ~this-sym)
+                        (if (> (.-length args#) ~max-ifn-arity)
+                          (doto (.slice args# 0 ~max-ifn-arity)
+                            (.push (.slice args# ~max-ifn-arity)))
+                          args#))))))
              (meta form)))]
       (ifn-invoke-methods type type-sym form))))
 
@@ -2623,9 +2640,12 @@
 (core/defmacro hash-map
   ([] `(.-EMPTY cljs.core/PersistentHashMap))
   ([& kvs]
-   (core/let [pairs (partition 2 kvs)
+   (core/let [pairs (map
+                      (core/fn [pair]
+                        (remove #{::missing} pair))
+                      (partition 2 2 (repeat ::missing) kvs))
               ks    (map first pairs)
-              vs    (map second pairs)]
+              vs    (map second (take-while #(= 2 (count %)) pairs))]
      (vary-meta
        `(.fromArrays cljs.core/PersistentHashMap (array ~@ks) (array ~@vs))
        assoc :tag 'cljs.core/PersistentHashMap))))
@@ -2669,8 +2689,8 @@
       (js-obj* '())
       `(let [~@(apply concat (clojure.set/map-invert expr->local))
             ~obj ~(js-obj* (filter-on-keys core/string? kvs))]
-        ~@(map (core/fn [[k v]] `(goog.object/set ~obj ~k ~v)) sym-pairs)
-        ~@(map (core/fn [[k v]] `(goog.object/set ~obj ~v ~(core/get kvs k))) expr->local)
+        ~@(map (core/fn [[k v]] `(unchecked-set ~obj ~k ~v)) sym-pairs)
+        ~@(map (core/fn [[k v]] `(unchecked-set ~obj ~v ~(core/get kvs k))) expr->local)
         ~obj))))
 
 (core/defmacro alength [a]
@@ -2885,7 +2905,7 @@
   (core/list 'js* "''+~{}" s))
 
 (core/defmacro es6-iterable [ty]
-  `(goog.object/set (.-prototype ~ty) cljs.core/ITER_SYMBOL
+  `(unchecked-set (.-prototype ~ty) cljs.core/ITER_SYMBOL
      (fn []
        (this-as this#
          (cljs.core/es6-iterator this#)))))
@@ -3249,8 +3269,9 @@
                ~(if variadic?
                   `(let [args-arr# (array)]
                      (copy-arguments args-arr#)
-                     (let [argseq# (new ^::ana/no-resolve cljs.core/IndexedSeq
-                                        (.slice args-arr# ~maxfa) 0 nil)]
+                     (let [argseq# (when (< ~maxfa (alength args-arr#))
+                                     (new ^::ana/no-resolve cljs.core/IndexedSeq
+                                          (.slice args-arr# ~maxfa) 0 nil))]
                        (. ~rname
                           (~'cljs$core$IFn$_invoke$arity$variadic
                            ~@(dest-args maxfa)

@@ -953,6 +953,10 @@
     (is (= 1 (gobject/get #js {:a 1} "a")))
     (is (= 1 (.-a #js {:a 1})))))
 
+(deftest test-3352
+  (is (== ##-Inf (/ -0.0)))
+  (is (== ##Inf (/ -0))))
+
 (deftest test-char?
   (is (char? "0"))
   (is (char? (String/fromCharCode 13)))

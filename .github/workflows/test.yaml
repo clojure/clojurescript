@@ -5,7 +5,7 @@ jobs:
   # Runtime Tests
   runtime-test:
     name: Runtime Tests
-    runs-on: macos-10.15
+    runs-on: macos-12
     steps:
       - uses: actions/checkout@v2
 
@@ -54,10 +54,31 @@ jobs:
           WebKit/WebKitBuild/Release/bin/jsc builds/out-adv/core-advanced-test.js | tee test-out.txt
           grep -qxF '0 failures, 0 errors.' test-out.txt
 
+    # Runtime Tests
+  runtime-windows-test:
+    name: Runtime Windows Tests
+    runs-on: windows-2019
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: DeLaGuardo/setup-clojure@3.5
+        with:
+          cli: '1.10.1.763'
+
+      - name: Build tests
+        run: clojure -M:runtime.test.build
+        shell: powershell
+
+      - name: Run tests
+        run: |
+          node builds/out-adv/core-advanced-test.js | tee test-out.txt
+          findstr "0 failures, 0 errors." test-out.txt
+        shell: powershell
+
   # Self-host Tests
   self-host-test:
     name: Self-host Tests
-    runs-on: macos-10.15
+    runs-on: macos-12
     steps:
       - uses: actions/checkout@v2
 
@@ -96,7 +117,7 @@ jobs:
   # Self-parity Tests
   self-parity-test:
     name: Self-parity Tests
-    runs-on: macos-10.15
+    runs-on: macos-12
     steps:
       - uses: actions/checkout@v2
 
@@ -135,7 +156,7 @@ jobs:
   # Compiler Tests
   compiler-test:
     name: Compiler Tests
-    runs-on: macos-10.15
+    runs-on: macos-12
     steps:
       - uses: actions/checkout@v2
 
@@ -166,10 +187,25 @@ jobs:
       - name: Run tests
         run: clojure -M:compiler.test:compiler.test.run
 
+  # Compiler Windows Tests
+  compiler-windows-test:
+    name: Compiler Windows Tests
+    runs-on: windows-2019
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: DeLaGuardo/setup-clojure@3.5
+        with:
+          cli: '1.10.1.763'
+
+      - name: Run tests
+        run: clojure -M:compiler.test:compiler.test.run
+        shell: powershell
+
   # CLI Tests
   cli-test:
     name: CLI Tests
-    runs-on: macos-10.15
+    runs-on: macos-12
     steps:
       - uses: actions/checkout@v2
         with:

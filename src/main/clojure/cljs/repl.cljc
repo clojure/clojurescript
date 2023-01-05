@@ -11,9 +11,9 @@
   (:require [clojure.java.io :as io]
             [clojure.string :as string]
             [clojure.set :as set]
-            [clojure.data.json :as json]
-            [clojure.tools.reader :as reader]
-            [clojure.tools.reader.reader-types :as readers]
+            [cljs.vendor.clojure.data.json :as json]
+            [cljs.vendor.clojure.tools.reader :as reader]
+            [cljs.vendor.clojure.tools.reader.reader-types :as readers]
             [cljs.tagged-literals :as tags]
             [clojure.edn :as edn]
             [cljs.util :as util]
@@ -1054,6 +1054,10 @@
                                   [cljs.pprint :refer [pprint] :refer-macros [pp]]]
                   bind-err true}
              :as opts}]
+  ;; bridge clojure.tools.reader to satisfy the old contract
+  (when (and (find-ns 'clojure.tools.reader)
+             (not (find-ns 'cljs.vendor.bridge)))
+    (require 'cljs.vendor.bridge))
   (doseq [[unknown-opt suggested-opt] (util/unknown-opts (set (keys opts)) (set/union known-repl-opts cljsc/known-opts))]
     (when suggested-opt
       (println (str "WARNING: Unknown option '" unknown-opt "'. Did you mean '" suggested-opt "'?"))))
@@ -1113,7 +1117,7 @@
                ana/*fn-invoke-direct* (and static-fns fn-invoke-direct)
                *repl-opts* opts]
        (try
-         (let [env {:context :expr :locals {}}
+         (let [env (assoc (ana/empty-env) :context :expr)
                special-fns (merge default-special-fns special-fns)
                is-special-fn? (set (keys special-fns))
                request-prompt (Object.)
@@ -1143,11 +1147,9 @@
                (fn []
                  (let [input (binding [*ns* (create-ns ana/*cljs-ns*)
                                        reader/resolve-symbol ana/resolve-symbol
-                                       reader/*data-readers* tags/*cljs-data-readers*
-                                       reader/*alias-map*
-                                       (apply merge
-                                         ((juxt :requires :require-macros)
-                                           (ana/get-namespace ana/*cljs-ns*)))]
+                                       reader/*data-readers* (merge tags/*cljs-data-readers*
+                                                               (ana/load-data-readers))
+                                       reader/*alias-map* (ana/get-aliases ana/*cljs-ns*)]
                                (try
                                  (read request-prompt request-exit)
                                  (catch Throwable e
@@ -1510,7 +1512,8 @@ itself (not its value) is returned. The reader macro #'x expands to (var x)."}})
             (let [rdr (readers/source-logging-push-back-reader pbr)]
               (dotimes [_ (dec (:line v))] (readers/read-line rdr))
               (binding [reader/*alias-map*    identity
-                        reader/*data-readers* tags/*cljs-data-readers*]
+                        reader/*data-readers* (merge tags/*cljs-data-readers*
+                                                (ana/load-data-readers))]
                 (-> (reader/read {:read-cond :allow :features #{:cljs}} rdr)
                   meta :source)))))))))
 

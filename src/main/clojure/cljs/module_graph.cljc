@@ -148,8 +148,13 @@
   "Return all dependencies for x in a graph using deps-key."
   [x graph deps-key]
   (let [requires (get-in graph [x deps-key])]
-    (-> (mapcat #(deps-for % graph deps-key) requires)
-      (concat requires) distinct vec)))
+    (try
+      (-> (mapcat #(deps-for % graph deps-key) requires)
+        (concat requires) distinct vec)
+      (catch Throwable t
+        (throw
+          (ex-info (str "Failed to compute deps for " x)
+            {:lib x :requires requires} t))))))
 
 (defn deps-for-entry
   "Return all dependencies for an entry using a compiler inputs index."

@@ -35,14 +35,14 @@
              ;; check for new-ish private goog/debugLoader
              (if (some? goog/debugLoader_)
                (let [path (.getPathFromDeps_ goog/debugLoader_ src)]
-                 (goog.object/remove (.-written_ goog/debugLoader_) path)
-                 (goog.object/remove (.-written_ goog/debugLoader_)
+                 (cljs.core/js-delete (.-written_ goog/debugLoader_) path)
+                 (cljs.core/js-delete (.-written_ goog/debugLoader_)
                    (str js/goog.basePath path)))
                ;; legacy approach
-               (let [path (goog.object/get js/goog.dependencies_.nameToPath src)]
-                 (goog.object/remove js/goog.dependencies_.visited path)
-                 (goog.object/remove js/goog.dependencies_.written path)
-                 (goog.object/remove js/goog.dependencies_.written
+               (let [path (cljs.core/unchecked-get js/goog.dependencies_.nameToPath src)]
+                 (cljs.core/js-delete js/goog.dependencies_.visited path)
+                 (cljs.core/js-delete js/goog.dependencies_.written path)
+                 (cljs.core/js-delete js/goog.dependencies_.written
                    (str js/goog.basePath path)))))
            (let [ret (.require__ js/goog src)]
              (when (= reload "reload-all")

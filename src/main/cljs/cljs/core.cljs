@@ -1008,7 +1008,7 @@
     (bit-xor (-hash o) 0)
 
     (number? o)
-    (if (js/isFinite o)
+    (if ^boolean (js/isFinite o)
       (js-mod (Math/floor o) 2147483647)
       (case o
         ##Inf
@@ -1951,7 +1951,8 @@ reduces them without incurring seq initialization"
         xs)))
 
 (defn get
-  "Returns the value mapped to key, not-found or nil if key not present."
+  "Returns the value mapped to key, not-found or nil if key not present
+  in associative collection, set, string, array, or ILookup instance."
   ([o k]
     (when-not (nil? o)
       (cond
@@ -2129,10 +2130,18 @@ reduces them without incurring seq initialization"
           ret)))))
 
 (defn empty?
-  "Returns true if coll has no items - same as (not (seq coll)).
-  Please use the idiom (seq x) rather than (not (empty? x))"
-  [coll] (or (nil? coll)
-             (not (seq coll))))
+  "Returns true if coll has no items. To check the emptiness of a seq,
+  please use the idiom (seq x) rather than (not (empty? x))"
+  [coll]
+  (cond
+    (nil? coll)
+    true
+
+    (satisfies? ICounted coll)
+    (zero? (-count coll))
+
+    :else
+    (not (seq coll))))
 
 (defn coll?
   "Returns true if x satisfies ICollection"
@@ -2283,6 +2292,10 @@ reduces them without incurring seq initialization"
        (not ^boolean (js/isNaN n))
        (not (identical? n js/Infinity))
        (== (js/parseFloat n) (js/parseInt n 10))))
+
+(def
+  ^{:doc "INTERNAL: do not use"}
+  LongImpl goog.math.Long)
 
 (defn int?
   "Return true if x satisfies integer? or is an instance of goog.math.Integer
@@ -2706,6 +2719,11 @@ reduces them without incurring seq initialization"
 (defn dec
   "Returns a number one less than num."
   [x] (- x 1))
+
+(defn ^number abs
+  {:doc "Returns the absolute value of a."
+   :added "1.11.10"}
+  [a] (Math/abs a))
 
 (defn ^number max
   "Returns the greatest of the nums."
@@ -4001,8 +4019,14 @@ reduces them without incurring seq initialization"
 
 ;; CLJS-3200: used by destructure macro for maps to reduce amount of repeated code
 ;; placed here because it needs apply and hash-map (only declared at this point)
-(defn --destructure-map [x]
-  (if (implements? ISeq x) (apply cljs.core/hash-map x) x))
+(defn --destructure-map [gmap]
+  (if (implements? ISeq gmap)
+    (if (next gmap)
+      (.createAsIfByAssoc PersistentArrayMap (to-array gmap))
+      (if (seq gmap)
+        (first gmap)
+        (.-EMPTY PersistentArrayMap)))
+    gmap))
 
 (defn vary-meta
  "Returns an object of the same type and value as obj, with
@@ -4672,8 +4696,8 @@ reduces them without incurring seq initialization"
      (fn ep3
        ([] true)
        ([x] (boolean (and (p1 x) (p2 x) (p3 x))))
-       ([x y] (boolean (and (p1 x) (p2 x) (p3 x) (p1 y) (p2 y) (p3 y))))
-       ([x y z] (boolean (and (p1 x) (p2 x) (p3 x) (p1 y) (p2 y) (p3 y) (p1 z) (p2 z) (p3 z))))
+       ([x y] (boolean (and (p1 x) (p1 y) (p2 x) (p2 y) (p3 x) (p3 y))))
+       ([x y z] (boolean (and (p1 x) (p1 y) (p1 z) (p2 x) (p2 y) (p2 z) (p3 x) (p3 y) (p3 z))))
        ([x y z & args] (boolean (and (ep3 x y z)
                                      (every? #(and (p1 %) (p2 %) (p3 %)) args))))))
   ([p1 p2 p3 & ps]
@@ -4711,8 +4735,8 @@ reduces them without incurring seq initialization"
      (fn sp3
        ([] nil)
        ([x] (or (p1 x) (p2 x) (p3 x)))
-       ([x y] (or (p1 x) (p2 x) (p3 x) (p1 y) (p2 y) (p3 y)))
-       ([x y z] (or (p1 x) (p2 x) (p3 x) (p1 y) (p2 y) (p3 y) (p1 z) (p2 z) (p3 z)))
+       ([x y] (or (p1 x) (p1 y) (p2 x) (p2 y) (p3 x) (p3 y)))
+       ([x y z] (or (p1 x) (p1 y) (p1 z) (p2 x) (p2 y) (p2 z) (p3 x) (p3 y) (p3 z)))
        ([x y z & args] (or (sp3 x y z)
                            (some #(or (p1 %) (p2 %) (p3 %)) args)))))
   ([p1 p2 p3 & ps]
@@ -5252,7 +5276,11 @@ reduces them without incurring seq initialization"
        (reduce conj to from)))
   ([to xform from]
      (if (implements? IEditableCollection to)
-       (-with-meta (persistent! (transduce xform conj! (transient to) from)) (meta to))
+       (let [tm (meta to)
+             rf (fn
+                  ([coll] (-> (persistent! coll) (-with-meta tm)))
+                  ([coll v] (conj! coll v)))]
+         (transduce xform rf (transient to) from))
        (transduce xform conj to from))))
 
 (defn mapv
@@ -5309,7 +5337,12 @@ reduces them without incurring seq initialization"
   {:added "1.2"
    :static true}
   ([m ks]
-     (reduce get m ks))
+   (loop [m m
+          ks (seq ks)]
+     (if (nil? ks)
+       m
+       (recur (get m (first ks))
+         (next ks)))))
   ([m ks not-found]
      (loop [sentinel lookup-sentinel
             m m
@@ -5507,7 +5540,7 @@ reduces them without incurring seq initialization"
            (recur nacc (inc i) arr)))
        acc))))
 
-(declare tv-editable-root tv-editable-tail TransientVector deref
+(declare tv-editable-root tv-editable-tail TransientVector
          pr-sequential-writer pr-writer chunked-seq)
 
 (defprotocol APersistentVector
@@ -5693,9 +5726,9 @@ reduces them without incurring seq initialization"
 
   IFn
   (-invoke [coll k]
-    (-nth coll k))
-  (-invoke [coll k not-found]
-    (-nth coll k not-found))
+    (if (number? k)
+      (-nth coll k)
+      (throw (js/Error. "Key must be integer"))))
 
   IEditableCollection
   (-as-transient [coll]
@@ -7053,19 +7086,91 @@ reduces them without incurring seq initialization"
       (let [cnt (/ (alength arr) 2)]
         (PersistentArrayMap. nil cnt arr nil)))))
 
+(defn key-test [key other]
+  (cond
+    (identical? key other) true
+    (keyword-identical? key other) true
+    :else (= key other)))
+
+(defn- ^boolean pam-dupes? [arr]
+  (loop [i 0]
+    (if (< i (alength arr))
+      (let [dupe? (loop [j 0]
+                    (if (< j i)
+                      (or
+                        (key-test (aget arr i) (aget arr j))
+                        (recur (+ 2 j)))
+                      false))]
+        (or dupe? (recur (+ 2 i))))
+      false)))
+
+(defn- pam-new-size [arr]
+  (loop [i 0 n 0]
+    (if (< i (alength arr))
+      (let [dupe? (loop [j 0]
+                    (if (< j i)
+                      (or
+                        (key-test (aget arr i) (aget arr j))
+                        (recur (+ 2 j)))
+                      false))]
+        (recur (+ 2 i) (if dupe? n (+ n 2))))
+      n)))
+
+(defn- pam-grow-seed-array [seed trailing]
+  (let [seed-cnt  (dec (alength seed))
+        extra-kvs (seq trailing)
+        ret       (make-array (+ seed-cnt (* 2 (count extra-kvs))))
+        ret       (array-copy seed 0 ret 0 seed-cnt)]
+    (loop [i seed-cnt extra-kvs extra-kvs]
+      (if extra-kvs
+        (let [kv (first extra-kvs)]
+          (aset ret i (-key kv))
+          (aset ret (inc i) (-val kv))
+          (recur (+ 2 seed-cnt) (next extra-kvs)))
+        ret))))
+
 (set! (.-createAsIfByAssoc PersistentArrayMap)
-  (fn [arr]
-    (let [ret (array)]
-      (loop [i 0]
-        (when (< i (alength arr))
-          (let [k (aget arr i)
-                v (aget arr (inc i))
-                idx (array-index-of ret k)]
-            (if (== idx -1)
-              (doto ret (.push k) (.push v))
-              (aset ret (inc idx) v)))
-          (recur (+ i 2))))
-      (PersistentArrayMap. nil (/ (alength ret) 2) ret nil))))
+  (fn [init]
+    ;; check trailing element
+    (let [len           (alength init)
+          has-trailing? (== 1 (bit-and len  1))]
+      (if-not (or has-trailing? (pam-dupes? init))
+        (PersistentArrayMap. nil (/ len 2) init nil)
+        (.createAsIfByAssocComplexPath PersistentArrayMap init has-trailing?)))))
+
+(set! (.-createAsIfByAssocComplexPath PersistentArrayMap)
+  (fn [init ^boolean has-trailing?]
+    (let [init (if has-trailing?
+                 (pam-grow-seed-array init
+                   ;; into {} in case the final element is not a map but something conj-able
+                   ;; for parity with Clojure implementation of CLJ-2603
+                   (into {} (aget init (dec (alength init)))))
+                 init)
+          n    (pam-new-size init)
+          len  (alength init)]
+      (if (< n len)
+        (let [nodups (make-array n)]
+          (loop [i 0 m 0]
+            (if (< i len)
+              (let [dupe? (loop [j 0]
+                            (if (< j m)
+                              (or
+                                (key-test (aget init i) (aget init j))
+                                (recur (+ 2 j)))
+                              false))]
+                (if-not dupe?
+                  (let [j (loop [j (- len 2)]
+                            (if (>= j i)
+                              (if (key-test (aget init i) (aget init j))
+                                j
+                                (recur (- j 2)))
+                              j))]
+                    (aset nodups m (aget init i))
+                    (aset nodups (inc m) (aget init (inc j)))
+                    (recur (+ 2 i) (+ 2 m)))
+                  (recur (+ 2 i) m)))))
+          (PersistentArrayMap. nil (/ (alength nodups) 2) nodups nil))
+        (PersistentArrayMap. nil (/ (alength init) 2) init nil)))))
 
 (es6-iterable PersistentArrayMap)
 
@@ -7164,13 +7269,7 @@ reduces them without incurring seq initialization"
 
 (deftype Box [^:mutable val])
 
-(declare create-inode-seq create-array-node-seq reset! create-node atom deref)
-
-(defn key-test [key other]
-  (cond
-    (identical? key other) true
-    (keyword-identical? key other) true
-    :else (= key other)))
+(declare create-inode-seq create-array-node-seq create-node)
 
 (defn- mask [hash shift]
   (bit-and (bit-shift-right-zero-fill hash shift) 0x01f))
@@ -7325,7 +7424,9 @@ reduces them without incurring seq initialization"
                         (== bitmap bit) nil
                         :else (BitmapIndexedNode. nil (bit-xor bitmap bit) (remove-pair arr idx))))
                 (key-test key key-or-nil)
-                (BitmapIndexedNode. nil (bit-xor bitmap bit) (remove-pair arr idx))
+                (if (== bitmap bit)
+                  nil
+                  (BitmapIndexedNode. nil (bit-xor bitmap bit) (remove-pair arr idx)))
                 :else inode)))))
 
   (inode-lookup [inode shift hash key not-found]
@@ -8052,7 +8153,9 @@ reduces them without incurring seq initialization"
     (let [len (alength ks)]
       (loop [i 0 ^not-native out (transient (.-EMPTY PersistentHashMap))]
         (if (< i len)
-          (recur (inc i) (-assoc! out (aget ks i) (aget vs i)))
+          (if (<= (alength vs) i)
+            (throw (js/Error. (str "No value supplied for key: " (aget ks i))))
+            (recur (inc i) (-assoc! out (aget ks i) (aget vs i))))
           (persistent! out))))))
 
 (set! (.-createWithCheck PersistentHashMap)
@@ -8926,7 +9029,10 @@ reduces them without incurring seq initialization"
   [& keyvals]
   (loop [in (seq keyvals), out (transient (.-EMPTY PersistentHashMap))]
     (if in
-      (recur (nnext in) (assoc! out (first in) (second in)))
+      (let [in' (next in)]
+        (if (nil? in')
+          (throw (js/Error. (str "No value supplied for key: " (first in))))
+          (recur (next in') (assoc! out (first in) (first in')) )))
       (persistent! out))))
 
 (defn array-map
@@ -8936,7 +9042,17 @@ reduces them without incurring seq initialization"
   (let [arr (if (and (instance? IndexedSeq keyvals) (zero? (.-i keyvals)))
               (.-arr keyvals)
               (into-array keyvals))]
-    (.createAsIfByAssoc PersistentArrayMap arr)))
+    (if (odd? (alength arr))
+      (throw (js/Error. (str "No value supplied for key: " (last arr))))
+      (.createAsIfByAssoc PersistentArrayMap arr))))
+
+(defn seq-to-map-for-destructuring
+  "Builds a map from a seq as described in
+  https://clojure.org/reference/special_forms#keyword-arguments"
+  [s]
+  (if (next s)
+    (.createAsIfByAssoc PersistentArrayMap (to-array s))
+    (if (seq s) (first s) (.-EMPTY PersistentArrayMap))))
 
 (defn obj-map
   "keyval => key val
@@ -10851,6 +10967,49 @@ reduces them without incurring seq initialization"
   (reduce #(proc %2) nil coll)
   nil)
 
+(defn iteration
+  "Creates a seqable/reducible via repeated calls to step,
+  a function of some (continuation token) 'k'. The first call to step
+  will be passed initk, returning 'ret'. Iff (somef ret) is true,
+  (vf ret) will be included in the iteration, else iteration will
+  terminate and vf/kf will not be called. If (kf ret) is non-nil it
+  will be passed to the next step call, else iteration will terminate.
+  This can be used e.g. to consume APIs that return paginated or batched data.
+   step - (possibly impure) fn of 'k' -> 'ret'
+   :somef - fn of 'ret' -> logical true/false, default 'some?'
+   :vf - fn of 'ret' -> 'v', a value produced by the iteration, default 'identity'
+   :kf - fn of 'ret' -> 'next-k' or nil (signaling 'do not continue'), default 'identity'
+   :initk - the first value passed to step, default 'nil'
+  It is presumed that step with non-initk is unreproducible/non-idempotent.
+  If step with initk is unreproducible it is on the consumer to not consume twice."
+  {:added "1.11"}
+  [step & {:keys [somef vf kf initk]
+           :or {vf identity
+                kf identity
+                somef some?
+                initk nil}}]
+  (reify
+    ISeqable
+    (-seq [_]
+      ((fn next [ret]
+         (when (somef ret)
+           (cons (vf ret)
+             (when-some [k (kf ret)]
+               (lazy-seq (next (step k)))))))
+       (step initk)))
+    IReduce
+    (-reduce [_ rf init]
+      (loop [acc init
+             ret (step initk)]
+        (if (somef ret)
+          (let [acc (rf acc (vf ret))]
+            (if (reduced? acc)
+              @acc
+              (if-some [k (kf ret)]
+                (recur acc (step k))
+                acc)))
+          acc)))))
+
 (defprotocol IEncodeJS
   (-clj->js [x] "Recursively transforms clj values to JavaScript")
   (-key->js [x] "Transforms map keys to valid JavaScript keys. Arbitrary keys are
@@ -11344,7 +11503,7 @@ reduces them without incurring seq initialization"
         prefer-table method-cache cached-hierarchy default-dispatch-val)))
 
   (-prefer-method [mf dispatch-val-x dispatch-val-y]
-    (when (prefers* dispatch-val-x dispatch-val-y prefer-table)
+    (when (prefers* dispatch-val-y dispatch-val-x  prefer-table)
       (throw (js/Error. (str "Preference conflict in multimethod '" name "': " dispatch-val-y
                    " is already preferred to " dispatch-val-x))))
     (swap! prefer-table
@@ -11416,7 +11575,7 @@ reduces them without incurring seq initialization"
 
   IEquiv
   (-equiv [_ other]
-    (and (instance? UUID other) (identical? uuid (.-uuid other))))
+    (and (implements? IUUID other) (identical? uuid (.-uuid other))))
 
   IPrintWithWriter
   (-pr-writer [_ writer _]
@@ -11434,24 +11593,31 @@ reduces them without incurring seq initialization"
       (garray/defaultCompare uuid (.-uuid other))
       (throw (js/Error. (str "Cannot compare " this " to " other))))))
 
-(defn uuid [s]
+(defn uuid
+  "Returns a UUID consistent with the string s."
+  [s]
   (assert (string? s))
   (UUID. (.toLowerCase s) nil))
 
-(defn random-uuid []
-  (letfn [(hex [] (.toString (rand-int 16) 16))]
-    (let [rhex (.toString (bit-or 0x8 (bit-and 0x3 (rand-int 16))) 16)]
+(defn random-uuid
+  "Returns a pseudo-randomly generated UUID instance (i.e. type 4)."
+  []
+  (letfn [(^string quad-hex []
+            (let [unpadded-hex ^string (.toString (rand-int 65536) 16)]
+              (case (count unpadded-hex)
+                1 (str "000" unpadded-hex)
+                2 (str "00" unpadded-hex)
+                3 (str "0" unpadded-hex)
+                unpadded-hex)))]
+    (let [ver-tripple-hex ^string (.toString (bit-or 0x4000 (bit-and 0x0fff (rand-int 65536))) 16)
+          res-tripple-hex ^string (.toString (bit-or 0x8000 (bit-and 0x3fff (rand-int 65536))) 16)]
       (uuid
-        (str (hex) (hex) (hex) (hex)
-             (hex) (hex) (hex) (hex) "-"
-             (hex) (hex) (hex) (hex) "-"
-             "4"   (hex) (hex) (hex) "-"
-             rhex  (hex) (hex) (hex) "-"
-             (hex) (hex) (hex) (hex)
-             (hex) (hex) (hex) (hex)
-             (hex) (hex) (hex) (hex))))))
+        (str (quad-hex) (quad-hex) "-" (quad-hex) "-"
+             ver-tripple-hex "-" res-tripple-hex "-"
+             (quad-hex) (quad-hex) (quad-hex))))))
 
 (defn uuid?
+  "Return true if x is a UUID."
   [x] (implements? IUUID x))
 
 ;;; ExceptionInfo
@@ -11524,6 +11690,43 @@ reduces them without incurring seq initialization"
   [ex]
   (when (instance? ExceptionInfo ex)
     (.-cause ex)))
+
+(defn Throwable->map
+  "Constructs a data representation for an Error with keys:
+    :cause - root cause message
+    :phase - error phase
+    :via - cause chain, with cause keys:
+             :type - exception class symbol
+             :message - exception message
+             :data - ex-data
+             :at - top stack element
+    :trace - root cause stack elements"
+  [o]
+  (let [base (fn [t]
+               (merge {:type (cond
+                               (instance? ExceptionInfo t) `ExceptionInfo
+                               (instance? js/Error t) (symbol "js" (.-name t))
+                               :else nil)}
+                 (when-let [msg (ex-message t)]
+                   {:message msg})
+                 (when-let [ed (ex-data t)]
+                   {:data ed})
+                 #_(let [st (extract-canonical-stacktrace t)]
+                     (when (pos? (count st))
+                       {:at st}))))
+        via  (loop [via [], t o]
+               (if t
+                 (recur (conj via t) (ex-cause t))
+                 via))
+        root (peek via)]
+    (merge {:via   (vec (map base via))
+            :trace nil #_(extract-canonical-stacktrace (or root o))}
+      (when-let [root-msg (ex-message root)]
+        {:cause root-msg})
+      (when-let [data (ex-data root)]
+        {:data data})
+      (when-let [phase (-> o ex-data :clojure.error/phase)]
+        {:phase phase}))))
 
 (defn comparator
   "Returns an JavaScript compatible comparator based upon pred."
@@ -11715,6 +11918,35 @@ reduces them without incurring seq initialization"
           (tap x)
           (catch js/Error ex))))))
 
+(defn update-vals
+  "m f => {k (f v) ...}
+  Given a map m and a function f of 1-argument, returns a new map where the keys of m
+  are mapped to result of applying f to the corresponding values of m."
+  {:added "1.11"}
+  [m f]
+  (with-meta
+    (persistent!
+      (reduce-kv (fn [acc k v] (assoc! acc k (f v)))
+                 (if (implements? IEditableCollection m)
+                   (transient m)
+                   (transient {}))
+                 m))
+    (meta m)))
+
+(defn update-keys
+  "m f => {(f k) v ...}
+  Given a map m and a function f of 1-argument, returns a new map whose
+  keys are the result of applying f to the keys of m, mapped to the
+  corresponding values of m.
+  f must return a unique key for each key of m, else the behavior is undefined."
+  {:added "1.11"}
+  [m f]
+  (let [ret (persistent!
+              (reduce-kv (fn [acc k v] (assoc! acc (f k) v))
+                         (transient {})
+                         m))]
+    (with-meta ret (meta m))))
+
 ;; -----------------------------------------------------------------------------
 ;; Bootstrap helpers - incompatible with advanced compilation
 
@@ -11844,6 +12076,66 @@ reduces them without incurring seq initialization"
   {:added "1.9"}
   [x]
   (instance? goog.Uri x))
+
+(defn ^boolean NaN?
+  "Returns true if num is NaN, else false"
+  [val]
+  (js/isNaN val))
+
+(defn ^:private parsing-err
+  "Construct message for parsing for non-string parsing error"
+  [val]
+  (str "Expected string, got: " (if (nil? val) "nil" (goog/typeOf val))))
+
+(defn ^number parse-long
+  "Parse string of decimal digits with optional leading -/+ and return an
+  integer value, or nil if parse fails"
+  [s]
+  (if (string? s)
+    (and (re-matches #"[+-]?\d+" s)
+         (let [i (js/parseInt s)]
+           (when (and (<= i js/Number.MAX_SAFE_INTEGER)
+                      (>= i js/Number.MIN_SAFE_INTEGER))
+             i)))
+    (throw (js/Error. (parsing-err s)))))
+
+(defn ^number parse-double
+  "Parse string with floating point components and return a floating point value,
+  or nil if parse fails.
+  Grammar: https://docs.oracle.com/javase/8/docs/api/java/lang/Double.html#valueOf-java.lang.String-"
+  [s]
+  (if (string? s)
+    (cond
+      ^boolean (re-matches #"[\x00-\x20]*[+-]?NaN[\x00-\x20]*" s) ##NaN
+      ^boolean (re-matches
+                #"[\x00-\x20]*[+-]?(Infinity|((\d+\.?\d*|\.\d+)([eE][+-]?\d+)?)[dDfF]?)[\x00-\x20]*"
+                s) (js/parseFloat s)
+      :default nil)
+    (throw (js/Error. (parsing-err s)))))
+
+(def ^:private uuid-regex
+  #"^[0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]-[0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]-[0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]-[0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]-[0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]$")
+
+(defn parse-uuid
+  "Parse a string representing a UUID and return a UUID instance,
+  or nil if parse fails.
+  Grammar: https://docs.oracle.com/javase/8/docs/api/java/util/UUID.html#toString--"
+  [s]
+  (if (string? s)
+    (when ^boolean (re-matches uuid-regex s)
+      (uuid s))
+    (throw (js/Error. (parsing-err s)))))
+
+(defn parse-boolean
+  "Parse strings \"true\" or \"false\" and return a boolean, or nil if invalid. Note that this explicitly
+  excludes strings with different cases, or space characters."
+  [s]
+  (if (string? s)
+    (case s
+      "true" true
+      "false" false
+      nil)
+    (throw (js/Error. (parsing-err s)))))
 
 (defn- maybe-enable-print! []
   (cond

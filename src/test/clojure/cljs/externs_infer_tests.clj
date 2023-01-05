@@ -413,6 +413,46 @@
                  :with-core? true}))]
     (is (empty? @ws))))
 
+(deftest test-cljs-3373
+  (testing "var from foreign libraries that are invoked as fn should propagate 'js hints"
+    (let [ws  (atom [])
+          res (infer-test-helper
+                {:js-dependency-index {"firebase" {:global-exports '{firebase Firebase}}}
+                 :forms '[(ns foo.core
+                            (:require [firebase :refer [getAuth]]))
+                          (def auth
+                            (doto (getAuth)
+                              (.useDeviceLanguage)
+                              (.onAuthStateChanged (fn [user]))))]
+                 :warnings ws
+                 :warn true
+                 :with-core? false})]
+      (is (= (unsplit-lines
+               ["Object.getAuth;"
+                "Object.useDeviceLanguage;"
+                "Object.onAuthStateChanged;"])
+              res)))))
+
+(deftest test-cljs-3377
+  (testing "constructors from foreign libraries that used via `new` should propagate 'js hints"
+    (let [ws  (atom [])
+          res (infer-test-helper
+                {:js-dependency-index {"firebase" {:global-exports '{firebase Firebase}}}
+                 :forms '[(ns foo.core
+                            (:require [firebase :refer [GoogleAuthProvider]]))
+                          (def goog-provider
+                            (GoogleAuthProvider.))
+                          (.someMethod goog-provider)
+                          (.-someProperty goog-provider)]
+                 :warnings ws
+                 :warn true
+                 :with-core? false})]
+      (is (= (unsplit-lines
+               ["Object.GoogleAuthProvider;"
+                "Object.someMethod;"
+                "Object.someProperty;"])
+            res)))))
+
 (comment
   (binding [ana/*cljs-ns* ana/*cljs-ns*]
     (ana/no-warn

@@ -7,7 +7,8 @@
 ;; You must not remove this notice, or any other, from this software.
 
 (ns cljs.ns-test.foo
-  (:require [cljs.test :refer-macros [deftest is]]))
+  (:require [cljs.test :refer-macros [deftest is]]
+            [made.up.lib :as-alias lib]))
 
 (defn baz [] 123)
 
@@ -17,3 +18,6 @@
 (deftest test-namespaced-keywords
   (is (= (str kw) ":cljs.ns-test.foo/foo"))
   (is (= (str qkw) ":cljs.ns-test.foo/foo")))
+
+(deftest test-as-alias-keywords
+  (is (keyword-identical? ::lib/foo :made.up.lib/foo)))

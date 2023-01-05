@@ -8,7 +8,7 @@
 
 (ns cljs.js-deps
   (:require [cljs.util :as util :refer [distinct-by]]
-            [clojure.data.json :as json]
+            [cljs.vendor.clojure.data.json :as json]
             [clojure.java.io :as io]
             [clojure.string :as string])
   (:import [java.io File]

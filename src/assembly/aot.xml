@@ -8,7 +8,7 @@
     <fileSet>
       <directory>target/classes</directory>
         <outputDirectory>/</outputDirectory>
-          <!-- Excluding these breaks AOT, needs more investigating -->
+          <!-- Excluding these class files leads to class loader failure on deftypes -->
           <!--
           <excludes>
             <exclude>clojure/data/**</exclude>

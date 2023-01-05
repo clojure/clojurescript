@@ -25,32 +25,27 @@
         <dependency>
             <groupId>org.clojure</groupId>
             <artifactId>clojure</artifactId>
-            <version>1.8.0</version>
+            <version>1.10.0</version>
         </dependency>
         <dependency>
             <groupId>com.google.javascript</groupId>
             <artifactId>closure-compiler-unshaded</artifactId>
-            <version>v20210505</version>
+            <version>v20220502</version>
         </dependency>
         <dependency>
             <groupId>org.clojure</groupId>
             <artifactId>google-closure-library</artifactId>
-            <version>0.0-20201211-3e6c510d</version>
-        </dependency>
-        <dependency>
-            <groupId>org.clojure</groupId>
-            <artifactId>data.json</artifactId>
-            <version>0.2.6</version>
+            <version>0.0-20211011-0726fdeb</version>
         </dependency>
         <dependency>
             <groupId>org.clojure</groupId>
             <artifactId>tools.reader</artifactId>
-            <version>1.3.3</version>
+            <version>1.3.6</version>
         </dependency>
         <dependency>
             <groupId>com.cognitect</groupId>
-            <artifactId>transit-clj</artifactId>
-            <version>0.8.309</version>
+            <artifactId>transit-java</artifactId>
+            <version>1.0.362</version>
             <exclusions>
                 <exclusion>
                     <groupId>org.clojure</groupId>
@@ -61,7 +56,7 @@
         <dependency>
             <groupId>org.clojure</groupId>
             <artifactId>test.check</artifactId>
-            <version>0.10.0-alpha3</version>
+            <version>1.1.1</version>
             <scope>test</scope>
             <exclusions>
                 <exclusion>
@@ -269,7 +264,7 @@
             <plugin>
                 <groupId>com.theoryinpractise</groupId>
                 <artifactId>clojure-maven-plugin</artifactId>
-                <version>1.3.13</version>
+                <version>1.8.3</version>
                 <configuration>
                     <temporaryOutputDirectory>false</temporaryOutputDirectory>
                 </configuration>
@@ -281,34 +276,9 @@
                             <goal>compile</goal>
                         </goals>
                         <configuration>
-                            <compileDeclaredNamespaceOnly>true</compileDeclaredNamespaceOnly>
+                            <cleanAOTNamespaces>true</cleanAOTNamespaces>
                             <namespaces>
-                                <namespace>cljs.util</namespace>
-                                <namespace>cljs.env</namespace>
-                                <namespace>cljs.js-deps</namespace>
-                                <namespace>cljs.core</namespace>
-                                <namespace>cljs.source-map.base64</namespace>
-                                <namespace>cljs.source-map.base64-vlq</namespace>
-                                <namespace>cljs.source-map</namespace>
-                                <namespace>cljs.analyzer</namespace>
-                                <namespace>cljs.analyzer.utils</namespace>
-                                <namespace>cljs.compiler</namespace>
-                                <namespace>cljs.closure</namespace>
-                                <namespace>cljs.tagged-literals</namespace>
-                                <namespace>cljs.test</namespace>
-                                <namespace>cljs.analyzer.api</namespace>
-                                <namespace>cljs.build.api</namespace>
-                                <namespace>cljs.compiler.api</namespace>
-                                <namespace>cljs.spec.alpha</namespace>
-                                <namespace>cljs.spec.test.alpha</namespace>
-                                <namespace>cljs.spec.gen.alpha</namespace>
-                                <namespace>cljs.repl</namespace>
-                                <namespace>cljs.repl.browser</namespace>
-                                <namespace>cljs.repl.node</namespace>
-                                <namespace>cljs.repl.reflect</namespace>
-                                <namespace>cljs.repl.server</namespace>
-                                <namespace>cljs.main</namespace>
-                                <namespace>cljs.cli</namespace>
+                                <namespace>!cljs.vendor.bridge</namespace>
                             </namespaces>
                         </configuration>
                     </execution>

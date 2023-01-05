@@ -13,13 +13,13 @@
 * DONE *e
 * *err*
 * *file*
-* *flush-on-newline*
+* DONE *flush-on-newline*
 * *fn-loader*
 * *in*
 * *math-context*
-* *ns*
-* *out*
-* *print-dup*
+* DONE *ns*
+* DONE *out*
+* DONE *print-dup*
 * DONE *print-length*
 * DONE *print-level*
 * DONE *print-meta*
@@ -37,7 +37,7 @@ does what?
 * -'
 * DONE ->
 * DONE ->>
-* ->ArrayChunk
+* DONE ->ArrayChunk
 * ->Vec
 * ->VecNode
 * ->VecSeq
@@ -123,7 +123,7 @@ does what?
 * char-array
 * char-escape-string
 * char-name-string
-* char?
+* DONE char?
 * DONE chars
 * DONE chunk
 * DONE chunk-append
@@ -209,7 +209,7 @@ For macros only, uses clojure.core version
 * enumeration-seq
 * error-handler
 * error-mode
-* eval
+* DONE eval (bootstrapped)
 * DONE even?
 * DONE every-pred
 * DONE every?
@@ -226,7 +226,7 @@ macro currently expands into extend call
 * DONE filter
 * DONE find
 * TODO find-keyword
-* find-ns
+* DONE find-ns (not advanced compliation compatible)
 * find-protocol-impl
 * find-protocol-method
 * find-var
@@ -234,9 +234,9 @@ macro currently expands into extend call
 * DONE flatten
 * DONE float
 * float-array
-* float?
+* DONE float?
 * DONE floats
-* flush
+* DONE flush
 * DONE fn
 * DONE fn?
 * DONE fnext
@@ -327,7 +327,7 @@ does what?
 * DONE mapcat
 * DONE max
 * DONE max-key
-* memfn
+* DONE memfn
 * DONE memoize
 * DONE merge
 * DONE merge-with
@@ -342,7 +342,7 @@ does what?
 * DONE namespace
 * namespace-munge
 * DONE neg?
-* newline
+* DONE newline
 * DONE next
 * DONE nfirst
 * DONE nil?
@@ -424,9 +424,9 @@ dunno about regex
 * DONE re-matches
 * DONE re-pattern
 * DONE re-seq
-* read
+* DONE read (via tools.reader)
 * read-line
-* read-string
+* DONE read-string (via tools.reader)
 * DONE realized?
 * DONE reduce
 * DONE reductions
@@ -453,8 +453,8 @@ dunno about regex
 * TODO require
 ticket #8
 * DONE reset!
-* reset-meta!
-* resolve
+* DONE reset-meta!
+* DONE resolve (as macro)
 * DONE rest
 * restart-agent
 * resultset-seq
@@ -575,7 +575,7 @@ as macro
 * with-open
 * DONE with-out-str
 * with-precision
-* with-redefs
+* DONE with-redefs
 * with-redefs-fn
 * TODO xml-seq
 * DONE zero?

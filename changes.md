@@ -1,3 +1,107 @@
+## 1.11.60
+
+### Fixes
+* broaden scope of UUID equiv to implementers of protocol rather than concrete type
+* CLJS-3382: Fix regression in .apply after CLJS-3024
+
+## 1.11.57
+
+### Fixes
+* CLJS-3377: Objects created from required JS constructor are not correctly hinted
+* get-bridged-alias-map is not needed in self-hosted
+
+## 1.11.54
+
+### Changes
+* use `require` instead of `load` for `cljs.vendor.bridge`, addresses issue
+  reported by Bruce Hauman wrt. Figwheel
+
+## 1.11.51
+
+### Changes
+* CLJS-3372: Vendorize data.json, transit-clj, and tools.reader
+  data.json and transit-clj are no longer dependencies. CLJS-3375 bridges
+  tools.reader for backwards compatibility
+* Clojure 1.10 minimum version  
+* Update Google Closure Compiler, transit-java, tools.reader dependencies to latest
+* CLJS-2820 Compile cljs.loader regardless of whether :modules are used
+* CLJS-3370: improved uuid regex to only accept hex characters
+* Update / clarify docstrings, CLJS-3358, CLJS-3359, CLJS-3360, CLJS-3361, CLJS-3364
+* CLJS-3354: map-invert should use transients and reduce-kv instead of reduce
+* CLJS-3350: Update test.check dependency
+* CLJS-3294: data_readers.cljc doesn't provide a way to have target-specific
+  behaviour
+
+### Fixes
+* CLJS-3373: Externs Inference issue with vars invoked from foreign libs
+* CLJS-3368: let binding can shadow globals, leading to strange behavior
+* CLJS-3367: Backward conflict test in prefer-method causes incorrect exception
+* CLJS-3371: Invalid warning on record constructor
+* Fix apply of IFn for more than 20 arguments
+* CLJS-3288: selfhost: *eval-fn* not bound for :js sources
+* CLJS-3362: some-fn has different short-circuiting when using 3 predicates
+* CLJS-3356: halt-when not usable within #'c.c/into
+* CLJS-3352: Self-host negative zero emitted as positive zero
+* CLJS-3319: make PersistentHashMap release inodes correctly
+
+### Enhancements
+* CLJS-3348: Implement new functions for parity with Clojure 1.11
+* CLJS-3353: Add the new iteration function introduced in Clojure 1.11
+* CLJS-3347: Create clojure.math namespace
+* CLJS-3299: port CLJ-2603
+* CLJS-3346: :as-alias
+* add update-vals & update-keys
+
+## 1.11.4
+
+### Fixes
+* CLJS-3345: package.json exports can be a dupe of main
+
+## 1.10.914
+
+### Fixes
+* CLJS-3339: cljs.core/hash should type hint call to js/isFinite
+* CLJS-3333: defonce expansion non-hygienic with respect to core names
+* CLJS-3334: exists? evaluates to true for cljs.user//
+* CLJS-3341: Revert dependency issue in dep order patch
+
+### Changes
+* CLJS-3332: Cannot require `@firebase/auth`
+* CLJS-3335: CI, test-and-or-code-gen-pass fails on Windows
+* CLJS-3440: CI, Compiler tests fail test-cljs-3235 regarding react-select
+* CLJS-3342: Run CI compiler unit tests on Windows
+* CLJS-3338: Missing CI test coverage
+* CLJS-3343: Failing js module processing test on Windows
+
+## 1.10.896
+
+### Fixes
+* CLJS-3336: REGRESSION: Cannot require `goog`
+* CLJS-3337: REPL, Regression for :reload
+* Fix Windows path issue in cljs.externs
+
+## 1.10.891
+
+### Changes
+* Update Google Closure Compiler `v20210808`
+* Update Google Closure Library `0.0-20211011-0726fdeb`
+* CLJS-3330: Flag for legacy loading of goog.object & goog.array
+
+### Fixes
+* CLJS-3324: hash-map behavior differs from Clojure
+* CLJS-3056: runtime namespace load order is independent from ordering in ns macro :require form
+* CLJS-3074: Resolve :warning-handlers compiler option when symbols
+* CLJS-3317: PersistentVector invoke does not align with Clojure
+
+## 1.10.879
+
+### Changes
+* Revert CLJS-3276 - macros that expand to require
+
+### Fixes
+* CLJS-3096 Add :exception true to prepl errors
+* CLJS-3313: Protocol implementations via metadata: ClojureScript behaves differently from Clojure
+
 ## 1.10.866
 
 ### Changes
@@ -6,7 +110,6 @@
 ### Enhancements
 * CLJS-3260: and/or optimization as compiler pass, fixes core.async go macro issue
 * CLJS-3276: Support macros that expand to require statements
-
 
 ### Fixes
 * CLJS-3309: and/or opt bug - passes to remove dropped locals from anon fns,

@@ -70,31 +70,7 @@
              :at - top stack element
     :trace - root cause stack elements"
   [o]
-  (let [base (fn [t]
-               (merge {:type (cond
-                               (instance? ExceptionInfo t) `ExceptionInfo
-                               (instance? js/Error t) (symbol "js" (.-name t))
-                               :else nil)}
-                 (when-let [msg (ex-message t)]
-                   {:message msg})
-                 (when-let [ed (ex-data t)]
-                   {:data ed})
-                 #_(let [st (extract-canonical-stacktrace t)]
-                   (when (pos? (count st))
-                     {:at st}))))
-        via (loop [via [], t o]
-              (if t
-                (recur (conj via t) (ex-cause t))
-                via))
-        root (peek via)]
-    (merge {:via   (vec (map base via))
-            :trace nil #_(extract-canonical-stacktrace (or root o))}
-      (when-let [root-msg (ex-message root)]
-        {:cause root-msg})
-      (when-let [data (ex-data root)]
-        {:data data})
-      (when-let [phase (-> o ex-data :clojure.error/phase)]
-        {:phase phase}))))
+  (Throwable->map o))
 
 (defn ex-triage
   "Returns an analysis of the phase, error, cause, and location of an error that occurred

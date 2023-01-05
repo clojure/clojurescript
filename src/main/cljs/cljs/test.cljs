@@ -587,7 +587,7 @@
    (group-by (comp :ns meta) vars)))
 
 (defn test-vars
-  "Groups vars by their namespace and runs test-vars on them with
+  "Groups vars by their namespace and runs test-var on them with
   appropriate fixtures assuming they are present in the current
   testing environment."
   [vars]

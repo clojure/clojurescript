@@ -20,13 +20,11 @@
             [clojure.reflect]
             [clojure.set :as set]
             [clojure.string :as string]
-            [clojure.data.json :as json]
-            [clojure.tools.reader :as reader]
-            [clojure.tools.reader.reader-types :as readers]
+            [cljs.vendor.clojure.data.json :as json]
             [cljs.module-graph :as module-graph])
   (:import [java.lang ProcessBuilder]
            [java.io
-            File BufferedInputStream BufferedReader
+            File BufferedReader BufferedInputStream
             Writer InputStreamReader IOException StringWriter ByteArrayInputStream]
            [java.net URI URL]
            [java.util.logging Level]
@@ -39,9 +37,8 @@
                                          SourceMap$DetailLevel ClosureCodingConvention SourceFile
                                          Result JSError CheckLevel DiagnosticGroup DiagnosticGroups
                                          CommandLineRunner
-                                         JSModule SourceMap VariableMap PrintStreamErrorManager DiagnosticType
+                                         JSChunk SourceMap VariableMap PrintStreamErrorManager DiagnosticType
                                          VariableRenamingPolicy PropertyRenamingPolicy]
-           [com.google.javascript.jscomp.bundle Transpiler]
            [com.google.javascript.jscomp.deps ClosureBundler ModuleLoader$ResolutionMode ModuleNames
                                               SimpleDependencyInfo]
            [com.google.javascript.rhino Node]
@@ -84,25 +81,27 @@
   "Converts a namespaced symbol to a var, loading the requisite namespace if
   needed. For use with a function defined under a keyword in opts. The kw and
   ex-data arguments are used to form exceptions."
-  [sym kw ex-data]
-  (let [ns     (namespace sym)
-        _      (when (nil? ns)
-                 (throw
-                   (ex-info (str kw " symbol " sym " is not fully qualified")
-                     (merge ex-data {kw sym
-                                     :clojure.error/phase :compilation}))))
-        var-ns (symbol ns)]
-    (when (not (find-ns var-ns))
-      (try
-        (locking ana/load-mutex
-          (require var-ns))
-        (catch Throwable t
-          (throw (ex-info (str "Cannot require namespace referred by " kw " value " sym)
-                   (merge ex-data {kw sym
-                                   :clojure.error/phase :compilation})
-                   t)))))
+  ([sym kw]
+   (sym->var sym kw nil))
+  ([sym kw ex-data]
+   (let [ns     (namespace sym)
+         _      (when (nil? ns)
+                  (throw
+                    (ex-info (str kw " symbol " sym " is not fully qualified")
+                      (merge ex-data {kw sym
+                                      :clojure.error/phase :compilation}))))
+         var-ns (symbol ns)]
+     (when (not (find-ns var-ns))
+       (try
+         (locking ana/load-mutex
+           (require var-ns))
+         (catch Throwable t
+           (throw (ex-info (str "Cannot require namespace referred by " kw " value " sym)
+                    (merge ex-data {kw sym
+                                    :clojure.error/phase :compilation})
+                    t)))))
 
-    (find-var sym)))
+     (find-var sym))))
 
 (defn- opts-fn
   "Extracts a function from opts, by default expecting a function value, but
@@ -117,16 +116,25 @@
 (defmulti js-source-file (fn [_ source] (class source)))
 
 (defmethod js-source-file String [^String name ^String source]
-  (SourceFile/fromCode name source))
+  (-> (SourceFile/builder)
+    (.withPath name)
+    (.withContent source)
+    (.build)))
 
 (defmethod js-source-file File [_ ^File source]
-  (SourceFile/fromPath (.toPath source) StandardCharsets/UTF_8))
+  (-> (SourceFile/builder)
+    (.withPath (.toPath source))
+    (.withCharset StandardCharsets/UTF_8)
+    (.build)))
 
 (defmethod js-source-file URL [_ ^URL source]
   (js-source-file _ (io/file (.getPath source))))
 
 (defmethod js-source-file BufferedInputStream [^String name ^BufferedInputStream source]
-  (SourceFile/fromInputStream name source))
+  (-> (SourceFile/builder)
+    (.withPath name)
+    (.withContent source)
+    (.build)))
 
 (def check-level
   {:error CheckLevel/ERROR
@@ -180,11 +188,9 @@
    :too-many-type-params DiagnosticGroups/TOO_MANY_TYPE_PARAMS
    :tweaks DiagnosticGroups/TWEAKS
    :type-invalidation DiagnosticGroups/TYPE_INVALIDATION
-   :undefined-names DiagnosticGroups/UNDEFINED_NAMES
    :undefined-variables DiagnosticGroups/UNDEFINED_VARIABLES
    :underscore DiagnosticGroups/UNDERSCORE
    :unknown-defines DiagnosticGroups/UNKNOWN_DEFINES
-   :unnecessary-escape DiagnosticGroups/UNNECESSARY_ESCAPE
    :unused-local-variable DiagnosticGroups/UNUSED_LOCAL_VARIABLE
    :unused-private-property DiagnosticGroups/UNUSED_PRIVATE_PROPERTY
    :violated-module-dep DiagnosticGroups/VIOLATED_MODULE_DEP
@@ -204,7 +210,7 @@
     :watch :watch-error-fn :watch-fn :install-deps :process-shim :rename-prefix :rename-prefix-namespace
     :closure-variable-map-in :closure-property-map-in :closure-variable-map-out :closure-property-map-out
     :stable-names :ignore-js-module-exts :opts-cache :aot-cache :elide-strict :fingerprint :spec-skip-macros
-    :nodejs-rt :target-fn :deps-cmd :bundle-cmd})
+    :nodejs-rt :target-fn :deps-cmd :bundle-cmd :global-goog-object&array :node-modules-dirs})
 
 (def string->charset
   {"iso-8859-1" StandardCharsets/ISO_8859_1
@@ -259,7 +265,7 @@
   (when (contains? opts :pseudo-names)
     (set! (.generatePseudoNames compiler-options) (:pseudo-names opts)))
 
-  (when-let [lang-key (:language-in opts :ecmascript5)]
+  (when-let [lang-key (:language-in opts :ecmascript-next)]
     (.setLanguageIn compiler-options (lang-key->lang-mode lang-key)))
 
   (when-let [lang-key (:language-out opts)]
@@ -1238,15 +1244,16 @@
   compiled last after all inputs. This is because all inputs must be known and
   they must already be sorted in dependency order."
   [inputs {:keys [modules] :as opts}]
-  (when-let [loader (when (seq modules)
-                      (->> inputs
-                           (filter
-                            (fn [input]
-                              (some '#{"cljs.loader" cljs.loader}
-                                    (:provides input))))
-                           first))]
-    (let [module-uris  (module-graph/modules->module-uris modules inputs opts)
-          module-infos (module-graph/modules->module-infos modules)]
+  (when-let [loader (->> inputs
+                         (filter
+                          (fn [input]
+                            (some '#{"cljs.loader" cljs.loader}
+                                  (:provides input))))
+                         first)]
+    (let [module-uris  (when (seq modules)
+                         (module-graph/modules->module-uris modules inputs opts))
+          module-infos (when (seq modules)
+                         (module-graph/modules->module-infos modules))]
       (swap! env/*compiler* ana/add-consts
              {'cljs.core/MODULE_INFOS
               (merge (const-expr-form @env/*compiler* 'cljs.core/MODULE_INFOS) module-infos)
@@ -1262,7 +1269,7 @@
   "Given a list of IJavaScript sources in dependency order and compiler options
    return a dependency sorted list of module name / description tuples. The
    module descriptions will be augmented with a :closure-module entry holding
-   the Closure JSModule. Each module description will also be augmented with
+   the Closure JSChunk. Each module description will also be augmented with
    a :foreign-deps vector containing foreign IJavaScript sources in dependency
    order."
   [sources opts]
@@ -1287,7 +1294,7 @@
               (str "Module " name " does not define any :entries"))
             (when (:verbose opts)
               (util/debug-prn "Building module" name))
-            (let [js-module (JSModule. (clojure.core/name name))
+            (let [js-module (JSChunk. (clojure.core/name name))
                   module-sources
                   (reduce
                     (fn [ret entry-sym]
@@ -1315,7 +1322,7 @@
                   (do
                     (when (:verbose opts)
                       (util/debug-prn "  module" name "depends on" dep))
-                    (.addDependency js-module ^JSModule parent-module))
+                    (.addDependency js-module ^JSChunk parent-module))
                   (throw (util/compilation-error (IllegalArgumentException.
                                                    (str "Parent module " dep " does not exist"))))))
               (conj ret
@@ -1424,7 +1431,7 @@
         (io/file prop-out)))))
 
 (defn optimize-modules
-  "Use the Closure Compiler to optimize one or more Closure JSModules. Returns
+  "Use the Closure Compiler to optimize one or more Closure JSChunks. Returns
    a dependency sorted list of module name and description tuples."
   [opts & sources]
   ;; the following pre-condition can't be enabled
@@ -1445,7 +1452,7 @@
                   sources)
         modules (build-modules sources opts)
         ^List inputs (map (comp :closure-module second) modules)
-        _ (doseq [^JSModule input inputs]
+        _ (doseq [^JSChunk input inputs]
             (.sortInputsByDeps input closure-compiler))
         _ (when (or ana/*verbose* (:verbose opts))
             (util/debug-prn "Applying optimizations" (:optimizations opts) "to" (count sources) "sources"))
@@ -1465,7 +1472,7 @@
                  :source
                  (do
                    (when source-map (.reset source-map))
-                   (.toSource closure-compiler ^JSModule closure-module)))
+                   (.toSource closure-compiler ^JSChunk closure-module)))
                (when source-map
                  (let [sw (StringWriter.)
                        source-map-name (str output-to ".map.closure")]
@@ -2476,6 +2483,28 @@
            [(if (symbol? k) (str (comp/munge k)) k) v])
       defines)))
 
+(defn resolve-warning-handlers [fns]
+  (reduce
+    (fn [ret afn]
+      (cond
+        (fn? afn) (conj ret afn)
+
+        (symbol? afn)
+        (let [afn' (sym->var afn :warning-handlers)]
+          (when-not afn'
+            (throw
+              (ex-info (str "Could not resolve warning handler: " afn)
+                {:warning-handlers fns
+                 :clojure.error/phase :compilation})))
+          (conj ret afn'))
+
+        :else
+        (throw
+          (ex-info (str "Invalid warning handler " afn " of type " (type afn))
+            {:warning-handlers fns
+             :clojure.error/phase :compilation}))))
+    [] fns))
+
 (defn add-implicit-options
   [{:keys [optimizations output-dir]
     :or {optimizations :none
@@ -2579,7 +2608,10 @@
             opts)))
 
       (nil? (:ignore-js-module-exts opts))
-      (assoc :ignore-js-module-exts [".css"]))))
+      (assoc :ignore-js-module-exts [".css"])
+
+      (:warning-handlers opts)
+      (update :warning-handlers resolve-warning-handlers))))
 
 (defn- alive? [proc]
   (try (.exitValue proc) false (catch IllegalThreadStateException _ true)))
@@ -2707,45 +2739,90 @@
      (when env/*compiler*
        (:options @env/*compiler*))))
   ([modules opts]
-   (let [node-modules (io/file "node_modules")]
-     (if (and (not (empty? modules)) (.exists node-modules) (.isDirectory node-modules))
-       (let [modules (into #{} (map name) modules)
-             deps-file (io/file (util/output-directory opts) "cljs$node_modules.js")
-             old-contents (when (.exists deps-file)
-                            (slurp deps-file))
-             new-contents (let [sb (StringBuffer.)]
-                            (run! #(.append sb (str "require('" % "');\n")) modules)
-                            (str sb))]
-         (util/mkdirs deps-file)
-         (if (or (not= old-contents new-contents)
-                 (nil? env/*compiler*)
-                 (nil? (::transitive-dep-set @env/*compiler*)))
-           (do
-             (spit deps-file new-contents)
-             (let [transitive-js (node-inputs [{:file (.getAbsolutePath deps-file)}] opts)]
-               (when-not (nil? env/*compiler*)
-                 (swap! env/*compiler* update-in [::transitive-dep-set]
-                   assoc modules transitive-js))
-               transitive-js))
-           (when-not (nil? env/*compiler*)
-             (get-in @env/*compiler* [::transitive-dep-set modules]))))
-       []))))
+   (->> (or (:node-modules-dirs opts) ["node_modules"])
+        (map io/file)
+        (mapcat (fn [dir]
+                  (when (and (seq modules) (.exists dir) (.isDirectory dir))
+                    (let [modules (into #{} (map name) modules)
+                          deps-file (io/file (util/output-directory opts) "cljs$node_modules.js")
+                          old-contents (when (.exists deps-file)
+                                         (slurp deps-file))
+                          new-contents (let [sb (StringBuffer.)]
+                                         (run! #(.append sb (str "require('" % "');\n")) modules)
+                                         (str sb))]
+                      (util/mkdirs deps-file)
+                      (if (or (not= old-contents new-contents)
+                              (nil? env/*compiler*)
+                              (nil? (::transitive-dep-set @env/*compiler*)))
+                        (do
+                          (spit deps-file new-contents)
+                          (let [transitive-js (node-inputs [{:file (.getAbsolutePath deps-file)}] opts)]
+                            (when-not (nil? env/*compiler*)
+                              (swap! env/*compiler* update-in [::transitive-dep-set]
+                                     assoc modules transitive-js))
+                            transitive-js))
+                        (when-not (nil? env/*compiler*)
+                          (get-in @env/*compiler* [::transitive-dep-set modules])))))))
+        (filterv identity))))
 
 (defn- node-file-seq->libs-spec*
+  "Given a sequence of non-nested node_module paths where the extension ends in
+  `.js/.json`, return lib-spec maps for each path containing at least :file,
+   :module-type, and :provides."
   [module-fseq opts]
   (letfn [(package-json? [path]
-            (boolean (re-find #"node_modules[/\\](@[^/\\]+?[/\\])?[^/\\]+?[/\\]package\.json$" path)))]
-    (let [pkg-jsons (into {}
-                      (comp
-                        (map #(.getAbsolutePath %))
-                        (filter package-json?)
-                        (map (fn [path]
-                               [path (json/read-str (slurp path))])))
-                      module-fseq)
-          trim-package-json (fn [s]
-                              (if (string/ends-with? s "package.json")
-                                (subs s 0 (- (count s) 12))
-                                s))]
+            (= "package.json" (.getName (io/file path))))
+
+          (top-level-package-json? [path]
+            (boolean (re-find #"node_modules[/\\](@[^/\\]+?[/\\])?[^/\\]+?[/\\]package\.json$" path)))
+
+          ;; the path sans the package.json part
+          ;; i.e. some_lib/package.json -> some_lib
+          (trim-package-json [s]
+            (if (string/ends-with? s "package.json")
+              (subs s 0 (- (count s) 12))
+              s))
+
+          (trim-relative [path]
+            (cond-> path
+              (string/starts-with? path "./")
+              (subs 2)))
+
+          (add-exports [pkg-jsons]
+            (reduce-kv
+              (fn [pkg-jsons path {:strs [exports] :as pkg-json}]
+                ;; "exports" can just be a dupe of "main", i.e. a string - ignore
+                ;; https://nodejs.org/api/packages.html#main-entry-point-export
+                (if (string? exports)
+                  pkg-jsons
+                  (reduce-kv
+                    (fn [pkg-jsons export _]
+                      ;; NOTE: ignore "." exports for now
+                      (if (= "." export)
+                        pkg-jsons
+                        (let [export-pkg-json
+                              (io/file
+                                (trim-package-json path)
+                                (trim-relative export)
+                                "package.json")]
+                          (cond-> pkg-jsons
+                            (.exists export-pkg-json)
+                            (assoc
+                              (.getAbsolutePath export-pkg-json)
+                              (json/read-str (slurp export-pkg-json)))))))
+                    pkg-jsons exports)))
+              pkg-jsons pkg-jsons))]
+    (let [
+          ;; a map of all the *top-level* package.json paths and their exports
+          ;; to the package.json contents as EDN
+          pkg-jsons (add-exports
+                      (into {}
+                        (comp
+                          (map #(.getAbsolutePath %))
+                          (filter top-level-package-json?)
+                          (map (fn [path]
+                                 [path (json/read-str (slurp path))])))
+                        module-fseq))]
       (into []
         (comp
           (map #(.getAbsolutePath %))
@@ -2753,6 +2830,8 @@
                  (merge
                    {:file path
                     :module-type :es6}
+                   ;; if the file is *not* a package.json, then compute what
+                   ;; namespaces it :provides to ClojureScript
                    (when-not (package-json? path)
                      (let [pkg-json-main (some
                                            (fn [[pkg-json-path {:as pkg-json :strs [name]}]]
@@ -2761,20 +2840,21 @@
                                                (when-not (nil? entry)
                                                  ;; should be the only edge case in
                                                  ;; the package.json main field - Antonio
-                                                 (let [entry (cond-> entry
-                                                              (string/starts-with? entry "./")
-                                                              (subs 2))
+                                                 (let [entry (trim-relative entry)
                                                        entry-path (-> pkg-json-path
                                                                      (string/replace \\ \/)
                                                                      trim-package-json
                                                                      (str entry))]
+                                                   ;; find a package.json entry point that matches
+                                                   ;; the `path`
                                                    (some (fn [candidate]
                                                            (when (= candidate (string/replace path \\ \/))
                                                              name))
                                                          (cond-> [entry-path]
                                                            (not (or (string/ends-with? entry-path ".js")
                                                                     (string/ends-with? entry-path ".json")))
-                                                           (into [(str entry-path ".js") (str entry-path "/index.js") (str entry-path ".json")])))))))
+                                                           (into [(str entry-path ".js") (str entry-path "/index.js") (str entry-path ".json")
+                                                                  (string/replace entry-path #"\.cjs$" ".js")])))))))
                                            pkg-jsons)]
                        {:provides (let [module-rel-name (-> (subs path (.lastIndexOf path "node_modules"))
                                                             (string/replace \\ \/)
@@ -2797,7 +2877,7 @@
      (when env/*compiler*
        (:options @env/*compiler*))))
   ([opts]
-   (let [module-fseq (util/module-file-seq)]
+   (let [module-fseq (util/module-file-seq opts)]
      (node-file-seq->libs-spec module-fseq opts))))
 
 (defn preprocess-js
@@ -2855,7 +2935,12 @@
                                           (when (or ana/*verbose* (:verbose opts))
                                             (util/debug-prn "Ignoring JS module" url "based on the file extension"))
                                           (assoc js :source ""))
-                                        (assoc js :source (deps/-source js opts))))))
+                                        (if-let [src (deps/-source js opts)]
+                                          (assoc js :source src)
+                                          (throw
+                                            (ex-info (str "Could not get source for JS module")
+                                              {:js-module lib
+                                               :clojure.error/phase :compilation})))))))
                              (map (fn [js]
                                     (if (:preprocess js)
                                       (preprocess-js js opts)
@@ -2892,52 +2977,9 @@
             opts js-modules)))
       opts)))
 
-(defn- load-data-reader-file [mappings ^java.net.URL url]
-  (with-open [rdr (readers/input-stream-push-back-reader (.openStream url))]
-    (binding [*file* (.getFile url)]
-      (let [new-mappings (reader/read {:eof nil :read-cond :allow} rdr)]
-        (when (not (map? new-mappings))
-          (throw (ex-info (str "Not a valid data-reader map")
-                   {:url url
-                    :clojure.error/phase :compilation})))
-        (reduce
-          (fn [m [k v]]
-            (when (not (symbol? k))
-              (throw (ex-info (str "Invalid form in data-reader file")
-                       {:url url
-                        :form k
-                        :clojure.error/phase :compilation})))
-            (when (and (contains? mappings k)
-                    (not= (mappings k) v))
-              (throw (ex-info "Conflicting data-reader mapping"
-                       {:url url
-                        :conflict k
-                        :mappings m
-                        :clojure.error/phase :compilation})))
-            (assoc m k v))
-          mappings
-          new-mappings)))))
-
-(defn get-data-readers*
-  "returns a merged map containing all data readers defined by libraries
-   on the classpath."
-  ([]
-   (get-data-readers* (. (Thread/currentThread) (getContextClassLoader))))
-  ([classloader]
-   (let [data-reader-urls (enumeration-seq (. classloader (getResources "data_readers.cljc")))]
-     (reduce load-data-reader-file {} data-reader-urls))))
-
-(def get-data-readers (memoize get-data-readers*))
-
 (defn load-data-readers! [compiler]
-  (let [data-readers (get-data-readers)
-        nses (map (comp symbol namespace) (vals data-readers))]
-    (swap! compiler update-in [:cljs.analyzer/data-readers] merge (get-data-readers))
-    (doseq [ns nses]
-      (try
-        (locking ana/load-mutex
-          (require ns))
-        (catch Throwable _)))))
+  (swap! compiler update-in [:cljs.analyzer/data-readers] merge
+    (ana/load-data-readers)))
 
 (defn add-externs-sources [opts]
   (cond-> opts

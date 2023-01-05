@@ -17,11 +17,11 @@
                     [cljs.source-map :as sm]
                     [cljs.tagged-literals :as tags]
                     [cljs.util :as util]
-                    [clojure.data.json :as json]
+                    [cljs.vendor.clojure.data.json :as json]
                     [clojure.java.io :as io]
                     [clojure.set :as set]
                     [clojure.string :as string]
-                    [clojure.tools.reader :as reader])
+                    [cljs.vendor.clojure.tools.reader :as reader])
      :cljs (:require [cljs.analyzer :as ana]
                      [cljs.analyzer.impl :as ana.impl]
                      [cljs.env :as env]
@@ -334,6 +334,9 @@
 
            (not (js/isFinite x))
            (emits (if (pos? x) "Infinity" "-Infinity"))
+
+           (and (zero? x) (neg? (/ x)))
+           (emits "(-0)")
 
            :else (emits "(" x ")"))))
 
@@ -1294,6 +1297,9 @@
                                      (let [{node-libs true libs-to-load false} (group-by ana/node-module-dep? libs)]
                                        [node-libs libs-to-load])
                                      [nil libs]))
+        [goog-modules libs-to-load] (let [{goog-modules true libs-to-load false}
+                                          (group-by ana/goog-module-dep? libs-to-load)]
+                                      [goog-modules libs-to-load])
         global-exports-libs (filter ana/dep-has-global-exports? libs-to-load)]
     (when (-> libs meta :reload-all)
       (emitln "if(!COMPILED) " loaded-libs-temp " = " loaded-libs " || cljs.core.set([\"cljs.core\"]);")
@@ -1336,11 +1342,26 @@
         :else
         (when-not (= lib 'goog)
           (emitln "goog.require('" (munge lib) "');"))))
+    ;; Node Libraries
     (doseq [lib node-libs]
       (let [[lib' sublib] (ana/lib&sublib lib)]
         (emitln (munge ns-name) "."
           (ana/munge-node-lib lib)
           " = require('" lib' "')" (sublib-select sublib) ";")))
+    ;; Google Closure Library Modules (i.e. goog.module(...))
+    ;; these must be assigned to vars
+    (doseq [lib goog-modules]
+      (let [[lib' sublib] (ana/lib&sublib lib)]
+        (emitln "goog.require('" lib' "');")
+        ;; we emit goog.scope here to suppress a Closure error about
+        ;; goog.module.get when compiling - meant to discourage incorrect
+        ;; usage by hand written code - not applicable here
+        (emitln "goog.scope(function(){")
+        (emitln (munge ns-name) "."
+          (ana/munge-goog-module-lib lib)
+          " = goog.module.get('" lib' "')" (sublib-select sublib) ";")
+        (emitln "});")))
+    ;; Global Exports
     (doseq [lib global-exports-libs]
       (let [{:keys [global-exports]} (get js-dependency-index (name (-> lib ana/lib&sublib first)))]
         (emit-global-export ns-name global-exports lib)))
@@ -1538,7 +1559,7 @@
        (binding [*out*                 out
                  ana/*cljs-ns*         'cljs.user
                  ana/*cljs-file*       (.getPath ^File src)
-                 reader/*alias-map*    (or reader/*alias-map* {})
+                 reader/*alias-map*    (or (ana/get-bridged-alias-map) reader/*alias-map* {})
                  ana/*checked-arrays*  (or ana/*checked-arrays* (:checked-arrays opts))
                  ana/*cljs-static-fns* (or ana/*cljs-static-fns* (:static-fns opts))
                  *source-map-data*     (when (:source-map opts)
@@ -1557,7 +1578,7 @@
                         emit)]
              (loop [forms       (ana/forms-seq* rdr (util/path src))
                     ns-name     nil
-                    deps        nil]
+                    deps        []]
                (if (seq forms)
                  (let [env (assoc env :ns (ana/get-namespace ana/*cljs-ns*))
                        {:keys [op] :as ast} (ana/analyze env (first forms) nil opts)]
@@ -1569,7 +1590,7 @@
                                      'cljs.core$macros
                                      ns-name)]
                        (emit ast)
-                       (recur (rest forms) ns-name (merge (:uses ast) (:requires ast))))
+                       (recur (rest forms) ns-name (into deps (:deps ast))))
 
                      (= :ns* (:op ast))
                      (let [ns-emitted? (some? ns-name)
@@ -1579,7 +1600,7 @@
                        (if-not ns-emitted?
                          (emit (assoc ast :name ns-name :op :ns))
                          (emit ast))
-                       (recur (rest forms) ns-name (merge deps (:uses ast) (:requires ast))))
+                       (recur (rest forms) ns-name (into deps (:deps ast))))
 
                      :else
                      (let [ns-emitted? (some? ns-name)
@@ -1601,8 +1622,8 @@
                               :macros-ns  (:macros-ns opts)
                               :provides   [ns-name]
                               :requires   (if (= ns-name 'cljs.core)
-                                            (set (vals deps))
-                                            (cond-> (conj (set (vals deps)) 'cljs.core)
+                                            (vec (distinct deps))
+                                            (cond-> (conj (vec (distinct deps)) 'cljs.core)
                                               (get-in @env/*compiler* [:options :emit-constants])
                                               (conj ana/constants-ns-sym)))
                               :file        dest

@@ -1493,12 +1493,22 @@
             (:import goog))]))
     (is (= {} (get-in @cenv [::ana/namespaces 'test.foo :imports])))))
 
-(deftest test-cljs-3276-require-from-macro
-  (let [cenv (env/default-compiler-env)]
-    (env/with-compiler-env cenv
-      (ana/analyze-form-seq
-       '[(ns test.foo
-           (:require-macros [cljs-3276.macros :refer [macro-that-requires]]))
-         (macro-that-requires)]))
-    (is (= '{cljs-3276.foo cljs-3276.foo} (get-in @cenv [::ana/namespaces 'test.foo :requires])))
-    (is (contains? (get @cenv ::ana/namespaces) 'cljs-3276.foo))))
+(deftest test-cljs-3371
+  (let [ws (atom [])]
+    (ana/with-warning-handlers [(collecting-warning-handler ws)]
+      (env/with-compiler-env @test-cenv
+        (analyze (ana/empty-env)
+                 '(do
+                    (defrecord Foo [a])
+                    (Foo. nil)
+                    (Foo. nil nil nil)))))
+    (is (empty? @ws)))
+  (let [ws (atom [])]
+    (ana/with-warning-handlers [(collecting-warning-handler ws)]
+      (env/with-compiler-env @test-cenv
+        (analyze (ana/empty-env)
+                 '(do
+                    (defrecord Foo [a])
+                    (Foo. nil nil)))))
+    (is (= 1 (count @ws)))
+    (is (string/starts-with? (first @ws) "Wrong number of args (2) passed to Foo"))))

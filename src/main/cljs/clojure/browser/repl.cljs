@@ -227,7 +227,10 @@
           (let [ret (.require__ js/goog src)]
             (when (= reload "reload-all")
               (set! (.-cljsReloadAll_ js/goog) false))
-            ret))))))
+            ;; handle requires from Closure Library goog.modules
+            (if (js/goog.isInModuleLoader_)
+              (js/goog.module.getInternal_ src)
+              ret)))))))
 
 (defn connect
   "Connects to a REPL server from an HTML document. After the
