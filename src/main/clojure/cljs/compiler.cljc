@@ -49,6 +49,7 @@
                 [lang (keyword (string/replace (name lang) #"^ecmascript" "es"))])))
     [:ecmascript5 :ecmascript5-strict :ecmascript6 :ecmascript6-strict
      :ecmascript-2015 :ecmascript6-typed :ecmascript-2016 :ecmascript-2017
+     :ecmascript-2018 :ecmascript-2019 :ecmascript-2020 :ecmascript-2021
      :ecmascript-next]))
 
 (def ^:dynamic *recompiled* nil)
