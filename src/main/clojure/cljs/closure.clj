@@ -235,7 +235,8 @@
 
 (def lang-level
   [:ecmascript3 :ecmascript5 :ecmascript5-strict :ecmascript6 :ecmascript6-strict
-   :ecmascript-2015 :ecmascript-2016 :ecmascript-2017 :ecmascript-next
+   :ecmascript-2015 :ecmascript-2016 :ecmascript-2017 :ecmascript-2018
+   :ecmascript-2019 :ecmascript-2020 :ecmascript-2021 :ecmascript-next
    :no-transpile])
 
 (defn expand-lang-key [key]
@@ -252,6 +253,10 @@
     :ecmascript-2015       CompilerOptions$LanguageMode/ECMASCRIPT_2015
     :ecmascript-2016       CompilerOptions$LanguageMode/ECMASCRIPT_2016
     :ecmascript-2017       CompilerOptions$LanguageMode/ECMASCRIPT_2017
+    :ecmascript-2018       CompilerOptions$LanguageMode/ECMASCRIPT_2018
+    :ecmascript-2019       CompilerOptions$LanguageMode/ECMASCRIPT_2019
+    :ecmascript-2020       CompilerOptions$LanguageMode/ECMASCRIPT_2020
+    :ecmascript-2021       CompilerOptions$LanguageMode/ECMASCRIPT_2021
     :ecmascript-next       CompilerOptions$LanguageMode/ECMASCRIPT_NEXT))
 
 (defn set-options
