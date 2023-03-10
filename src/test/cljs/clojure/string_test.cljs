@@ -81,7 +81,9 @@
     (is (= " \\\"foo\\\" "
               (s/escape " \"foo\" " {\" "\\\""})))
     (is (= "faabor"
-              (s/escape "foobar" {\a \o, \o \a}))))
+              (s/escape "foobar" {\a \o, \o \a})))
+    (is (= "aaa"
+              (s/escape "foo" (fn [c] \a)))))
 
   (testing "Testing string replace-first"
     (is (= "barbarfoo" (s/replace-first "foobarfoo" "foo" "bar")))

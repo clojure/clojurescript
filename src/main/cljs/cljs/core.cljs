@@ -205,19 +205,23 @@
   nil)
 
 (def
-  ^{:doc "bound in a repl thread to the most recent value printed"}
+  ^{:dynamic true
+    :doc "bound in a repl thread to the most recent value printed"}
   *1)
 
 (def
-  ^{:doc "bound in a repl thread to the second most recent value printed"}
+  ^{:dynamic true
+    :doc "bound in a repl thread to the second most recent value printed"}
   *2)
 
 (def
-  ^{:doc "bound in a repl thread to the third most recent value printed"}
+  ^{:dynamic true
+    :doc "bound in a repl thread to the third most recent value printed"}
   *3)
 
 (def
-  ^{:doc "bound in a repl thread to the most recent exception caught by the repl"}
+  ^{:dynamic true
+    :doc "bound in a repl thread to the most recent exception caught by the repl"}
   *e)
 
 (defn truth_
