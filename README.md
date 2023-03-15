@@ -10,6 +10,12 @@ Latest stable release: 1.11.60
 
 * [All released versions](http://search.maven.org/#search%7Cgav%7C1%7Cg%3A%22org.clojure%22%20AND%20a%3A%22clojurescript%22)
 
+[Clojure deps.edn](http://clojure.org/guides/deps_and_cli) dependency information:
+
+```
+org.clojure/clojurescript {:mvn/version "1.11.60"}
+```
+
 [Leiningen](http://github.com/technomancy/leiningen/) dependency information:
 
 ```
