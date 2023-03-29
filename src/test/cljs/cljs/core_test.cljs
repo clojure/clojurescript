@@ -1982,3 +1982,8 @@
 (deftest test-cljs-3386
   (is (nil? (cljs-3386-test-fn 1 2)))
   (is (= '(3 4) (cljs-3386-test-fn 1 2 3 4))))
+
+(deftest test-cljs-3400
+  (testing "macroexpanding non-seqs should work"
+    (is (true? (macroexpand '(and))))
+    (is (nil? (macroexpand '(or))))))
