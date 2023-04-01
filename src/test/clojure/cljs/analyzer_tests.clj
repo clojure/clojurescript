@@ -1512,3 +1512,9 @@
                     (Foo. nil nil)))))
     (is (= 1 (count @ws)))
     (is (string/starts-with? (first @ws) "Wrong number of args (2) passed to Foo"))))
+
+(deftest test-cljs-3401
+  (is (not= (ana/gen-constant-id '_PLUS_)
+            (ana/gen-constant-id '+)))
+  (is (not= (ana/gen-constant-id 'foo.bar)
+            (ana/gen-constant-id 'foo$bar))))
