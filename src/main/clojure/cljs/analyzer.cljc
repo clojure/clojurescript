@@ -513,14 +513,16 @@
                  (symbol? value)  "cst$sym$"
                  :else
                  (throw
-                   #?(:clj (Exception. (str "constant type " (type value) " not supported"))
-                      :cljs (js/Error. (str "constant type " (type value) " not supported")))))
+                  #?(:clj (Exception. (str "constant type " (type value) " not supported"))
+                     :cljs (js/Error. (str "constant type " (type value) " not supported")))))
         name   (if (keyword? value)
                  (subs (str value) 1)
                  (str value))
         name   (if (= "." name)
                  "_DOT_"
                  (-> name
+                     (string/replace "_" "__")
+                     (string/replace "$" "$$")
                      (string/replace "-" "_DASH_")
                      (munge)
                      (string/replace "." "$")
