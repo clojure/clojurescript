@@ -15,7 +15,8 @@
             [cljs.test]
             [cljs.ns-test.foo :refer [baz]]
             [clojure.set :as s :refer [intersection] :rename {intersection itsc}]
-            [cljs.analyzer :as ana])
+            [cljs.analyzer :as ana]
+            [fake.ns :as-alias fake])
   (:use [cljs.ns-test.bar :only [quux]]))
 
 (def + -)
@@ -43,3 +44,7 @@
     (is (.isArrayLike js/goog array-like))
     (is (goog/isArrayLike array-like))
     (is (goog-alias/isArrayLike array-like))))
+
+(deftest test-cljs-3399
+  (is (= ::fake/foo :fake.ns/foo)
+      (= `fake/foo `fake.ns/foo)))
