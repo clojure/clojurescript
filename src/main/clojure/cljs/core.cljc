@@ -2257,7 +2257,11 @@
   temp-value-exprs will be evaluated and each resulting value will
   replace in parallel the root value of its var.  After the body is
   executed, the root values of all the vars will be set back to their
-  old values. Useful for mocking out functions during testing."
+  old values. Useful for mocking out functions during testing.
+
+  Note that under advanced compilation vars are statically resolved,
+  preventing with-redef usage.  If var redefinition is desired in a production
+  setting then the var to be redefined must be declared ^:dynamic."
   [bindings & body]
   (core/let [names (take-nth 2 bindings)
              vals (take-nth 2 (drop 1 bindings))
