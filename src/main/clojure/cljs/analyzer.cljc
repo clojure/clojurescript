@@ -917,8 +917,11 @@
   ([env name]
    (resolve-ns-alias env name (symbol name)))
   ([env name not-found]
-   (let [sym (symbol name)]
-     (get (:requires (:ns env)) sym not-found))))
+   (let [sym (symbol name)
+         {:keys [requires as-aliases]}  (:ns env)]
+     (or (get requires sym)
+         (get as-aliases sym)
+         not-found))))
 
 (defn resolve-macro-ns-alias
   ([env name]
