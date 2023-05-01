@@ -2604,7 +2604,7 @@
 
 (defmethod parse 'set!
   [_ env [_ target val alt :as form] _ _]
-  (let [[target val] (if alt
+  (let [[target val] (if (= 4 (count form))
                        ;; (set! o -prop val)
                        [`(. ~target ~val) alt]
                        [target val])]
