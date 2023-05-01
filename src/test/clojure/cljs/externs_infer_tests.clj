@@ -51,7 +51,7 @@
     (is (= 'js/Foo (ana/js-tag '[baz] :ret-tag externs)))))
 
 (defn infer-test-helper
-  [{:keys [forms externs warnings warn js-dependency-index with-core? opts]}]
+  [{:keys [forms externs warnings warn js-dependency-index node-module-index with-core? opts]}]
   (let [test-cenv (atom
                     (cond->
                       (if with-core?
@@ -60,7 +60,8 @@
                         {::ana/externs
                          (externs/externs-map
                            (closure/load-externs {:externs (or externs [])}))})
-                      js-dependency-index (assoc :js-dependency-index js-dependency-index)))
+                      js-dependency-index (assoc :js-dependency-index js-dependency-index)
+                      node-module-index (assoc :node-module-index node-module-index)))
         wrap      (if with-core?
                     #(comp/with-core-cljs nil %)
                     #(do (%)))]
