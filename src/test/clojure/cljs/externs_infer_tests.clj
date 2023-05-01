@@ -51,7 +51,7 @@
     (is (= 'js/Foo (ana/js-tag '[baz] :ret-tag externs)))))
 
 (defn infer-test-helper
-  [{:keys [forms externs warnings warn js-dependency-index with-core? opts]}]
+  [{:keys [forms externs warnings warn js-dependency-index node-module-index with-core? opts]}]
   (let [test-cenv (atom
                     (cond->
                       (if with-core?
@@ -60,7 +60,8 @@
                         {::ana/externs
                          (externs/externs-map
                            (closure/load-externs {:externs (or externs [])}))})
-                      js-dependency-index (assoc :js-dependency-index js-dependency-index)))
+                      js-dependency-index (assoc :js-dependency-index js-dependency-index)
+                      node-module-index (assoc :node-module-index node-module-index)))
         wrap      (if with-core?
                     #(comp/with-core-cljs nil %)
                     #(do (%)))]
@@ -451,6 +452,27 @@
                ["Object.GoogleAuthProvider;"
                 "Object.someMethod;"
                 "Object.someProperty;"])
+            res)))))
+
+(deftest test-cljs-3381
+  (testing "invokeable js namespaces not hinted properly"
+    (let [ws  (atom [])
+          res (infer-test-helper
+                {:node-module-index #{"markdown-it"}
+                 :forms '[(ns foo.core
+                            (:require [markdown-it]))
+                          (defonce mdi
+                            (doto (new markdown-it
+                                    (js-obj
+                                      "linkify" true
+                                      "typographer" true))
+                              (.renderInline mdi "hi")))]
+                 :warnings ws
+                 :warn true
+                 :with-core? false
+                 :target :nodejs})]
+      (is (= (unsplit-lines
+               ["Object.renderInline;"])
             res)))))
 
 (comment
