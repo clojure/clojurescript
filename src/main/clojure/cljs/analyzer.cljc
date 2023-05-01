@@ -1220,11 +1220,13 @@
       :node   {:name (symbol (str current-ns)
                        (munge-node-lib (resolve-ns-alias env ns)))
                :op :js-var
-               :ns current-ns}
+               :ns current-ns
+               :tag 'js}
       :global {:name (symbol (str current-ns)
                        (munge-global-export (resolve-ns-alias env ns)))
                :op :js-var
-               :ns current-ns})))
+               :ns current-ns
+               :tag 'js})))
 
 (defn resolve-import
   "goog.modules are deterministically assigned to a property of the namespace,
