@@ -1987,3 +1987,9 @@
   (testing "macroexpanding non-seqs should work"
     (is (true? (macroexpand '(and))))
     (is (nil? (macroexpand '(or))))))
+
+(deftest test-cljs-3395
+  (testing "(set! foo -bar baz) pattern"
+    (let [a #js {}]
+      (set! a -x false)
+      (is (false? (.-x a))))))
