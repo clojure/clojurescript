@@ -454,6 +454,27 @@
                 "Object.someProperty;"])
             res)))))
 
+(deftest test-cljs-3381
+  (testing "invokeable js namespaces not hinted properly"
+    (let [ws  (atom [])
+          res (infer-test-helper
+                {:node-module-index #{"markdown-it"}
+                 :forms '[(ns foo.core
+                            (:require [markdown-it]))
+                          (defonce mdi
+                            (doto (new markdown-it
+                                    (js-obj
+                                      "linkify" true
+                                      "typographer" true))
+                              (.renderInline mdi "hi")))]
+                 :warnings ws
+                 :warn true
+                 :with-core? false
+                 :target :nodejs})]
+      (is (= (unsplit-lines
+               ["Object.renderInline;"])
+            res)))))
+
 (comment
   (binding [ana/*cljs-ns* ana/*cljs-ns*]
     (ana/no-warn
