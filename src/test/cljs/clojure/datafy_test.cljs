@@ -22,3 +22,14 @@
           x (with-meta original {`clojure.core.protocols/datafy (fn [_] datafied)})]
       (is (= datafied (d/datafy x)))
       (is (= {:clojure.datafy/obj original} (meta (d/datafy x)))))))
+
+(deftest datafy-js-errors-test
+  (let [x (js/Error. "foo")]
+    (is (= (Throwable->map x) (d/datafy x))))
+  ;; Ensure we can datafy objects that extend js/Error
+  (let [x (js/RangeError. "x must be between 1 and 5")]
+    (is (= (Throwable->map x) (d/datafy x)))))
+
+(deftest datafy-ex-info-test
+  (let [x (ex-info "foo" {:a 1} (ex-info "bar" {:b 2}))]
+    (is (= (Throwable->map x) (d/datafy x)))))

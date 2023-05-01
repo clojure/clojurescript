@@ -41,6 +41,12 @@
   (with-meta [(deref r)] (meta r)))
 
 (extend-protocol p/Datafiable
+  js/Error
+  (datafy [x] (Throwable->map x))
+
+  ExceptionInfo
+  (datafy [x] (Throwable->map x))
+
   Var
   (datafy [r] (datify-ref r))
 
