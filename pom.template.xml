@@ -35,7 +35,7 @@
         <dependency>
             <groupId>org.clojure</groupId>
             <artifactId>google-closure-library</artifactId>
-            <version>0.0-20211011-0726fdeb</version>
+            <version>0.0-20230227-c7c0a541</version>
         </dependency>
         <dependency>
             <groupId>org.clojure</groupId>
