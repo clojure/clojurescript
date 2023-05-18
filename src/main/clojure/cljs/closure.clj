@@ -2598,7 +2598,7 @@
       (ensure-module-opts)
 
       (nil? (:language-in opts))
-      (assoc :language-in :es6)
+      (assoc :language-in :ecmascript-next)
 
       (:stable-names opts)
       (as-> opts
