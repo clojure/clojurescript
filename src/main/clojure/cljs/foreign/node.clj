@@ -14,6 +14,7 @@
              (and (sequential? (:package-json-resolution opts))
                   (every? string? (:package-json-resolution opts)))
              (not (contains? opts :package-json-resolution)))]}
+  ;; TODO: add "export" as first case here
   (let [modes {:nodejs ["main"]
                :webpack ["browser" "module" "main"]}]
     (if-let [mode (:package-json-resolution opts)]
@@ -114,6 +115,10 @@
     (string/replace #"node_modules[\\\/]" "")))
 
 (defn path->provides
+  "For a given path in node_modules, determine what namespaces that file would
+  provide to ClojureScript. Note it is assumed that we *already* processed all
+  package.json files and they are present via pkg-jsons parameter as we need them
+  to figure out the provides."
   [path pkg-jsons opts]
   (merge
     {:file        path
@@ -121,6 +126,9 @@
     ;; if the file is *not* a package.json, then compute what
     ;; namespaces it :provides to ClojureScript
     (when-not (package-json? path)
+      ;; given some path search the package.json to determine whether it is a
+      ;; main entry point or not
+      ;; TODO: renamed pkg-json->main to pkg-json->provide, because we need to figure out exports too
       (let [pkg-json-main (some #(pkg-json->main % path opts) pkg-jsons)]
         {:provides (let [module-rel-name (path->rel-name path)
                          provides        (cond-> [module-rel-name (string/replace module-rel-name #"\.js(on)?$" "")]
@@ -147,5 +155,6 @@
     (into []
       (comp
         (map #(.getAbsolutePath %))
+        ;; for each file, figure out what it will provide to ClojureScript
         (map #(path->provides % pkg-jsons+exports opts)))
       module-fseq)))
