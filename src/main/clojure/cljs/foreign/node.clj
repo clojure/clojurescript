@@ -85,17 +85,17 @@
   [pkg-jsons]
   (reduce-kv
     (fn [pkg-jsons path {:strs [exports] :as pkg-json}]
-      ;; "exports" can just be a dupe of "main", i.e. a string - ignore
+
       (if (string? exports)
         pkg-jsons
         (reduce-kv
           (fn [acc k _] (export-subpaths acc k path)) pkg-jsons exports)))
     pkg-jsons pkg-jsons))
 
-(defn pkg-json->main
-  "Determine whether a pkg-json map identifies path as an entrypoint. If so
-  return the name entry provided in the package.json file."
-  [[pkg-json-path {:as pkg-json :strs [name]}] path opts]
+(defn path->main-name
+  "Determine whether a path is a main entrypoint in the provided package.json.
+  If so return the name entry provided in the package.json file."
+  [path [pkg-json-path {:as pkg-json :strs [name]}] opts]
   (let [entries (package-json-entries opts)
         entry   (first (keep (partial get pkg-json) entries))]
     (when-not (nil? entry)
@@ -134,7 +134,7 @@
       ;; given some path search the package.json to determine whether it is a
       ;; main entry point or not
       ;; TODO: renamed pkg-json->main to pkg-json->provide, because we need to figure out exports too
-      (let [pkg-json-main (some #(pkg-json->main % path opts) pkg-jsons)]
+      (let [pkg-json-main (some #(path->main-name path % opts) pkg-jsons)]
         {:provides (let [module-rel-name (path->rel-name path)
                          provides        (cond-> [module-rel-name (string/replace module-rel-name #"\.js(on)?$" "")]
                                            (some? pkg-json-main) (conj pkg-json-main))

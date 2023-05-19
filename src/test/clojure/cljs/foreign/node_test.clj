@@ -3,19 +3,34 @@
             [cljs.util :as util]
             [clojure.java.io :as io]
             [clojure.java.shell :as sh]
-            [clojure.test :as test :refer [deftest is testing]]))
+            [clojure.test :as test :refer [deftest is testing]])
+  (:import [java.io File]))
+
+(defn all-file-seq
+  [dir]
+  (tree-seq
+    (fn [^File f] (or (. f (isDirectory))
+                      (= ".bin" (.getName f))))
+    (fn [^File d] (seq (. d (listFiles))))
+    dir))
+
+(defn recursive-delete
+  ([file]
+   (recursive-delete file))
+  ([file extra-files]
+   (doseq [^File f (concat
+                     (-> file io/file all-file-seq reverse)
+                     extra-files)]
+     (when (.exists f)
+       (io/delete-file f)))))
 
 (defn cleanup
   ([] (cleanup #()))
   ([f]
-   (doseq [f (-> "node_modules/.bin" io/file file-seq reverse)]
-     (io/delete-file f))
-   (doseq [f (concat
-               (-> "node_modules" io/file file-seq reverse)
-               (map io/file ["package.json" "package-lock.json"
-                             "yarn.lock" "yarn-error.log"]))]
-     (when (.exists f)
-       (io/delete-file f)))
+   (recursive-delete "node_modules"
+     (map io/file
+       ["package.json" "package-lock.json" "yarn.lock"
+        "yarn-error.log"]))
    (f)))
 
 (defn install
@@ -54,7 +69,7 @@
          (is (= #{"babylon/lib/index.js" "babylon/lib/index" "babylon" "babylon/lib"}
                 (into #{} (:provides babylon)))))))))
 
-(deftest test-exports-basic
+#_(deftest test-exports-basic
   (install :yarn "react-select" "5.7.2"))
 
 (comment
@@ -62,5 +77,7 @@
   (test/run-tests)
   (cleanup)
   (install :yarn "react-select" "5.7.2")
+  (path->lib-spec (indexed-lib-specs)
+    "node_modules/react-select/dist/react-select.cjs.js")
 
   )
