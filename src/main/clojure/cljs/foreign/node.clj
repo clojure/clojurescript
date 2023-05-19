@@ -58,11 +58,14 @@
     "package.json"))
 
 (defn- export-subpaths
-  [pkg-jsons export path]
+  [pkg-jsons export-subpath path]
   ;; NOTE: ignore "." exports for now
-  (if (= "." export)
+  (if (= "." export-subpath)
     pkg-jsons
-    (let [export-pkg-json (->export-pkg-json path export)]
+    ;; if a package.json exists at the export add
+    ;; TODO: the problem is that this *won't* have a name
+    ;; but we can compute it from export-subpath
+    (let [export-pkg-json (->export-pkg-json path export-subpath)]
       (cond-> pkg-jsons
         (.exists export-pkg-json)
         (assoc
@@ -90,6 +93,8 @@
     pkg-jsons pkg-jsons))
 
 (defn pkg-json->main
+  "Determine whether a pkg-json map identifies path as an entrypoint. If so
+  return the name entry provided in the package.json file."
   [[pkg-json-path {:as pkg-json :strs [name]}] path opts]
   (let [entries (package-json-entries opts)
         entry   (first (keep (partial get pkg-json) entries))]
