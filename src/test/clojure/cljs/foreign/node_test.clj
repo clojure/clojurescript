@@ -5,13 +5,25 @@
             [clojure.java.shell :as sh]
             [clojure.test :as test :refer [deftest is testing]]))
 
-(defn cleanup [f]
-  (doseq [f (-> "node_modules" io/file file-seq reverse)]
-    (io/delete-file f))
-  (f))
+(defn cleanup
+  ([] (cleanup #()))
+  ([f]
+   (doseq [f (-> "node_modules/.bin" io/file file-seq reverse)]
+     (io/delete-file f))
+   (doseq [f (concat
+               (-> "node_modules" io/file file-seq reverse)
+               (map io/file ["package.json" "package-lock.json"
+                             "yarn.lock" "yarn-error.log"]))]
+     (when (.exists f)
+       (io/delete-file f)))
+   (f)))
 
-(defn install [lib version]
-  (sh/sh "npm" "install" lib version))
+(defn install
+  ([lib version]
+   (install :npm lib version))
+  ([cmd lib version]
+   (let [action ({:npm "install" :yarn "add"} cmd)]
+     (sh/sh (name cmd) action (str lib "@" version)))))
 
 (test/use-fixtures :once cleanup)
 
@@ -42,8 +54,13 @@
          (is (= #{"babylon/lib/index.js" "babylon/lib/index" "babylon" "babylon/lib"}
                 (into #{} (:provides babylon)))))))))
 
+(deftest test-exports-basic
+  (install :yarn "react-select" "5.7.2"))
+
 (comment
 
   (test/run-tests)
+  (cleanup)
+  (install :yarn "react-select" "5.7.2")
 
   )
