@@ -126,7 +126,6 @@
                                ["common" "app"])
         opts {:optimizations :simple
               :output-dir out
-              :language-in :es6
               :modules {:common {:entries #{"hello.foo.bar"}
                                  :output-to (.getAbsolutePath common-tmp)}
                         :app {:entries #{"hello.core"}
@@ -191,7 +190,6 @@
    :opts
    {:output-dir output-dir
     :optimizations :none
-    :language-in :es6
     :verbose true
     :foreign-libs [{:file "src/test/cljs_build/loader_test/foreignA.js"
                     :provides ["foreign.a"]}
@@ -681,7 +679,6 @@
   (let [out  (io/file (test/tmp-dir) "cljs-2903-out")
         opts {:output-to (.getPath (io/file out "main.js"))
               :output-dir (.getPath out)
-              :language-in :es6
               :fingerprint true
               :stable-names true
               :optimizations :advanced}]
@@ -715,7 +712,6 @@
         out-file (io/file out "main.js")
         {:keys [inputs opts]} {:inputs (str (io/file "src" "test" "cljs_build"))
                                :opts {:main 'trivial.core
-                                      :language-in :es6
                                       :output-dir out
                                       :output-to (.getPath out-file)
                                       :optimizations :advanced}}
@@ -730,7 +726,6 @@
         opts {:main 'trivial.core
               :output-to (.getPath out-file)
               :output-dir out
-              :language-in :es6
               :optimizations :none}
         cenv (env/default-compiler-env)]
     (test/delete-out-files out)

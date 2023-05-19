@@ -2598,7 +2598,7 @@
       (ensure-module-opts)
 
       (nil? (:language-in opts))
-      (assoc :language-in :es6)
+      (assoc :language-in :ecmascript-next)
 
       (:stable-names opts)
       (as-> opts
@@ -3512,7 +3512,7 @@
       (ana/write-analysis-cache 'cljs.core cache src)
       (ana/write-analysis-cache 'cljs.core tcache src))
     (create-client-js-file
-      {:language-in :es6
+      {:language-in :ecmascript-next
        :optimizations :simple
        :output-dir "aot_out"}
       (io/file "resources" "brepl_client.js"))

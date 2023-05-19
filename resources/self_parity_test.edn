@@ -1,6 +1,5 @@
 {:optimizations :none
  :main self-parity.test
- :language-in :es6
  :language-out :es6
  :verbose true
  :output-to "builds/out-self-parity/main.js"
