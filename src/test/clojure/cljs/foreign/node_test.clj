@@ -45,25 +45,29 @@
 ;; =============================================================================
 ;; Tests
 
+(defn pkg-jsons []
+  (-> (util/module-file-seq {})
+    node/get-pkg-jsons))
+
 (defn indexed-lib-specs []
   (as-> (-> (util/module-file-seq {})
           (node/node-file-seq->libs-spec* {}))
     xs (zipmap (map :file xs) xs)))
 
-(defn path->lib-spec [index path]
+(defn relpath->data [index path]
   (get index (.getAbsolutePath (io/file path))))
 
 (deftest test-basic
   (install "left-pad" "1.3.0")
   (testing "Install left-pad, verify that it is indexed and has a sensible lib-spec"
    (let [index (indexed-lib-specs)]
-     (let [left-pad (path->lib-spec index "node_modules/left-pad/index.js")]
+     (let [left-pad (relpath->data index "node_modules/left-pad/index.js")]
        (is (some? (:file left-pad)))
        (is (some? (:module-type left-pad)))
        (is (= #{"left-pad/index.js" "left-pad/index" "left-pad"}
              (into #{} (:provides left-pad)))))
      (testing "\tleft-pad has a dep on bablyon, which uses main with different path, check"
-       (let [babylon (path->lib-spec (indexed-lib-specs) "node_modules/babylon/lib/index.js")]
+       (let [babylon (relpath->data (indexed-lib-specs) "node_modules/babylon/lib/index.js")]
          (is (some? (:file babylon)))
          (is (some? (:module-type babylon)))
          (is (= #{"babylon/lib/index.js" "babylon/lib/index" "babylon" "babylon/lib"}
@@ -77,7 +81,10 @@
   (test/run-tests)
   (cleanup)
   (install :yarn "react-select" "5.7.2")
-  (path->lib-spec (indexed-lib-specs)
+  (relpath->data (indexed-lib-specs)
     "node_modules/react-select/dist/react-select.cjs.js")
+
+  (relpath->data (pkg-jsons)
+    "node_modules/react-select/package.json")
 
   )
