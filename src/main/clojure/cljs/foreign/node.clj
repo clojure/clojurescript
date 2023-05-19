@@ -10,10 +10,10 @@
    :nodejs)."
   [opts]
   {:pre [(or (= (:package-json-resolution opts) :webpack)
-           (= (:package-json-resolution opts) :nodejs)
-           (and (sequential? (:package-json-resolution opts))
-             (every? string? (:package-json-resolution opts)))
-           (not (contains? opts :package-json-resolution)))]}
+             (= (:package-json-resolution opts) :nodejs)
+             (and (sequential? (:package-json-resolution opts))
+                  (every? string? (:package-json-resolution opts)))
+             (not (contains? opts :package-json-resolution)))]}
   (let [modes {:nodejs ["main"]
                :webpack ["browser" "module" "main"]}]
     (if-let [mode (:package-json-resolution opts)]
@@ -50,13 +50,31 @@
     (string/starts-with? path "./")
     (subs 2)))
 
+(defn- ->export-pkg-json [path export]
+  (io/file
+    (trim-package-json path)
+    (trim-relative export)
+    "package.json"))
+
+(defn- export-subpaths
+  [pkg-jsons export path]
+  ;; NOTE: ignore "." exports for now
+  (if (= "." export)
+    pkg-jsons
+    (let [export-pkg-json (->export-pkg-json path export)]
+      (cond-> pkg-jsons
+        (.exists export-pkg-json)
+        (assoc
+          (.getAbsolutePath export-pkg-json)
+          (json/read-str (slurp export-pkg-json)))))))
+
 (defn- add-exports
   "Given a list of pkg-jsons examine them for the `exports` field. `exports`
-  is now the preferred way to declare an entrypoint to a library. However, for
-  backwards compatibility it is often combined with `main`.
+  is now the preferred way to declare an entrypoint to a Node.js library. However,
+  for backwards compatibility it is often combined with `main`.
 
-  `export` can also be a JS object - if so it can define subpaths. If `.` points
-  to main, then subpaths can be defined relative to that.
+  `export` can also be a JS object - if so, it can define subpaths. `.` points
+  to main and other subpaths can be defined relative to that.
 
   See https://nodejs.org/api/packages.html#main-entry-point-export for more
   detailed information."
@@ -67,64 +85,50 @@
       (if (string? exports)
         pkg-jsons
         (reduce-kv
-          (fn [pkg-jsons export _]
-            ;; NOTE: ignore "." exports for now
-            (if (= "." export)
-              pkg-jsons
-              (let [export-pkg-json
-                    (io/file
-                      (trim-package-json path)
-                      (trim-relative export)
-                      "package.json")]
-                (cond-> pkg-jsons
-                  (.exists export-pkg-json)
-                  (assoc
-                    (.getAbsolutePath export-pkg-json)
-                    (json/read-str (slurp export-pkg-json)))))))
-          pkg-jsons exports)))
+          (fn [acc k _] (export-subpaths acc k path)) pkg-jsons exports)))
     pkg-jsons pkg-jsons))
+
+(defn pkg-json->main
+  [[pkg-json-path {:as pkg-json :strs [name]}] path opts]
+  (let [entries (package-json-entries opts)
+        entry   (first (keep (partial get pkg-json) entries))]
+    (when-not (nil? entry)
+      ;; should be the only edge case in
+      ;; the package.json main field - Antonio
+      (let [entry      (trim-relative entry)
+            entry-path (-> pkg-json-path (string/replace \\ \/)
+                         trim-package-json (str entry))]
+        ;; find a package.json entry point that matches
+        ;; the `path`
+        (some (fn [candidate]
+                (when (= candidate (string/replace path \\ \/)) name))
+          (cond-> [entry-path]
+            (not (or (string/ends-with? entry-path ".js")
+                     (string/ends-with? entry-path ".json")))
+            (into [(str entry-path ".js") (str entry-path "/index.js") (str entry-path ".json")
+                   (string/replace entry-path #"\.cjs$" ".js")])))))))
+
+(defn- path->rel-name [path]
+  (-> (subs path (.lastIndexOf path "node_modules"))
+    (string/replace \\ \/)
+    (string/replace #"node_modules[\\\/]" "")))
 
 (defn path->provides
   [path pkg-jsons opts]
   (merge
-    {:file path
+    {:file        path
      :module-type :es6}
     ;; if the file is *not* a package.json, then compute what
     ;; namespaces it :provides to ClojureScript
     (when-not (package-json? path)
-      (let [pkg-json-main (some
-                            (fn [[pkg-json-path {:as pkg-json :strs [name]}]]
-                              (let [entries (package-json-entries opts)
-                                    entry (first (keep (partial get pkg-json) entries))]
-                                (when-not (nil? entry)
-                                  ;; should be the only edge case in
-                                  ;; the package.json main field - Antonio
-                                  (let [entry (trim-relative entry)
-                                        entry-path (-> pkg-json-path
-                                                     (string/replace \\ \/)
-                                                     trim-package-json
-                                                     (str entry))]
-                                    ;; find a package.json entry point that matches
-                                    ;; the `path`
-                                    (some (fn [candidate]
-                                            (when (= candidate (string/replace path \\ \/))
-                                              name))
-                                      (cond-> [entry-path]
-                                        (not (or (string/ends-with? entry-path ".js")
-                                               (string/ends-with? entry-path ".json")))
-                                        (into [(str entry-path ".js") (str entry-path "/index.js") (str entry-path ".json")
-                                               (string/replace entry-path #"\.cjs$" ".js")])))))))
-                            pkg-jsons)]
-        {:provides (let [module-rel-name (-> (subs path (.lastIndexOf path "node_modules"))
-                                           (string/replace \\ \/)
-                                           (string/replace #"node_modules[\\\/]" ""))
-                         provides (cond-> [module-rel-name (string/replace module-rel-name #"\.js(on)?$" "")]
-                                    (some? pkg-json-main)
-                                    (conj pkg-json-main))
-                         index-replaced (string/replace module-rel-name #"[\\\/]index\.js(on)?$" "")]
+      (let [pkg-json-main (some #(pkg-json->main % path opts) pkg-jsons)]
+        {:provides (let [module-rel-name (path->rel-name path)
+                         provides        (cond-> [module-rel-name (string/replace module-rel-name #"\.js(on)?$" "")]
+                                           (some? pkg-json-main) (conj pkg-json-main))
+                         index-replaced  (string/replace module-rel-name #"[\\\/]index\.js(on)?$" "")]
                      (cond-> provides
                        (and (boolean (re-find #"[\\\/]index\.js(on)?$" module-rel-name))
-                         (not (some #{index-replaced} provides)))
+                            (not (some #{index-replaced} provides)))
                        (conj index-replaced)))}))))
 
 (defn node-file-seq->libs-spec*
@@ -134,15 +138,14 @@
   [module-fseq opts]
   (let [;; a map of all the *top-level* package.json paths and their exports
         ;; to the package.json contents as EDN
-        pkg-jsons (add-exports
-                    (into {}
-                      (comp
-                        (map #(.getAbsolutePath %))
-                        (filter top-level-package-json?)
-                        (map (fn [path] [path (json/read-str (slurp path))])))
-                      module-fseq))]
+        pkg-jsons         (into {}
+                            (comp (map #(.getAbsolutePath %))
+                              (filter top-level-package-json?)
+                              (map (fn [path] [path (json/read-str (slurp path))])))
+                            module-fseq)
+        pkg-jsons+exports (add-exports pkg-jsons)]
     (into []
       (comp
         (map #(.getAbsolutePath %))
-        (map #(path->provides % pkg-jsons opts)))
+        (map #(path->provides % pkg-jsons+exports opts)))
       module-fseq)))
