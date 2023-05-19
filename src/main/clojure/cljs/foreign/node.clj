@@ -144,6 +144,17 @@
                             (not (some #{index-replaced} provides)))
                        (conj index-replaced)))}))))
 
+(defn get-pkg-jsons
+  "Given all a seq of files in node_modules return a map of all package.json
+  files indexed by path. Includes any `export` package.json files as well"
+  [module-fseq]
+  (->> module-fseq
+    (into {}
+      (comp (map #(.getAbsolutePath %))
+        (filter top-level-package-json?)
+        (map (fn [path] [path (json/read-str (slurp path))]))))
+    add-exports))
+
 (defn node-file-seq->libs-spec*
   "Given a sequence of non-nested node_module paths where the extension ends in
   `.js/.json`, return lib-spec maps for each path containing at least :file,
@@ -151,15 +162,10 @@
   [module-fseq opts]
   (let [;; a map of all the *top-level* package.json paths and their exports
         ;; to the package.json contents as EDN
-        pkg-jsons         (into {}
-                            (comp (map #(.getAbsolutePath %))
-                              (filter top-level-package-json?)
-                              (map (fn [path] [path (json/read-str (slurp path))])))
-                            module-fseq)
-        pkg-jsons+exports (add-exports pkg-jsons)]
+        pkg-jsons (get-pkg-jsons module-fseq)]
     (into []
       (comp
         (map #(.getAbsolutePath %))
         ;; for each file, figure out what it will provide to ClojureScript
-        (map #(path->provides % pkg-jsons+exports opts)))
+        (map #(path->provides % pkg-jsons opts)))
       module-fseq)))
