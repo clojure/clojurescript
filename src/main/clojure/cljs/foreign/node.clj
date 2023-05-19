@@ -51,11 +51,19 @@
     (subs 2)))
 
 (defn- add-exports
+  "Given a list of pkg-jsons examine them for the `exports` field. `exports`
+  is now the preferred way to declare an entrypoint to a library. However, for
+  backwards compatibility it is often combined with `main`.
+
+  `export` can also be a JS object - if so it can define subpaths. If `.` points
+  to main, then subpaths can be defined relative to that.
+
+  See https://nodejs.org/api/packages.html#main-entry-point-export for more
+  detailed information."
   [pkg-jsons]
   (reduce-kv
     (fn [pkg-jsons path {:strs [exports] :as pkg-json}]
       ;; "exports" can just be a dupe of "main", i.e. a string - ignore
-      ;; https://nodejs.org/api/packages.html#main-entry-point-export
       (if (string? exports)
         pkg-jsons
         (reduce-kv
