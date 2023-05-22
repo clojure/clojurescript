@@ -61,10 +61,16 @@
   (install :yarn "react-select" "5.7.2")
   (testing "Verify that path->main works as expected"
     (is (= "react-select"
-            (node/path->main-name
+           (node/path->main-name
               (.getAbsolutePath (io/file "node_modules/react-select/dist/react-select.cjs.js"))
               (relpath->data (pkg-jsons)
                 "node_modules/react-select/package.json" :find)
+              {:package-json-resolution :nodejs})))
+    (is (= "react-select/creatable"
+            (node/path->main-name
+              (.getAbsolutePath (io/file "node_modules/react-select/creatable/dist/react-select-creatable.cjs.js"))
+              (relpath->data (pkg-jsons)
+                "node_modules/react-select/creatable/package.json" :find)
               {:package-json-resolution :nodejs})))
     (is (nil? (node/path->main-name
                 (.getAbsolutePath (io/file "node_modules/react-select/dist/react-select.cjs.js"))

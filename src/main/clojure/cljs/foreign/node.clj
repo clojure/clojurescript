@@ -58,19 +58,26 @@
     "package.json"))
 
 (defn- export-subpaths
-  [pkg-jsons export-subpath path]
+  "Examine the export subpaths to compute subpackages"
+  [pkg-jsons export-subpath export path pkg-name]
   ;; NOTE: ignore "." exports for now
   (if (= "." export-subpath)
     pkg-jsons
     ;; if a package.json exists at the export add
-    ;; TODO: the problem is that this *won't* have a name
-    ;; but we can compute it from export-subpath
+    ;; FIXME: technically this logic is a bit brittle since `exports` is used
+    ;; to hide the package structure.
     (let [export-pkg-json (->export-pkg-json path export-subpath)]
+      ;; note this will ignore export wildcards etc.
       (cond-> pkg-jsons
         (.exists export-pkg-json)
-        (assoc
-          (.getAbsolutePath export-pkg-json)
-          (json/read-str (slurp export-pkg-json)))))))
+        (-> (assoc
+              (.getAbsolutePath export-pkg-json)
+              (merge
+                (json/read-str (slurp export-pkg-json))
+                ;; add the name field so that path->main-name works later
+                (when (and (map? export)
+                           (contains? export "require"))
+                  {"name" (str pkg-name (string/replace export-subpath "./" "/"))}))))))))
 
 (defn- add-exports
   "Given a list of pkg-jsons examine them for the `exports` field. `exports`
@@ -84,13 +91,15 @@
   detailed information."
   [pkg-jsons opts]
   (reduce-kv
-    (fn [pkg-jsons path {:strs [exports name] :as pkg-json}]
-
+    (fn [pkg-jsons path {:strs [exports] :as pkg-json}]
       (if (string? exports)
         pkg-jsons
         ;; map case
         (reduce-kv
-          (fn [acc k _] (export-subpaths acc k path)) pkg-jsons exports)))
+          (fn [pkg-jsons export-subpath export]
+            (export-subpaths pkg-jsons
+              export-subpath export path (get pkg-json "name")))
+          pkg-jsons exports)))
     pkg-jsons pkg-jsons))
 
 (defn path->main-name
