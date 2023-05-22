@@ -62,9 +62,11 @@
   ;; NOTE: ignore "." exports for now
   (if (= "." export-subpath)
     pkg-jsons
-    ;; if a package.json exists at the export add
-    ;; FIXME: technically this logic is a bit brittle since `exports` is used
-    ;; to hide the package structure.
+    ;; technically the following logic is a bit brittle since `exports` is
+    ;; supposed to be used to hide the package structure.
+    ;; instead, here we assume the export subpath does match the library structure
+    ;; on disk, if we find a package.json we add it to pkg-jsons map
+    ;; and we synthesize "name" key based on subpath
     (let [export-pkg-json (->export-pkg-json path export-subpath)]
       ;; note this will ignore export wildcards etc.
       (cond-> pkg-jsons
