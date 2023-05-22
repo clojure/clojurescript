@@ -82,12 +82,13 @@
 
   See https://nodejs.org/api/packages.html#main-entry-point-export for more
   detailed information."
-  [pkg-jsons]
+  [pkg-jsons opts]
   (reduce-kv
-    (fn [pkg-jsons path {:strs [exports] :as pkg-json}]
+    (fn [pkg-jsons path {:strs [exports name] :as pkg-json}]
 
       (if (string? exports)
         pkg-jsons
+        ;; map case
         (reduce-kv
           (fn [acc k _] (export-subpaths acc k path)) pkg-jsons exports)))
     pkg-jsons pkg-jsons))
@@ -147,13 +148,15 @@
 (defn get-pkg-jsons
   "Given all a seq of files in node_modules return a map of all package.json
   files indexed by path. Includes any `export` package.json files as well"
-  [module-fseq]
-  (->> module-fseq
-    (into {}
-      (comp (map #(.getAbsolutePath %))
-        (filter top-level-package-json?)
-        (map (fn [path] [path (json/read-str (slurp path))]))))
-    add-exports))
+  ([module-fseq]
+   (get-pkg-jsons module-fseq nil))
+  ([module-fseq opts]
+   (add-exports
+     (into {}
+       (comp (map #(.getAbsolutePath %))
+         (filter top-level-package-json?)
+         (map (fn [path] [path (json/read-str (slurp path))])))
+       module-fseq) opts)))
 
 (defn node-file-seq->libs-spec*
   "Given a sequence of non-nested node_module paths where the extension ends in
@@ -162,7 +165,7 @@
   [module-fseq opts]
   (let [;; a map of all the *top-level* package.json paths and their exports
         ;; to the package.json contents as EDN
-        pkg-jsons (get-pkg-jsons module-fseq)]
+        pkg-jsons (get-pkg-jsons module-fseq opts)]
     (into []
       (comp
         (map #(.getAbsolutePath %))
