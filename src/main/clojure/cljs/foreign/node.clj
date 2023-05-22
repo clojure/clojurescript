@@ -14,7 +14,6 @@
              (and (sequential? (:package-json-resolution opts))
                   (every? string? (:package-json-resolution opts)))
              (not (contains? opts :package-json-resolution)))]}
-  ;; TODO: add "export" as first case here
   (let [modes {:nodejs ["main"]
                :webpack ["browser" "module" "main"]}]
     (if-let [mode (:package-json-resolution opts)]
@@ -143,7 +142,6 @@
     (when-not (package-json? path)
       ;; given some path search the package.json to determine whether it is a
       ;; main entry point or not
-      ;; TODO: renamed pkg-json->main to pkg-json->provide, because we need to figure out exports too
       (let [pkg-json-main (some #(path->main-name path % opts) pkg-jsons)]
         {:provides (let [module-rel-name (path->rel-name path)
                          provides        (cond-> [module-rel-name (string/replace module-rel-name #"\.js(on)?$" "")]
