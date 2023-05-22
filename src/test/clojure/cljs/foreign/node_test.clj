@@ -82,8 +82,5 @@
 
   (test/run-tests)
   (cleanup)
-  (install :yarn "react-select" "5.7.2")
-  (relpath->data (indexed-lib-specs)
-    "node_modules/react-select/dist/react-select.cjs.js")
 
   )

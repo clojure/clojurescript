@@ -118,6 +118,8 @@
         (some (fn [candidate]
                 (when (= candidate (string/replace path \\ \/)) name))
           (cond-> [entry-path]
+            ;; if we have an entry point that doesn't end in .js or .json
+            ;; try to match some alternatives
             (not (or (string/ends-with? entry-path ".js")
                      (string/ends-with? entry-path ".json")))
             (into [(str entry-path ".js") (str entry-path "/index.js") (str entry-path ".json")
