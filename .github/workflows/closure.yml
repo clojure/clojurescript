@@ -1,4 +1,4 @@
-name: Release on demand
+name: Stage Google closure library
 
 on: [workflow_dispatch]
 
