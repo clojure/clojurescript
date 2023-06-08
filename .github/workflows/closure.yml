@@ -1,0 +1,31 @@
+name: Release on demand
+
+on: [workflow_dispatch]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check out
+      uses: actions/checkout@v3
+    - name: Set Github identity
+      run: |
+        git config --global user.name clojure-build
+        git config --global user.email "clojure-build@users.noreply.github.com"
+    - name: Set up Java
+      uses: actions/setup-java@v3
+      with:
+        java-version: 8
+        distribution: 'temurin'
+        cache: 'maven'
+        server-id: sonatype-nexus-staging
+        server-username: MAVEN_USERNAME
+        server-password: MAVEN_PASSWORD
+        gpg-private-key: ${{ secrets.OSSRH_GPG_SECRET_KEY }}
+        gpg-passphrase: GPG_PASSPHRASE
+    - name: Release
+      run: |
+        cd script/closure-library-release
+        ./closure-library-release.sh
+      env:
+        HUDSON: true
