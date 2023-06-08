@@ -167,7 +167,7 @@ perl -p -e "s/RELEASE_VERSION/$release_version/go" \
 if [ "$HUDSON" = "true" ]; then
     (
         cd "$third_party_project_dir"
-        mvn --fail-at-end \
+        mvn -ntp -B --fail-at-end \
             -Psonatype-oss-release \
             -Dsource.skip=true \
             clean deploy
@@ -175,7 +175,7 @@ if [ "$HUDSON" = "true" ]; then
 
     (
         cd "$project_dir"
-        mvn --fail-at-end \
+        mvn -ntp -B --fail-at-end \
             -Psonatype-oss-release \
             -Dsource.skip=true \
             clean deploy
@@ -188,13 +188,13 @@ else
     (
         cd "$third_party_project_dir"
         mvn clean
-        mvn package
+        mvn -ntp -B package
         mvn install:install-file -Dfile=./target/google-closure-library-third-party-$release_version.jar -DpomFile=pom.xml
     )
     (
         cd "$project_dir"
         mvn clean
-        mvn package
+        mvn -ntp -B package
         mvn install:install-file -Dfile=./target/google-closure-library-$release_version.jar -DpomFile=pom.xml
     )
 fi
