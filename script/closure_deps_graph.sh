@@ -21,7 +21,7 @@ fi
 
 CP_FILE=`mktemp /tmp/cljs_cp.txt.XXXXXXXXXXX`
 
-mvn -f ../../pom.template.xml dependency:build-classpath -Dmdep.outputFile=$CP_FILE -Dmdep.fileSeparator=$FILE_SEP -Dmdep.pathSeparator=$PATH_SEP $CLJS_SCRIPT_MVN_OPTS
+mvn -ntp -B -f ../../pom.template.xml dependency:build-classpath -Dmdep.outputFile=$CP_FILE -Dmdep.fileSeparator=$FILE_SEP -Dmdep.pathSeparator=$PATH_SEP $CLJS_SCRIPT_MVN_OPTS
 
 CLJS_CP=`cat $CP_FILE`
 
