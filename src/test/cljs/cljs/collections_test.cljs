@@ -47,6 +47,14 @@
     (is (= (find [1 2 3] 10) nil)))
   )
 
+(deftest test-map
+  (testing "IDrop"
+    (let [am (apply array-map (interleave (range 7) (range 7)))]
+      (is (satisfies? IDrop am))
+      (is (= [[3 3] [4 4] [5 5] [6 6]] (drop 3 am)))
+      (is (satisfies? IDrop (drop 3 am)))
+      (is (= [[5 5] [6 6]] (drop 2 (drop 3 am)))))))
+
 (deftest test-vectors
   (testing "Testing vectors"
     (is (= :a (nth [:a :b :c :d] 0)))
@@ -66,6 +74,16 @@
       (testing "stack operations"
         (is (= 95 (peek stack1)))
         (is (= 94 (peek stack2)))))
+    (testing "IDrop"
+      (is (satisfies? IDrop (vec (range 39))))
+      (is (= (range 3 39) (drop 3 (vec (range 39)))))
+      (is (= (range 31 39) (drop 31 (vec (range 39)))))
+      (is (= (range 32 39) (drop 32 (vec (range 39)))))
+      (is (= (range 33 39) (drop 33 (vec (range 39)))))
+      (is (satisfies? IDrop (drop 3 (vec (range 39)))))
+      (is (= (range 31 39) (drop 28 (drop 3 (vec (range 39))))))
+      (is (= (range 32 39) (drop 29 (drop 3 (vec (range 39))))))
+      (is (= (range 33 39) (drop 30 (drop 3 (vec (range 39)))))))
     (let [v1 (vec (range 10))
           v2 (vec (range 5))
           s (subvec v1 2 8)]
@@ -182,6 +200,11 @@
     (is (chunked-seq? (range 0.1 10 1)))
     (is (= (range 0.5 8 1.2) '(0.5 1.7 2.9 4.1 5.3 6.5 7.7)))
     (is (= (range 0.5 -4 -2) '(0.5 -1.5 -3.5)))
+    (testing "IDrop"
+      (is (satisfies? IDrop (range 10)))
+      (is (= [5 6 7 8 9] (drop 5 (range 10))))
+      (is (satisfies? IDrop (drop 5 (range 10))))
+      (is (= [8 9] (drop 3 (drop 5 (range 10))))))
     (is (= (reduce + (range 0 100)) 4950))
     (is (= (reduce + 0 (range 0 100)) 4950))
     (is (= (reduce + (range 0.1 100)) 4960))
@@ -347,7 +370,20 @@
 
     (is (not (realized? (repeat 5 7))))
 
+    (is (= [1 1] (into [] (drop 98 (repeat 100 1)))))
     (is (= [1 1] (into [] (drop 98) (repeat 100 1))))
+    (is (= [1 1] (into [] (take 2 (drop 98 (repeat 1))))))
+
+    (is (= [1] (drop 0 (repeat 1 1))))
+    (is (= '(:a) (drop 1 (repeat 2 :a))))
+    (is (= () (drop 2 (repeat 2 :a))))
+    (is (= () (drop 3 (repeat 2 :a))))
+
+    (testing "IDrop"
+      (is (satisfies? IDrop (repeat 10 0)))
+      (is (= [0 0 0 0 0] (drop 5 (repeat 10 0))))
+      (is (satisfies? IDrop (drop 5 (repeat 10 0))))
+      (is (= [0 0] (drop 3 (drop 5 (repeat 10 0))))))
 
     (is (= () (empty (repeat 100 1))))
     (is (= () (empty (repeat 7))))
@@ -375,6 +411,16 @@
       1 [:x 1]
       2 [:x 1 1]
       3 [:x 1 1])))
+
+(deftest test-string
+  (testing "IDrop"
+    (is (satisfies? IDrop (seq "aaaaaaaaaa")))
+    (is (= [\a \a \a \a \a] (drop 5 "aaaaaaaaaa")))
+    (is (= [\a \a \a \a \a] (drop 5 (seq "aaaaaaaaaa"))))
+    (is (not (satisfies? IDrop (drop 5 "aaaaaaaaaa"))))
+    (is (satisfies? IDrop (drop 5 (seq "aaaaaaaaaa"))))
+    (is (= [\a \a] (drop 3 (drop 5 "aaaaaaaaaa"))))
+    (is (= [\a \a] (drop 3 (drop 5 (seq "aaaaaaaaaa")))))))
 
 (deftest test-iterate
   (testing "Testing Iterate"
@@ -436,6 +482,17 @@
     (split-at 0 [1 2 3]) [() (list 1 2 3)]
     (split-at -1 [1 2 3]) [() (list 1 2 3)]
     (split-at -5 [1 2 3]) [() (list 1 2 3)] ))
+
+(deftest test-splitv-at
+  (is (vector? (splitv-at 2 [])))
+  (is (vector? (first (splitv-at 2 []))))
+  (is (vector? (splitv-at 2 [1 2 3])))
+  (is (vector? (first (splitv-at 2 [1 2 3])))))
+
+(defspec splitv-at-equals-split-at 100
+  (prop/for-all [n gen/nat
+                 coll (gen/vector gen/nat)]
+    (= (splitv-at n coll) (split-at n coll))))
 
 (deftest test-rseq
   (testing "Testing RSeq"
@@ -1090,6 +1147,9 @@
           (hash-map :a)))
     (is (thrown-with-msg? js/Error #"No value supplied for key: :a"
           (apply hash-map [:a])))))
+
+(deftest test-cljs-3393
+  (is (= '(0 2 4) (take 3 (filter even? (range 100000000))))))
 
 (comment
 
