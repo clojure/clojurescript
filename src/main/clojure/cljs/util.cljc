@@ -403,7 +403,8 @@
     (filter (fn [^File f]
               (let [path (.getPath f)]
                 (or (.endsWith path ".json")
-                  (.endsWith path ".js"))))
+                    (.endsWith path ".js")
+                    (.endsWith path ".cjs"))))
       fseq)))
 
 (defn node-path-modules [opts]

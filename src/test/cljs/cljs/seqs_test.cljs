@@ -352,6 +352,166 @@
     (reset! rng r2)
     (long (random/rand-long r1))))
 
+(deftest test-take
+  (are [x y] (= x y)
+    (take 1 [1 2 3 4 5]) '(1)
+    (take 3 [1 2 3 4 5]) '(1 2 3)
+    (take 5 [1 2 3 4 5]) '(1 2 3 4 5)
+    (take 9 [1 2 3 4 5]) '(1 2 3 4 5)
+
+    (take 0 [1 2 3 4 5]) ()
+    (take -1 [1 2 3 4 5]) ()
+    (take -2 [1 2 3 4 5]) ()
+
+    (take 0.25 [1 2 3 4 5]) '(1)))
+
+
+(deftest test-drop
+  (are [x y] (= x y)
+    (drop 1 [1 2 3 4 5]) '(2 3 4 5)
+    (drop 3 [1 2 3 4 5]) '(4 5)
+    (drop 5 [1 2 3 4 5]) ()
+    (drop 9 [1 2 3 4 5]) ()
+
+    (drop 0 [1 2 3 4 5]) '(1 2 3 4 5)
+    (drop -1 [1 2 3 4 5]) '(1 2 3 4 5)
+    (drop -2 [1 2 3 4 5]) '(1 2 3 4 5)
+
+    (drop 0.25 [1 2 3 4 5]) '(2 3 4 5) )
+
+  (are [coll] (= (drop 4 coll) (drop -2 (drop 4 coll)))
+    [0 1 2 3 4 5]
+    (seq [0 1 2 3 4 5])
+    (range 6)
+    (repeat 6 :x)))
+
+(deftest test-nthrest
+  (are [x y] (= x y)
+    (nthrest [1 2 3 4 5] 1) '(2 3 4 5)
+    (nthrest [1 2 3 4 5] 3) '(4 5)
+    (nthrest [1 2 3 4 5] 5) ()
+    (nthrest [1 2 3 4 5] 9) ()
+
+    (nthrest [1 2 3 4 5] 0) '(1 2 3 4 5)
+    (nthrest [1 2 3 4 5] -1) '(1 2 3 4 5)
+    (nthrest [1 2 3 4 5] -2) '(1 2 3 4 5)
+
+    (nthrest [1 2 3 4 5] 0.25) '(2 3 4 5)
+    (nthrest [1 2 3 4 5] 1.2) '(3 4 5))
+
+  ;; (nthrest coll 0) should return coll
+  (are [coll] (let [r (nthrest coll 0)] (and (= coll r) (= (type coll) (type r))))
+    [1 2 3]
+    (seq [1 2 3])
+    (range 10)
+    (repeat 10 :x)
+    (seq "abc")))
+
+(deftest test-nthnext
+  (are [x y] (= x y)
+    (nthnext [1 2 3 4 5] 1) '(2 3 4 5)
+    (nthnext [1 2 3 4 5] 3) '(4 5)
+    (nthnext [1 2 3 4 5] 5) nil
+    (nthnext [1 2 3 4 5] 9) nil
+
+    (nthnext [1 2 3 4 5] 0) '(1 2 3 4 5)
+    (nthnext [1 2 3 4 5] -1) '(1 2 3 4 5)
+    (nthnext [1 2 3 4 5] -2) '(1 2 3 4 5)
+
+    (nthnext [1 2 3 4 5] 0.25) '(2 3 4 5)
+    (nthnext [1 2 3 4 5] 1.2) '(3 4 5) ))
+
+(deftest test-partitionv-all
+  (is (= (partitionv-all 4 [1 2 3 4 5 6 7 8 9])
+        [[1 2 3 4] [5 6 7 8] [9]]))
+  (is (= (partitionv-all 4 2 [1 2 3 4 5 6 7 8 9])
+        [[1 2 3 4] [3 4 5 6] [5 6 7 8] [7 8 9] [9]])))
+
+(deftest test-partition
+  (are [x y] (= x y)
+    (partition 2 [1 2 3]) '((1 2))
+    (partition 2 [1 2 3 4]) '((1 2) (3 4))
+    (partition 2 []) ()
+
+    (partition 2 3 [1 2 3 4 5 6 7]) '((1 2) (4 5))
+    (partition 2 3 [1 2 3 4 5 6 7 8]) '((1 2) (4 5) (7 8))
+    (partition 2 3 []) ()
+
+    (partition 1 []) ()
+    (partition 1 [1 2 3]) '((1) (2) (3))
+
+    (partition 5 [1 2 3]) ()
+
+    (partition 4 4 [0 0 0] (range 10)) '((0 1 2 3) (4 5 6 7) (8 9 0 0))
+             
+    (partition -1 [1 2 3]) ()
+    (partition -2 [1 2 3]) ())
+
+  ;; reduce
+  (is (= [1 2 4 8 16] (map #(reduce * (repeat % 2)) (range 5))))
+  (is (= [3 6 12 24 48] (map #(reduce * 3 (repeat % 2)) (range 5))))
+
+  ;; equality and hashing
+  (is (= (repeat 5 :x) (repeat 5 :x)))
+  (is (= (repeat 5 :x) '(:x :x :x :x :x)))
+  (is (= (hash (repeat 5 :x)) (hash '(:x :x :x :x :x))))
+  (is (= (assoc (array-map (repeat 1 :x) :y) '(:x) :z) {'(:x) :z}))
+  (is (= (assoc (hash-map (repeat 1 :x) :y) '(:x) :z) {'(:x) :z})))
+
+(deftest test-partitionv
+  (are [x y] (= x y)
+    (partitionv 2 [1 2 3]) '((1 2))
+    (partitionv 2 [1 2 3 4]) '((1 2) (3 4))
+    (partitionv 2 []) ()
+
+    (partitionv 2 3 [1 2 3 4 5 6 7]) '((1 2) (4 5))
+    (partitionv 2 3 [1 2 3 4 5 6 7 8]) '((1 2) (4 5) (7 8))
+    (partitionv 2 3 []) ()
+
+    (partitionv 1 []) ()
+    (partitionv 1 [1 2 3]) '((1) (2) (3))
+
+    (partitionv 5 [1 2 3]) ()
+
+    (partitionv -1 [1 2 3]) ()
+    (partitionv -2 [1 2 3]) ()))
+
+(deftest test-reduce-on-coll-seqs
+  ;; reduce on seq of coll, both with and without an init
+  (are [coll expected expected-init]
+    (and
+      (= expected-init (reduce conj [:init] (seq coll)))
+      (= expected (reduce conj (seq coll))))
+    ;; (seq [ ... ])
+    []      []    [:init]
+    [1]     1     [:init 1]
+    [[1] 2] [1 2] [:init [1] 2]
+
+    ;; (seq { ... })
+    {}        []          [:init]
+    {1 1}     [1 1]       [:init [1 1]]
+    {1 1 2 2} [1 1 [2 2]] [:init [1 1] [2 2]]
+
+    ;; (seq (hash-map ... ))
+    (hash-map)         []          [:init]
+    (hash-map 1 1)     [1 1]       [:init [1 1]]
+    (hash-map 1 1 2 2) [1 1 [2 2]] [:init [1 1] [2 2]]
+
+    ;; (seq (sorted-map ... ))
+    (sorted-map)         []          [:init]
+    (sorted-map 1 1)     [1 1]       [:init [1 1]]
+    (sorted-map 1 1 2 2) [1 1 [2 2]] [:init [1 1] [2 2]])
+
+  (are [coll expected expected-init]
+    (and
+      (= expected-init (reduce + 100 (seq coll)))
+      (= expected (reduce + (seq coll))))
+
+    ;; (seq (range ...))
+    (range 0)   0 100
+    (range 1 2) 1 101
+    (range 1 3) 3 103))
+
 (defspec iteration-seq-equals-reduce 1000
   (prop/for-all [initk gen/small-integer
                  seed gen/small-integer]

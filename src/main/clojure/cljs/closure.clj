@@ -14,6 +14,7 @@
             [cljs.analyzer :as ana]
             [cljs.source-map :as sm]
             [cljs.env :as env]
+            [cljs.foreign.node :refer [package-json-entries node-file-seq->libs-spec*]]
             [cljs.js-deps :as deps]
             [clojure.java.io :as io]
             [clojure.java.shell :as sh]
@@ -1958,35 +1959,6 @@
              (apply str))
         (.toSource closure-compiler ast-root)))))
 
-(defn- package-json-entries
-  "Takes options and returns a sequence with the desired order of package.json
-   entries for the given :package-json-resolution mode. If no mode is provided,
-   defaults to :webpack (if no target is set) and :nodejs (if the target is
-   :nodejs)."
-  [opts]
-  {:pre [(or (= (:package-json-resolution opts) :webpack)
-             (= (:package-json-resolution opts) :nodejs)
-             (and (sequential? (:package-json-resolution opts))
-                  (every? string? (:package-json-resolution opts)))
-             (not (contains? opts :package-json-resolution)))]}
-  (let [modes {:nodejs ["main"]
-               :webpack ["browser" "module" "main"]}]
-    (if-let [mode (:package-json-resolution opts)]
-      (if (sequential? mode) mode (get modes mode))
-      (case (:target opts)
-        :nodejs (:nodejs modes)
-        (:webpack modes)))))
-
-(comment
-  (= (package-json-entries {}) ["browser" "module" "main"])
-  (= (package-json-entries {:package-json-resolution :nodejs}) ["main"])
-  (= (package-json-entries {:package-json-resolution :webpack}) ["browser" "module" "main"])
-  (= (package-json-entries {:package-json-resolution ["foo" "bar" "baz"]}) ["foo" "bar" "baz"])
-  (= (package-json-entries {:target :nodejs}) ["main"])
-  (= (package-json-entries {:target :nodejs :package-json-resolution :nodejs}) ["main"])
-  (= (package-json-entries {:target :nodejs :package-json-resolution :webpack}) ["browser" "module" "main"])
-  (= (package-json-entries {:target :nodejs :package-json-resolution ["foo" "bar"]}) ["foo" "bar"]))
-
 (defn- sorting-dependency-options []
   (try
     (if (contains? (:flags (clojure.reflect/reflect DependencyOptions)) :abstract)
@@ -2598,7 +2570,7 @@
       (ensure-module-opts)
 
       (nil? (:language-in opts))
-      (assoc :language-in :es6)
+      (assoc :language-in :ecmascript-next)
 
       (:stable-names opts)
       (as-> opts
@@ -2769,110 +2741,6 @@
                         (when-not (nil? env/*compiler*)
                           (get-in @env/*compiler* [::transitive-dep-set modules])))))))
         (filterv identity))))
-
-(defn- node-file-seq->libs-spec*
-  "Given a sequence of non-nested node_module paths where the extension ends in
-  `.js/.json`, return lib-spec maps for each path containing at least :file,
-   :module-type, and :provides."
-  [module-fseq opts]
-  (letfn [(package-json? [path]
-            (= "package.json" (.getName (io/file path))))
-
-          (top-level-package-json? [path]
-            (boolean (re-find #"node_modules[/\\](@[^/\\]+?[/\\])?[^/\\]+?[/\\]package\.json$" path)))
-
-          ;; the path sans the package.json part
-          ;; i.e. some_lib/package.json -> some_lib
-          (trim-package-json [s]
-            (if (string/ends-with? s "package.json")
-              (subs s 0 (- (count s) 12))
-              s))
-
-          (trim-relative [path]
-            (cond-> path
-              (string/starts-with? path "./")
-              (subs 2)))
-
-          (add-exports [pkg-jsons]
-            (reduce-kv
-              (fn [pkg-jsons path {:strs [exports] :as pkg-json}]
-                ;; "exports" can just be a dupe of "main", i.e. a string - ignore
-                ;; https://nodejs.org/api/packages.html#main-entry-point-export
-                (if (string? exports)
-                  pkg-jsons
-                  (reduce-kv
-                    (fn [pkg-jsons export _]
-                      ;; NOTE: ignore "." exports for now
-                      (if (= "." export)
-                        pkg-jsons
-                        (let [export-pkg-json
-                              (io/file
-                                (trim-package-json path)
-                                (trim-relative export)
-                                "package.json")]
-                          (cond-> pkg-jsons
-                            (.exists export-pkg-json)
-                            (assoc
-                              (.getAbsolutePath export-pkg-json)
-                              (json/read-str (slurp export-pkg-json)))))))
-                    pkg-jsons exports)))
-              pkg-jsons pkg-jsons))]
-    (let [
-          ;; a map of all the *top-level* package.json paths and their exports
-          ;; to the package.json contents as EDN
-          pkg-jsons (add-exports
-                      (into {}
-                        (comp
-                          (map #(.getAbsolutePath %))
-                          (filter top-level-package-json?)
-                          (map (fn [path]
-                                 [path (json/read-str (slurp path))])))
-                        module-fseq))]
-      (into []
-        (comp
-          (map #(.getAbsolutePath %))
-          (map (fn [path]
-                 (merge
-                   {:file path
-                    :module-type :es6}
-                   ;; if the file is *not* a package.json, then compute what
-                   ;; namespaces it :provides to ClojureScript
-                   (when-not (package-json? path)
-                     (let [pkg-json-main (some
-                                           (fn [[pkg-json-path {:as pkg-json :strs [name]}]]
-                                             (let [entries (package-json-entries opts)
-                                                   entry (first (keep (partial get pkg-json) entries))]
-                                               (when-not (nil? entry)
-                                                 ;; should be the only edge case in
-                                                 ;; the package.json main field - Antonio
-                                                 (let [entry (trim-relative entry)
-                                                       entry-path (-> pkg-json-path
-                                                                     (string/replace \\ \/)
-                                                                     trim-package-json
-                                                                     (str entry))]
-                                                   ;; find a package.json entry point that matches
-                                                   ;; the `path`
-                                                   (some (fn [candidate]
-                                                           (when (= candidate (string/replace path \\ \/))
-                                                             name))
-                                                         (cond-> [entry-path]
-                                                           (not (or (string/ends-with? entry-path ".js")
-                                                                    (string/ends-with? entry-path ".json")))
-                                                           (into [(str entry-path ".js") (str entry-path "/index.js") (str entry-path ".json")
-                                                                  (string/replace entry-path #"\.cjs$" ".js")])))))))
-                                           pkg-jsons)]
-                       {:provides (let [module-rel-name (-> (subs path (.lastIndexOf path "node_modules"))
-                                                            (string/replace \\ \/)
-                                                            (string/replace #"node_modules[\\\/]" ""))
-                                        provides (cond-> [module-rel-name (string/replace module-rel-name #"\.js(on)?$" "")]
-                                                   (some? pkg-json-main)
-                                                   (conj pkg-json-main))
-                                        index-replaced (string/replace module-rel-name #"[\\\/]index\.js(on)?$" "")]
-                                    (cond-> provides
-                                      (and (boolean (re-find #"[\\\/]index\.js(on)?$" module-rel-name))
-                                           (not (some #{index-replaced} provides)))
-                                      (conj index-replaced)))}))))))
-        module-fseq))))
 
 (def node-file-seq->libs-spec (memoize node-file-seq->libs-spec*))
 
@@ -3512,7 +3380,7 @@
       (ana/write-analysis-cache 'cljs.core cache src)
       (ana/write-analysis-cache 'cljs.core tcache src))
     (create-client-js-file
-      {:language-in :es6
+      {:language-in :ecmascript-next
        :optimizations :simple
        :output-dir "aot_out"}
       (io/file "resources" "brepl_client.js"))

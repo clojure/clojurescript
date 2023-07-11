@@ -513,14 +513,16 @@
                  (symbol? value)  "cst$sym$"
                  :else
                  (throw
-                   #?(:clj (Exception. (str "constant type " (type value) " not supported"))
-                      :cljs (js/Error. (str "constant type " (type value) " not supported")))))
+                  #?(:clj (Exception. (str "constant type " (type value) " not supported"))
+                     :cljs (js/Error. (str "constant type " (type value) " not supported")))))
         name   (if (keyword? value)
                  (subs (str value) 1)
                  (str value))
         name   (if (= "." name)
                  "_DOT_"
                  (-> name
+                     (string/replace "_" "__")
+                     (string/replace "$" "$$")
                      (string/replace "-" "_DASH_")
                      (munge)
                      (string/replace "." "$")
@@ -915,8 +917,11 @@
   ([env name]
    (resolve-ns-alias env name (symbol name)))
   ([env name not-found]
-   (let [sym (symbol name)]
-     (get (:requires (:ns env)) sym not-found))))
+   (let [sym (symbol name)
+         {:keys [requires as-aliases]}  (:ns env)]
+     (or (get requires sym)
+         (get as-aliases sym)
+         not-found))))
 
 (defn resolve-macro-ns-alias
   ([env name]
@@ -1215,11 +1220,13 @@
       :node   {:name (symbol (str current-ns)
                        (munge-node-lib (resolve-ns-alias env ns)))
                :op :js-var
-               :ns current-ns}
+               :ns current-ns
+               :tag 'js}
       :global {:name (symbol (str current-ns)
                        (munge-global-export (resolve-ns-alias env ns)))
                :op :js-var
-               :ns current-ns})))
+               :ns current-ns
+               :tag 'js})))
 
 (defn resolve-import
   "goog.modules are deterministically assigned to a property of the namespace,
@@ -2599,7 +2606,7 @@
 
 (defmethod parse 'set!
   [_ env [_ target val alt :as form] _ _]
-  (let [[target val] (if alt
+  (let [[target val] (if (= 4 (count form))
                        ;; (set! o -prop val)
                        [`(. ~target ~val) alt]
                        [target val])]
@@ -4009,63 +4016,65 @@
 
 (defn macroexpand-1*
   [env form]
-  (let [op (first form)]
-    (if (contains? specials op)
-      (do
-        (when (= 'ns op)
-          (do-macroexpand-check env form (get-expander 'cljs.core/ns-special-form env)))
-        form)
-      ;else
+  (if (seq? form)
+    (let [op (first form)]
+      (if (contains? specials op)
+        (do
+          (when (= 'ns op)
+            (do-macroexpand-check env form (get-expander 'cljs.core/ns-special-form env)))
+          form)
+                                        ;else
         (if-some [mac-var (when (symbol? op) (get-expander op env))]
           (#?@(:clj [binding [*ns* (create-ns *cljs-ns*)]]
                :cljs [do])
-            (do-macroexpand-check env form mac-var)
-            (let [form' (try
-                          #?(:cljs (check-macro-arity mac-var form))
-                          (apply @mac-var form env (rest form))
-                          #?(:clj (catch ArityException e
-                                    (throw (ArityException. (- (.actual e) 2) (.name e)))))
-                          (catch #?(:clj Throwable :cljs :default) e
-                            (throw (ex-info nil (error-data env :macroexpansion (var->sym mac-var)) e))))]
-              (if #?(:clj (seq? form') :cljs (impl/cljs-seq? form'))
-                (let [sym' (first form')
-                      sym  (first form)]
-                  (if #?(:clj  (= sym' 'js*)
-                         :cljs (symbol-identical? sym' impl/JS_STAR_SYM))
-                    (let [sym   (if (some? (namespace sym))
-                                  sym
-                                  (symbol "cljs.core" (str sym)))
-                          js-op {:js-op sym}
-                          numeric #?(:clj  (-> mac-var meta ::numeric)
-                                     :cljs (let [mac-var-ns   (symbol (namespace (.-sym mac-var)))
-                                                 mac-var-name (symbol (name (.-sym mac-var)))]
-                                             (get-in @env/*compiler*
-                                               [::namespaces mac-var-ns :defs mac-var-name :meta ::numeric])))
-                          js-op (if (true? numeric)
-                                  (assoc js-op :numeric true)
-                                  js-op)]
-                      (vary-meta form' merge js-op))
-                    form'))
-                form')))
+           (do-macroexpand-check env form mac-var)
+           (let [form' (try
+                         #?(:cljs (check-macro-arity mac-var form))
+                         (apply @mac-var form env (rest form))
+                         #?(:clj (catch ArityException e
+                                   (throw (ArityException. (- (.actual e) 2) (.name e)))))
+                         (catch #?(:clj Throwable :cljs :default) e
+                           (throw (ex-info nil (error-data env :macroexpansion (var->sym mac-var)) e))))]
+             (if #?(:clj (seq? form') :cljs (impl/cljs-seq? form'))
+               (let [sym' (first form')
+                     sym  (first form)]
+                 (if #?(:clj  (= sym' 'js*)
+                        :cljs (symbol-identical? sym' impl/JS_STAR_SYM))
+                   (let [sym   (if (some? (namespace sym))
+                                 sym
+                                 (symbol "cljs.core" (str sym)))
+                         js-op {:js-op sym}
+                         numeric #?(:clj  (-> mac-var meta ::numeric)
+                                    :cljs (let [mac-var-ns   (symbol (namespace (.-sym mac-var)))
+                                                mac-var-name (symbol (name (.-sym mac-var)))]
+                                            (get-in @env/*compiler*
+                                                    [::namespaces mac-var-ns :defs mac-var-name :meta ::numeric])))
+                         js-op (if (true? numeric)
+                                 (assoc js-op :numeric true)
+                                 js-op)]
+                     (vary-meta form' merge js-op))
+                   form'))
+               form')))
           (if (symbol? op)
             (let [opname (str op)]
               (cond
                 (identical? \.
-                  #?(:clj  (first opname)
-                     :cljs (.charAt opname 0)))
+                            #?(:clj  (first opname)
+                               :cljs (.charAt opname 0)))
                 (let [[target & args] (next form)]
                   (with-meta (list* #?(:clj '. :cljs impl/DOT_SYM) target (symbol (subs opname 1)) args)
                     (meta form)))
 
                 (identical? \.
-                  #?(:clj  (last opname)
-                     :cljs (.charAt opname (dec (. opname -length)))))
+                            #?(:clj  (last opname)
+                               :cljs (.charAt opname (dec (. opname -length)))))
                 (with-meta
                   (list* #?(:clj 'new :cljs impl/NEW_SYM) (symbol (subs opname 0 (dec (count opname)))) (next form))
                   (meta form))
 
                 :else form))
-            form)))))
+            form))))
+    form))
 
 (defn macroexpand-1
   "Given a env, an analysis environment, and form, a ClojureScript form,

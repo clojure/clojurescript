@@ -1674,14 +1674,13 @@
   (is (chunked-seq? (range 5)))
   (is (satisfies? IChunk (chunk-first (range 5))))
   (is (nil? (chunk-next (range 32))))
-  (is (satisfies? IChunk (chunk-first (chunk-next (range 33)))))
-  (is (satisfies? IChunk (chunk-first (chunk-rest (range 33)))))
   (is (not (chunked-seq? (range 2 -2 0))))
   (is (chunked-seq? (range)))
   (is (= 5 (count (chunk-first (range 5)))))
   (is (= 32 (count (chunk-first (range)))))
   (is (= 17 (nth (chunk-first (range 100)) 17)))
-  (is (= ::not-found (nth (chunk-first (range 100)) 35 ::not-found)))
+  (is (= 35 (nth (chunk-first (range 100)) 35)))
+  (is (= 32 (count (chunk-first (range 100)))))
   (is (= 0 (first (range 5))))
   (is (= 1 (second (range 5))))
   (is (= (range 1 5) (rest (range 5))))
@@ -1982,3 +1981,14 @@
 (deftest test-cljs-3386
   (is (nil? (cljs-3386-test-fn 1 2)))
   (is (= '(3 4) (cljs-3386-test-fn 1 2 3 4))))
+
+(deftest test-cljs-3400
+  (testing "macroexpanding non-seqs should work"
+    (is (true? (macroexpand '(and))))
+    (is (nil? (macroexpand '(or))))))
+
+(deftest test-cljs-3395
+  (testing "(set! foo -bar baz) pattern"
+    (let [a #js {}]
+      (set! a -x false)
+      (is (false? (.-x a))))))
