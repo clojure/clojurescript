@@ -378,7 +378,7 @@
       (let [o (read* rdr true nil opts pending-forms)]
         (if (instance? IMeta o)
           (let [m (if (and line (seq? o))
-                    (assoc m :line line :column column)
+                    (merge {:line line :column column} m)
                     m)]
             (if (instance? IObj o)
               (with-meta o (merge (meta o) m))
