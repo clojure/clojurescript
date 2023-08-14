@@ -8,6 +8,8 @@ jobs:
     steps:
     - name: Check out
       uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
     - name: Set Github identity
       run: |
         git config --global user.name clojure-build
