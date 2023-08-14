@@ -1,0 +1,391 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>org.clojure</groupId>
+    <artifactId>clojurescript</artifactId>
+    <!-- Version number will be replaced by script/build -->
+    <version>1.10.843</version>
+    <packaging>jar</packaging>
+    <name>ClojureScript</name>
+
+    <url>https://github.com/clojure/clojurescript</url>
+
+    <description>
+        ClojureScript compiler and core runtime library.
+    </description>
+
+    <licenses>
+        <license>
+            <name>Eclipse Public License 1.0</name>
+            <url>http://opensource.org/licenses/eclipse-1.0.php</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.clojure</groupId>
+            <artifactId>clojure</artifactId>
+            <version>1.8.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.javascript</groupId>
+            <artifactId>closure-compiler-unshaded</artifactId>
+            <version>v20210202</version>
+        </dependency>
+        <dependency>
+            <groupId>org.clojure</groupId>
+            <artifactId>google-closure-library</artifactId>
+            <version>0.0-20201211-3e6c510d</version>
+        </dependency>
+        <dependency>
+            <groupId>org.clojure</groupId>
+            <artifactId>data.json</artifactId>
+            <version>0.2.6</version>
+        </dependency>
+        <dependency>
+            <groupId>org.clojure</groupId>
+            <artifactId>tools.reader</artifactId>
+            <version>1.3.3</version>
+        </dependency>
+        <dependency>
+            <groupId>com.cognitect</groupId>
+            <artifactId>transit-clj</artifactId>
+            <version>0.8.309</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.clojure</groupId>
+                    <artifactId>clojure</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>org.clojure</groupId>
+            <artifactId>test.check</artifactId>
+            <version>0.10.0-alpha3</version>
+            <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.clojure</groupId>
+                    <artifactId>clojure</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+    </dependencies>
+
+    <developers>
+        <developer><name>Aaron Bedra</name></developer>
+        <developer><name>Alan Dipert</name></developer>
+        <developer><name>Alex Dowad</name></developer>
+        <developer><name>Alan Malloy</name></developer>
+        <developer><name>Alen Ribic</name></developer>
+        <developer><name>Alex Redington</name></developer>
+        <developer><name>Ambrose Bonnaire-Sergeant</name></developer>
+        <developer><name>Andrew Rosa</name></developer>
+        <developer><name>Antonin Hildebrand</name></developer>
+        <developer><name>Ben Moss</name></developer>
+        <developer><name>Benjamin Meyer</name></developer>
+        <developer><name>Bo Jeanes</name></developer>
+        <developer><name>Bobby Calderwood</name></developer>
+        <developer><name>Brandon Bloom</name></developer>
+        <developer><name>Brenton Ashworth</name></developer>
+        <developer><name>Brian Jenkins</name></developer>
+        <developer><name>Brian Kim</name></developer>
+        <developer><name>Brian Taylor</name></developer>
+        <developer><name>Bruce Hauman</name></developer>
+        <developer><name>Chad Taylor</name></developer>
+        <developer><name>Chas Emerick</name></developer>
+        <developer><name>Charles Duffy</name></developer>
+        <developer><name>Chris Granger</name></developer>
+        <developer><name>Chris Pickard</name></developer>
+        <developer><name>Chris Houser</name></developer>
+        <developer><name>Chris Truter</name></developer>
+        <developer><name>Christopher Redinger</name></developer>
+        <developer><name>Colin Jones</name></developer>
+        <developer><name>Creighton Kirkendall</name></developer>
+        <developer><name>David Nolen</name></developer>
+        <developer><name>Daniel Compton</name></developer>
+        <developer><name>Daniel Skarda</name></developer>
+        <developer><name>Dave Sann</name></developer>
+        <developer><name>Devin Walters</name></developer>
+        <developer><name>Dylan Butman</name></developer>
+        <developer><name>Edward Tsech</name></developer>
+        <developer><name>Eric Normand</name></developer>
+        <developer><name>Eric Thorsen</name></developer>
+        <developer><name>Erik Ouchterlony</name></developer>
+        <developer><name>Evan Mezeske</name></developer>
+        <developer><name>Francis Avila</name></developer>
+        <developer><name>Frank Failla</name></developer>
+        <developer><name>Francoise De Serre</name></developer>
+        <developer><name>Gary Fredericks</name></developer>
+        <developer><name>Gary Trakhman</name></developer>
+        <developer><name>Herwig Hochleitner</name></developer>
+        <developer><name>Hubert Iwaniuk</name></developer>
+        <developer><name>Hugo Duncan</name></developer>
+        <developer><name>Immo Heikkinen</name></developer>
+        <developer><name>Ivan Willig</name></developer>
+        <developer><name>J. Pablo Fernandez</name></developer>
+        <developer><name>Jamie Brandon</name></developer>
+        <developer><name>Jeff Dik</name></developer>
+        <developer><name>Jess Martin</name></developer>
+        <developer><name>Joel Holdbrooks</name></developer>
+        <developer><name>Joel Martin</name></developer>
+        <developer><name>John Li</name></developer>
+        <developer><name>Jonas De Vuyst</name></developer>
+        <developer><name>Jonas Enlund</name></developer>
+        <developer><name>Jonathan Boston</name></developer>
+        <developer><name>Jozef Wagner</name></developer>
+        <developer><name>Juergen Hoetzel</name></developer>
+        <developer><name>Juho Teperi</name></developer>
+        <developer><name>Julian Eluard</name></developer>
+        <developer><name>Justin Tirrell</name></developer>
+        <developer><name>Kovas Boguta</name></developer>
+        <developer><name>Kevin J. Lynagh</name></developer>
+        <developer><name>Laszlo Toeroek</name></developer>
+        <developer><name>Leon Grapenthin</name></developer>
+        <developer><name>Luke VanderHart</name></developer>
+        <developer><name>Maria Geller</name></developer>
+        <developer><name>Martin Klepsch</name></developer>
+        <developer><name>Matjaz Gregoric</name></developer>
+        <developer><name>Max Gonzih</name></developer>
+        <developer><name>Max Penet</name></developer>
+        <developer><name>Max Veytsman</name></developer>
+        <developer><name>Michael Ballantyne</name></developer>
+        <developer><name>Michael Fogus</name></developer>
+        <developer><name>Michael Glaesemann</name></developer>
+        <developer><name>Michael Griffiths</name></developer>
+        <developer><name>Michael O. Church</name></developer>
+        <developer><name>Michał Marczyk</name></developer>
+        <developer><name>Michiel Borkent</name></developer>
+        <developer><name>Mike Fikes</name></developer>
+        <developer><name>Moritz Ulrich</name></developer>
+        <developer><name>Murphy McMahon</name></developer>
+        <developer><name>Nelson Morris</name></developer>
+        <developer><name>Nicola Mometto</name></developer>
+        <developer><name>Nikita Prokopov</name></developer>
+        <developer><name>Osbert Feng</name></developer>
+        <developer><name>Paul Michael Bauer</name></developer>
+        <developer><name>Paul deGrandis</name></developer>
+        <developer><name>Peter Schuck</name></developer>
+        <developer><name>Peter Stephens</name></developer>
+        <developer><name>Peter Taoussanis</name></developer>
+        <developer><name>Pieter van Prooijen</name></developer>
+        <developer><name>Raphaël Amiard</name></developer>
+        <developer><name>Raymond Huang</name></developer>
+        <developer><name>Rich Hickey</name></developer>
+        <developer><name>Roman Gonzalez</name></developer>
+        <developer><name>Roman Scherer</name></developer>
+        <developer><name>Rupa Shankar</name></developer>
+        <developer><name>Russ Olsen</name></developer>
+        <developer><name>Sam Umbach</name></developer>
+        <developer><name>Samuel Miller</name></developer>
+        <developer><name>Sean Grove</name></developer>
+        <developer><name>Sebastien Bensusan</name></developer>
+        <developer><name>Sean LeBron</name></developer>
+        <developer><name>Steven Kallstrom</name></developer>
+        <developer><name>Stuart Halloway</name></developer>
+        <developer><name>Stuart Mitchell</name></developer>
+        <developer><name>Stuart Sierra</name></developer>
+        <developer><name>Takahiro Hozumi</name></developer>
+        <developer><name>Thomas Heller</name></developer>
+        <developer><name>Thomas Scheiblauer</name></developer>
+        <developer><name>Tim Griesser</name></developer>
+        <developer><name>Timothy Pratley</name></developer>
+        <developer><name>Toby Crawley</name></developer>
+        <developer><name>Tom Hickey</name></developer>
+        <developer><name>Tom Jack</name></developer>
+        <developer><name>Tom Marble</name></developer>
+        <developer><name>Travis Thieman</name></developer>
+        <developer><name>Travis Vachon</name></developer>
+        <developer><name>Wilkes Joiner</name></developer>
+        <developer><name>Zachary Allaun</name></developer>
+        <developer><name>Zach Oakes</name></developer>
+        <developer><name>Zubair Quraishi</name></developer>
+    </developers>
+
+    <scm>
+        <connection>scm:git:git://github.com/clojure/clojurescript.git</connection>
+        <developerConnection>scm:git:git@github.com:clojure/clojurescript.git</developerConnection>
+        <url>https://github.com/clojure/clojurescript</url>
+    </scm>
+
+    <parent>
+        <groupId>org.clojure</groupId>
+        <artifactId>pom.contrib</artifactId>
+        <version>1.1.0</version>
+    </parent>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <clojure.source.dir>src/main/clojure</clojure.source.dir>
+        <cljs.source.dir>src/main/cljs</cljs.source.dir>
+        <cljs.source.dir>src/main/cljs</cljs.source.dir>
+        <resources.dir>resources</resources.dir>
+        <directlinking>true</directlinking>
+    </properties>
+
+    <build>
+        <plugins>
+            <plugin>
+                <!-- Add Clojure sources to the project's source directories -->
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>1.5</version>
+                <executions>
+                    <execution>
+                        <id>add-clojure-source-dirs</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>add-source</goal>
+                            <goal>add-resource</goal>
+                        </goals>
+                        <configuration>
+                            <sources>
+                                <source>${clojure.source.dir}</source>
+                                <source>${cljs.source.dir}</source>
+                            </sources>
+                            <resources>
+                                <resource>
+                                    <directory>${clojure.source.dir}</directory>
+                                </resource>
+                                <resource>
+                                    <directory>${cljs.source.dir}</directory>
+                                </resource>
+                                <resource>
+                                    <directory>${resources.dir}</directory>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>com.theoryinpractise</groupId>
+                <artifactId>clojure-maven-plugin</artifactId>
+                <version>1.7.1</version>
+                <configuration>
+                    <temporaryOutputDirectory>false</temporaryOutputDirectory>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>clojure-compile</id>
+                        <phase>compile</phase>
+                        <goals>
+                            <goal>compile</goal>
+                        </goals>
+                        <configuration>
+                            <compileDeclaredNamespaceOnly>true</compileDeclaredNamespaceOnly>
+                            <namespaces>
+                                <namespace>cljs.util</namespace>
+                                <namespace>cljs.env</namespace>
+                                <namespace>cljs.js-deps</namespace>
+                                <namespace>cljs.core</namespace>
+                                <namespace>cljs.source-map.base64</namespace>
+                                <namespace>cljs.source-map.base64-vlq</namespace>
+                                <namespace>cljs.source-map</namespace>
+                                <namespace>cljs.analyzer</namespace>
+                                <namespace>cljs.analyzer.utils</namespace>
+                                <namespace>cljs.compiler</namespace>
+                                <namespace>cljs.closure</namespace>
+                                <namespace>cljs.tagged-literals</namespace>
+                                <namespace>cljs.test</namespace>
+                                <namespace>cljs.analyzer.api</namespace>
+                                <namespace>cljs.build.api</namespace>
+                                <namespace>cljs.compiler.api</namespace>
+                                <namespace>cljs.spec.alpha</namespace>
+                                <namespace>cljs.spec.test.alpha</namespace>
+                                <namespace>cljs.spec.gen.alpha</namespace>
+                                <namespace>cljs.repl</namespace>
+                                <namespace>cljs.repl.browser</namespace>
+                                <namespace>cljs.repl.node</namespace>
+                                <namespace>cljs.repl.reflect</namespace>
+                                <namespace>cljs.repl.server</namespace>
+                                <namespace>cljs.main</namespace>
+                                <namespace>cljs.cli</namespace>
+                            </namespaces>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>2.4</version>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <mainClass>cljs.main</mainClass>
+                        </manifest>
+                    </archive>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>default-jar</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                        <configuration>
+                            <includes>
+                                <include>**/*.clj</include>
+                                <include>**/*.cljc</include>
+                                <include>**/*.cljs</include>
+                                <include>**/*.js</include>
+                                <include>**/*.map</include>
+                                <include>**/*.edn</include>
+                                <include>**/*.svg</include>
+                                <include>**/*.png</include>
+                            </includes>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>2.4</version>
+                <executions>
+                    <execution>
+                        <id>aot-jar</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                        <configuration>
+                            <appendAssemblyId>false</appendAssemblyId>
+                            <descriptors>
+                                <descriptor>src/assembly/aot.xml</descriptor>
+                            </descriptors>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>slim-jar</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+			<configuration>
+                            <descriptors>
+                                <descriptor>src/assembly/slim.xml</descriptor>
+                            </descriptors>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.1</version>
+                <configuration>
+                    <source>1.8</source>
+                    <target>1.8</target>
+                </configuration>
+            </plugin>
+	    <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-release-plugin</artifactId>
+                <version>2.5.3</version>
+		<configuration>
+                    <tagNameFormat>r@{project.version}</tagNameFormat>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>
