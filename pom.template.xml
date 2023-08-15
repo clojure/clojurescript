@@ -350,7 +350,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-gpg-plugin</artifactId>
-                <version>1.4</version>
+                <version>3.1.0</version>
                 <configuration>
 			<!-- <keyname>Clojure/core</keyname> -->
 			<gpgArguments>
