@@ -72,7 +72,7 @@ if [ "$HUDSON" = "true" ]; then
     git push origin "$TAG"
 else
     echo "Skipping remote deployment and Git tag because we are not on Hudson."
-    mvn -B -ntp -DskipNexusStagingDeployMojo=true --fail-at-end -Psonatype-oss-release $CLJS_SCRIPT_MVN_OPTS \
+    mvn -ntp -DskipNexusStagingDeployMojo=true --fail-at-end -Psonatype-oss-release $CLJS_SCRIPT_MVN_OPTS \
 	clean install
 fi
 
