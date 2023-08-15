@@ -1,6 +1,13 @@
 name: Release on demand
 
-on: [workflow_dispatch]
+on:
+  workflow_call:
+    inputs:
+      deploy:
+        description: "Deploy to Maven Central"
+        required: true
+        default: false
+        type: boolean
 
 jobs:
   build:
@@ -28,7 +35,7 @@ jobs:
     - name: Release
       run: script/build
       env:
-        HUDSON: false
+        HUDSON: ${{ github.event.inputs.deploy }}
         MAVEN_USERNAME: ${{ secrets.OSSRH_USERNAME }}
         MAVEN_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
         GPG_PASSPHRASE: ${{ secrets.OSSRH_GPG_SECRET_KEY_PASSWORD }}
