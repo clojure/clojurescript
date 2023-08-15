@@ -1,7 +1,7 @@
 name: Release on demand
 
 on:
-  workflow_call:
+  workflow_dispatch:
     inputs:
       deploy:
         description: "Deploy to Maven Central"
