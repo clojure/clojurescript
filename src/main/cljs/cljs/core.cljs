@@ -2624,9 +2624,11 @@ reduces them without incurring seq initialization"
   and f is not called. Note that reduce-kv is supported on vectors,
   where the keys will be the ordinals."
   ([f init coll]
-    (if-not (nil? coll)
+    (if (satisfies? IKVReduce coll)
       (-kv-reduce coll f init)
-      init)))
+      (reduce (fn [ret me]
+                (f ret (-key me) (-val me)))
+        init coll))))
 
 (defn identity
   "Returns its argument."

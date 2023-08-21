@@ -12,7 +12,6 @@ closure
 /out
 *out
 .lein*
-/pom.xml
 *.iml
 .repl*
 *.swp

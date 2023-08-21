@@ -27,4 +27,7 @@ jobs:
         cd script/closure-library-release
         ./closure-library-release.sh
       env:
+        MAVEN_USERNAME: ${{ secrets.OSSRH_USERNAME }}
+        MAVEN_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
+        GPG_PASSPHRASE: ${{ secrets.OSSRH_GPG_SECRET_KEY_PASSWORD }}
         HUDSON: true

@@ -1975,6 +1975,12 @@
       {1 1 3 3}     (update-keys (array-map 0 1 2 3) inc)
       {1 1 3 3}     (update-keys (sorted-map 2 3 0 1) inc))))
 
+(deftest test-cljs-3363
+  (is (= {}
+        (reduce-kv #(assoc %1 %3 %2) {} nil)))
+  (is (= {1 :a 2 :b}
+        (reduce-kv #(assoc %1 %3 %2) {} (seq {:a 1 :b 2})))))
+
 (defn cljs-3386-test-fn
   ([x] x) ([_ _ & zs] zs))
 
