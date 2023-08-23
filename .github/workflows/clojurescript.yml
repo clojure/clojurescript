@@ -1,0 +1,48 @@
+name: cooljeanius/clojurescript
+on:
+  push:
+    branches:
+    - "**/*"
+  pull_request:
+concurrency:
+#   # This item has no matching transformer
+#   maximum_number_of_builds: 0
+jobs:
+  test:
+    runs-on: ubuntu-16.04
+    steps:
+    - name: checkout
+      uses: actions/checkout@v3.5.0
+      with:
+        fetch-depth: 1000
+    - uses: actions/setup-node@v3.7.0
+      with:
+        cache: npm
+        node-version: '6'
+    - run: wget https://ftp.mozilla.org/pub/firefox/nightly/latest-mozilla-central/jsshell-linux-x86_64.zip
+    - run: unzip jsshell-linux-x86_64.zip -d spidermoney
+    - run: sudo apt-get install -y libjavascriptcoregtk-4.0-bin
+    - run: wget https://aka.ms/chakracore/cc_linux_x64_1_8_1 -O chakra-core.tar.gz
+    - run: tar xvzf chakra-core.tar.gz
+    - run: wget https://github.com/oracle/graal/releases/download/vm-1.0.0-rc12/graalvm-ce-1.0.0-rc12-linux-amd64.tar.gz
+    - run: tar xzf graalvm-ce-1.0.0-rc12-linux-amd64.tar.gz
+    - run: npm install
+    - run: script/bootstrap
+    - run: script/uberjar
+    - run: mkdir -p builds/out-adv
+    - run: bin/cljsc src/test/cljs "{:optimizations :advanced :output-wrapper true :verbose true :compiler-stats true :parallel-build true :output-dir \"builds/out-adv\" :npm-deps {:lodash \"4.17.4\"} :closure-warnings {:non-standard-jsdoc :off :global-this :off} :language-in :es6 :language-out :es5 :install-deps true :foreign-libs [{:file \"src/test/cljs/calculator_global.js\" :provides [\"calculator\"] :global-exports {calculator Calculator}} {:file \"src/test/cljs/es6_dep.js\" :module-type :es6 :provides [\"es6_calc\"]} {:file \"src/test/cljs/calculator.js\" :module-type :commonjs :provides [\"calculator\"]} {:file \"src/test/cljs/es6_default_hello.js\" :provides [\"es6_default_hello\"] :module-type :es6}]}" > builds/out-adv/core-advanced-test.js
+    - run: lein test
+    - run: jsc builds/out-adv/core-advanced-test.js | tee test-out.txt
+    - run: grep '0 failures, 0 errors.' test-out.txt
+    - run: "./spidermoney/js -f builds/out-adv/core-advanced-test.js | tee test-out.txt"
+    - run: grep '0 failures, 0 errors.' test-out.txt
+    - run: "./ChakraCoreFiles/bin/ch builds/out-adv/core-advanced-test.js | tee test-out.txt"
+    - run: grep '0 failures, 0 errors.' test-out.txt
+    - run: "./graalvm-ce-1.0.0-rc12/bin/js builds/out-adv/core-advanced-test.js | tee test-out.txt"
+    - run: grep '0 failures, 0 errors.' test-out.txt
+    - run: script/test-self-host | tee test-out.txt
+    - run: grep '0 failures, 0 errors.' test-out.txt
+    - run: script/test-self-parity | tee test-out.txt
+    - run: grep '0 failures, 0 errors.' test-out.txt
+    - run: script/test-cli node | tee test-out.txt
+    - run: grep '0 failures, 0 errors.' test-out.txt
