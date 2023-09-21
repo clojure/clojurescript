@@ -1,7 +1,7 @@
 dist: xenial
 
 git:
-  depth: 1000
+  depth: false
 
 language: node_js
 
@@ -19,6 +19,7 @@ before_install:
 
 before_script:
   - script/bootstrap
+  - git --version
   - script/uberjar
   - mkdir -p builds/out-adv
   - bin/cljsc src/test/cljs "{:optimizations :advanced
