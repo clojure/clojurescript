@@ -3,6 +3,10 @@ dist: xenial
 git:
   depth: false
 
+branches:
+  only:
+  - /.*/
+
 language: node_js
 
 node_js:
