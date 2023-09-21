@@ -11,6 +11,8 @@ fi
 
 rm -f resources/brepl_client.js
 
+git pull --tags
+
 # The command `git describe --match v0.0` will return a string like
 #
 # v0.0-856-g329708b
