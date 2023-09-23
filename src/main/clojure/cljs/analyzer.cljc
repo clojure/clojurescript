@@ -3611,7 +3611,7 @@
           (cons (subs s 0 idx)
             (js-star-seg (subs s (inc end)))))))))
 
-(def NUMERIC_SET '#{any number long double})
+(def NUMERIC_SET '#{any number int long double})
 
 (defn numeric-type?
   #?(:cljs {:tag boolean})
@@ -3630,6 +3630,7 @@
       (when #?(:clj  (set? t)
                :cljs (impl/cljs-set? t))
         (or (contains? t 'number)
+            (contains? t 'int)
             (contains? t 'long)
             (contains? t 'double)
             (contains? t 'any)
