@@ -251,9 +251,10 @@
     (instance? js/Array x)))
 
 (defn ^boolean number?
-  "Returns true if x is a JavaScript number."
+  "Returns true if x is a JavaScript Number or BigInt"
   [x]
-  (cljs.core/number? x))
+  (or (cljs.core/js-number? x)
+      (cljs.core/bigint? x)))
 
 (defn not
   "Returns true if x is logical false, false otherwise."
@@ -2313,7 +2314,7 @@ reduces them without incurring seq initialization"
   "Returns true if n is a JavaScript number with no decimal part."
   [n]
   (and (number? n)
-       (not ^boolean (js/isNaN n))
+       (not ^boolean (js/Number.isNaN n))
        (not (identical? n js/Infinity))
        (== (js/parseFloat n) (js/parseInt n 10))))
 
@@ -10509,10 +10510,10 @@ reduces them without incurring seq initialization"
         (number? obj)
         (-write writer
           (cond
-            ^boolean (js/isNaN obj) "##NaN"
+            ^boolean (js/Number.isNaN obj) "##NaN"
             (identical? obj js/Number.POSITIVE_INFINITY) "##Inf"
             (identical? obj js/Number.NEGATIVE_INFINITY) "##-Inf"
-            :else (str obj)))
+            :else (str obj (when (bigint? obj) "N"))))
 
         (object? obj)
         (do
@@ -12211,7 +12212,7 @@ reduces them without incurring seq initialization"
 (defn ^boolean NaN?
   "Returns true if num is NaN, else false"
   [val]
-  (js/isNaN val))
+  (js/Number.isNaN val))
 
 (defn ^:private parsing-err
   "Construct message for parsing for non-string parsing error"

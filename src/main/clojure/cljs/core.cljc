@@ -1007,8 +1007,11 @@
                `(let [c# ~c x# ~x]
                   (~'js* "(~{} instanceof ~{})" x# c#)))))
 
-(core/defmacro number? [x]
+(core/defmacro js-number? [x]
   (bool-expr (core/list 'js* "typeof ~{} === 'number'" x)))
+
+(core/defmacro bigint? [x]
+  (bool-expr (core/list 'js* "typeof ~{} === 'bigint'" x)))
 
 (core/defmacro symbol? [x]
   (bool-expr `(instance? Symbol ~x)))
