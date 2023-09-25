@@ -1040,7 +1040,7 @@
 
 (deftest test-807
   (testing "Testing CLJS-807, big int, float, big dec literals"
-    (is (= -1 -1N))
+    ;(is (= -1 -1N)) ;; invalid, -1N is now JS BigInt
     (is (= 9.007199254740996E15 9007199254740995N))
     (is (= 1.5 1.5M))
     (is (= 4.9E-324 5E-324M))))
