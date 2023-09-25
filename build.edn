@@ -9,8 +9,8 @@
  :npm-deps {:lodash "4.17.4"}
  :closure-warnings {:non-standard-jsdoc :off :global-this :off}
  :install-deps true
- :language-in :es6
- :language-out :es5
+ :language-in :ecmascript-2020
+ :language-out :ecmascript-2020
  :foreign-libs [{:file "src/test/cljs/calculator_global.js"
                  :provides ["calculator"]
                  :global-exports {calculator Calculator}}
