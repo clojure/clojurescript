@@ -1304,18 +1304,23 @@
      {nil "null"
       'object "object"
       'string "string"
+      'symbol "symbol"
       'number "number"
+      'bigint  "bigint"
       'array "array"
       'function "function"
       'boolean "boolean"
       'default "_"})
 
+;; only used for generating warnings when extending fundamental JS types
 (def ^:private js-base-type
      {'js/Boolean "boolean"
       'js/String "string"
+      'js/Symbol "symbol"
       'js/Array "array"
       'js/Object "object"
       'js/Number "number"
+      'js/BigInt "bigint"
       'js/Function "function"})
 
 (core/defmacro reify
