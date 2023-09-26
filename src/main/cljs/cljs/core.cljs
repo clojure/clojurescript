@@ -250,11 +250,20 @@
     (.isArray js/Array x)
     (instance? js/Array x)))
 
+(declare Integer)
+
 (defn ^boolean number?
   "Returns true if x is a JavaScript Number or BigInt"
   [x]
   (or (cljs.core/js-number? x)
-      (cljs.core/bigint? x)))
+      (cljs.core/bigint? x)
+      (instance? Integer x)))
+
+(defn ^boolean bigint?
+  "Returns true if x is a JavaScript Number or BigInt"
+  [x]
+  (or (cljs.core/bigint? x)
+      (instance? Integer x)))
 
 (defn not
   "Returns true if x is logical false, false otherwise."
@@ -342,8 +351,12 @@
 
 (if (and (exists? js/Symbol)
          (identical? (goog/typeOf js/Symbol) "function"))
-  (def ITER_SYMBOL (.-iterator js/Symbol))
-  (def ITER_SYMBOL "@@iterator"))
+  (do
+    (def ITER_SYMBOL (.-iterator js/Symbol))
+    (def TO_PRIM_SYMBOL (.-toPrimitive js/Symbol)))
+  (do
+    (def ITER_SYMBOL "@@iterator")
+    (def TO_PRIM_SYMBOL "@@toPrimitive")))
 
 (def ^{:jsdoc ["@enum {string}"]}
   CHAR_MAP
@@ -1016,46 +1029,38 @@
   (and (<= n js/Number.MAX_SAFE_INTEGER)
        (>= n js/Number.MIN_SAFE_INTEGER)))
 
+(declare hash)
+
+(defn hash-bigint [n]
+  (if (safe-value? n)
+    (hash (js/Number. n))
+    (hash-string (.toString n 32))))
+
+(defn hash-number [n]
+  (if ^boolean (js/isFinite n)
+    (js-mod (Math/floor n) 2147483647)
+    (case n
+      ##Inf 2146435072
+      ##-Inf -1048576
+      2146959360)))
+
 (defn hash
   "Returns the hash code of its argument. Note this is the hash code
    consistent with =."
   [o]
   (cond
-    (implements? IHash o)
-    (bit-xor (-hash o) 0)
-
-    (cljs.core/bigint? o)
-    (if (safe-value? o)
-      (hash (js/Number. o))
-      (hash-string (.toString o 32)))
-
-    (number? o)
-    (if ^boolean (js/isFinite o)
-      (js-mod (Math/floor o) 2147483647)
-      (case o
-        ##Inf
-        2146435072
-        ##-Inf
-        -1048576
-        2146959360))
-
+    (implements? IHash o) (bit-xor (-hash o) 0)
+    (bigint? o) (hash-bigint o)
+    (number? o) (hash-number o)
     ;; note: mirrors Clojure's behavior on the JVM, where the hashCode is
     ;; 1231 for true and 1237 for false
     ;; http://docs.oracle.com/javase/7/docs/api/java/lang/Boolean.html#hashCode%28%29
     (true? o) 1231
-
     (false? o) 1237
-
-    (string? o)
-    (m3-hash-int (hash-string o))
-
-    (instance? js/Date o)
-    (bit-xor (.valueOf o) 0)
-
+    (string? o) (m3-hash-int (hash-string o))
+    (instance? js/Date o) (bit-xor (.valueOf o) 0)
     (nil? o) 0
-
-    :else
-    (bit-xor (-hash o) 0)))
+    :else (bit-xor (-hash o) 0)))
 
 (defn hash-combine [seed hash]
   ; a la boost
@@ -1093,6 +1098,45 @@
    :default (garray/defaultCompare (.-name a) (.-name b))))
 
 (declare get)
+
+;; wrapper type to simplify bigint integration
+;; Integer has two fields, if number is null then beyond the range of
+;; JS safe integral values. bigint is set for comparisons.
+(deftype Integer [number bigint ^:mutable __hash]
+  Object
+  (toString [_]
+    (.toString bigint))
+  (equiv [this other] (-equiv this other))
+
+  IEquiv
+  (-equiv [_ other]
+    (cond
+      (instance? Integer other) (if (nil? number)
+                                  (== bigint (.-bigint other))
+                                  (== number (.-number other)))
+      (js-number? other) (== number other)
+      (bigint? other) (== bigint other)
+      :else false))
+
+  IHash
+  (-hash [_]
+    (if (nil? __hash)
+      (if (nil? bigint)
+        (set! __hash (hash-number number))
+        (set! __hash (hash-bigint bigint))))
+    __hash)
+
+  IPrintWithWriter
+  (-pr-writer [_ writer _]
+    (-write writer (or number bigint))
+    (-write writer "N")))
+
+(unchecked-set (.-prototype Integer) TO_PRIM_SYMBOL
+  (fn [hint]
+    (this-as this
+      (if (nil? (.-number this))
+        (.-bigint this)
+        (.-number this)))))
 
 (deftype Symbol [ns name str ^:mutable _hash _meta]
   Object
@@ -1444,16 +1488,18 @@
 (extend-type number
   IEquiv
   (-equiv [x o]
-    (if (cljs.core/bigint? o)
-      (cljs.core/coercive-= x o)
-      (identical? x o))))
+    (cond
+      (bigint? o) (coercive-= x o)
+      (instance? Integer o) (-equiv o x)
+      :else (identical? x o))))
 
 (extend-type bigint
   IEquiv
   (-equiv [x o]
-    (if (cljs.core/js-number? o)
-      (cljs.core/coercive-= x o)
-      (identical? x o))))
+    (cond
+      (js-number? o) (coercive-= x o)
+      (instance? Integer o) (-equiv o x)
+      :else (identical? x o))))
 
 (declare with-meta)
 
@@ -6735,7 +6781,7 @@ reduces them without incurring seq initialization"
         :else (recur (+ i 2))))))
 
 (defn- equal-number? [x y]
-  (and (number? x) (number? y) (cljs.core/coercive-= x y)))
+  (and (number? x) (number? y) (-equiv x y)))
 
 (defn- array-index-of-number [arr k]
   (let [len (alength arr)]

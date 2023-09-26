@@ -316,7 +316,7 @@
    (defmethod emit-constant* Long [x]
      (if (or (> x 9007199254740991)
              (< x -9007199254740991))
-       (emits "(" x "n)")
+       (emits "new cljs.core.Integer(null," x "n," (hash x) ")")
        (emits "(" x ")"))))
 
 #?(:clj
@@ -350,7 +350,13 @@
 
 #?(:clj
    (defmethod emit-constant* clojure.lang.BigInt [x]
-     (emits "(" (.toString ^clojure.lang.BigInt x) "n)")))
+     (if (or (> x 9007199254740991)
+             (< x -9007199254740991))
+       ;; not we don't set hash code at compile time because this is difficult to replicate
+       (emits "new cljs.core.Integer(null, " (.toString ^clojure.lang.BigInt x) "n, null)")
+       (emits "new cljs.core.Integer("
+         (.toString ^clojure.lang.BigInt x) ", " (.toString ^clojure.lang.BigInt x)
+         "n,  null)"))))
 
 (defmethod emit-constant* #?(:clj String :cljs js/String) [x]
   (emits (wrap-in-double-quotes (escape-string x))))

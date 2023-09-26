@@ -1162,7 +1162,7 @@
 
 (core/defmacro ^::ana/numeric ==
   ([x] true)
-  ([x y] (bool-expr (core/list 'js* "(~{} === ~{})" x y)))
+  ([x y] (bool-expr (core/list 'js* "(~{} == ~{})" x y)))
   ([x y & more] `(and (== ~x ~y) (== ~y ~@more))))
 
 (core/defmacro ^::ana/numeric dec [x]
