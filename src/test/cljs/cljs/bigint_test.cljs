@@ -36,7 +36,11 @@
     (is (= (js/BigInt 1) 1))
     (is (= 1 (js/BigInt 1))))
   (testing "Interaction with core"
-    (is (= (range 1 5) (range 1 5N)))))
+    (is (= (range 1 5) (range 1 5N))))
+  (testing "Arithmetic"
+    (is (= 2 (+ 1 1N)))
+    (is (= 0.5 (/ 1N 2)))
+    (is (= 4N (* 2N 2)))))
 
 (comment
 
