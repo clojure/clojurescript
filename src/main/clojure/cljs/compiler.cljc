@@ -313,7 +313,11 @@
 (defmethod emit-constant* nil [x] (emits "null"))
 
 #?(:clj
-   (defmethod emit-constant* Long [x] (emits "(" x ")")))
+   (defmethod emit-constant* Long [x]
+     (if (or (> x 9007199254740991)
+             (< x -9007199254740991))
+       (emits "(" x "n)")
+       (emits "(" x ")"))))
 
 #?(:clj
    (defmethod emit-constant* Integer [x] (emits x))) ; reader puts Integers in metadata
