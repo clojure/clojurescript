@@ -1012,6 +1012,10 @@
         h
         (add-to-string-hash-cache k)))))
 
+(defn- safe-value? [n]
+  (and (<= n js/Number.MAX_SAFE_INTEGER)
+       (>= n js/Number.MIN_SAFE_INTEGER)))
+
 (defn hash
   "Returns the hash code of its argument. Note this is the hash code
    consistent with =."
@@ -1019,6 +1023,11 @@
   (cond
     (implements? IHash o)
     (bit-xor (-hash o) 0)
+
+    (cljs.core/bigint? o)
+    (if (safe-value? o)
+      (hash (js/Number. o))
+      (hash-string (.toString o 32)))
 
     (number? o)
     (if ^boolean (js/isFinite o)
@@ -1434,7 +1443,17 @@
 
 (extend-type number
   IEquiv
-  (-equiv [x o] (identical? x o)))
+  (-equiv [x o]
+    (if (cljs.core/bigint? o)
+      (cljs.core/coercive-= x o)
+      (identical? x o))))
+
+(extend-type bigint
+  IEquiv
+  (-equiv [x o]
+    (if (cljs.core/js-number? o)
+      (cljs.core/coercive-= x o)
+      (identical? x o))))
 
 (declare with-meta)
 
@@ -6687,7 +6706,7 @@ reduces them without incurring seq initialization"
 
 ;;; PersistentArrayMap
 
-(defn- array-index-of-nil? [arr]
+(defn- array-index-of-nil [arr]
   (let [len (alength arr)]
     (loop [i 0]
       (cond
@@ -6695,7 +6714,7 @@ reduces them without incurring seq initialization"
         (nil? (aget arr i)) i
         :else (recur (+ i 2))))))
 
-(defn- array-index-of-keyword? [arr k]
+(defn- array-index-of-keyword [arr k]
   (let [len  (alength arr)
         kstr (.-fqn k)]
     (loop [i 0]
@@ -6705,7 +6724,7 @@ reduces them without incurring seq initialization"
              (identical? kstr (.-fqn (aget arr i)))) i
         :else (recur (+ i 2))))))
 
-(defn- array-index-of-symbol? [arr k]
+(defn- array-index-of-symbol [arr k]
   (let [len  (alength arr)
         kstr (.-str k)]
     (loop [i 0]
@@ -6713,6 +6732,17 @@ reduces them without incurring seq initialization"
         (<= len i) -1
         (and (symbol? (aget arr i))
              (identical? kstr (.-str (aget arr i)))) i
+        :else (recur (+ i 2))))))
+
+(defn- equal-number? [x y]
+  (and (number? x) (number? y) (cljs.core/coercive-= x y)))
+
+(defn- array-index-of-number [arr k]
+  (let [len (alength arr)]
+    (loop [i 0]
+      (cond
+        (<= len i) -1
+        (equal-number? k (aget arr i)) i
         :else (recur (+ i 2))))))
 
 (defn- array-index-of-identical? [arr k]
@@ -6723,7 +6753,7 @@ reduces them without incurring seq initialization"
         (identical? k (aget arr i)) i
         :else (recur (+ i 2))))))
 
-(defn- array-index-of-equiv? [arr k]
+(defn- array-index-of-equiv [arr k]
   (let [len (alength arr)]
     (loop [i 0]
       (cond
@@ -6733,17 +6763,20 @@ reduces them without incurring seq initialization"
 
 (defn array-index-of [arr k]
   (cond
-    (keyword? k) (array-index-of-keyword? arr k)
+    (keyword? k) (array-index-of-keyword arr k)
 
-    (or (string? k) (number? k))
+    (string? k)
     (array-index-of-identical? arr k)
 
-    (symbol? k) (array-index-of-symbol? arr k)
+    (number? k)
+    (array-index-of-number arr k)
+
+    (symbol? k) (array-index-of-symbol arr k)
 
     (nil? k)
-    (array-index-of-nil? arr)
+    (array-index-of-nil arr)
 
-    :else (array-index-of-equiv? arr k)))
+    :else (array-index-of-equiv arr k)))
 
 (defn- array-map-index-of [m k]
   (array-index-of (.-arr m) k))
