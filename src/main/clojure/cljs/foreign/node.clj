@@ -50,31 +50,53 @@
     (string/starts-with? path "./")
     (subs 2)))
 
-(defn- ->export-pkg-json [path export]
+(defn- ->export-pkg-json [package-path export]
   (io/file
-    (trim-package-json path)
+    (trim-package-json package-path)
     (trim-relative export)
     "package.json"))
 
+(defn resolve-export
+  "Given an export value, find the entry point based on the
+  :package-json-resolution value, defaults to :nodejs. Returns nil
+  if we couldn't resolve it."
+  [export opts]
+  (if (string? export)
+    export
+    ;; we check for require to attempt to filter out
+    ;; strange cases, i.e. import but no require etc.
+    (when (and (map? export) (contains? export "require"))
+      (let [resolve (:package-json-resolution opts :nodejs)
+            lookup  (if (sequential? resolve)
+                      (or (some #{"import" "require"} resolve) "require")
+                      ({:webpack "import" :nodejs "require"} resolve))
+            entry   (get export lookup)]
+        (if (map? entry)
+          (get entry "default")
+          entry)))))
+
 (defn- export-subpaths
-  "Examine the export subpaths to compute subpackages"
-  [pkg-jsons export-subpath export path pkg-name]
+  "Examine the export subpaths to compute subpackages. Add them to pkg-json
+  parameter (this is a reduce-kv helper)."
+  [pkg-jsons export-subpath export package-path pkg-name opts]
   ;; NOTE: ignore "." exports for now
   (if (= "." export-subpath)
-    pkg-jsons
+    (if-let [resolved (resolve-export export opts)]
+      (assoc-in pkg-jsons [package-path "main"] resolved)
+      pkg-jsons)
     ;; technically the following logic is a bit brittle since `exports` is
     ;; supposed to be used to hide the package structure.
     ;; instead, here we assume the export subpath does match the library structure
     ;; on disk, if we find a package.json we add it to pkg-jsons map
     ;; and we synthesize "name" key based on subpath
-    (let [export-pkg-json (->export-pkg-json path export-subpath)]
+    (let [export-pkg-json-file (->export-pkg-json package-path export-subpath)]
       ;; note this will ignore export wildcards etc.
       (cond-> pkg-jsons
-        (.exists export-pkg-json)
+        (.exists export-pkg-json-file)
         (-> (assoc
-              (.getAbsolutePath export-pkg-json)
+              (.getAbsolutePath export-pkg-json-file)
               (merge
-                (json/read-str (slurp export-pkg-json))
+                (json/read-str (slurp export-pkg-json-file))
                 ;; add the name field so that path->main-name works later
                 (when (and (map? export)
                            (contains? export "require"))
@@ -92,14 +114,14 @@
   detailed information."
   [pkg-jsons opts]
   (reduce-kv
-    (fn [pkg-jsons path {:strs [exports] :as pkg-json}]
+    (fn [pkg-jsons package-path {:strs [exports] :as pkg-json}]
       (if (string? exports)
         pkg-jsons
         ;; map case
         (reduce-kv
           (fn [pkg-jsons export-subpath export]
-            (export-subpaths pkg-jsons
-              export-subpath export path (get pkg-json "name")))
+            (export-subpaths pkg-jsons export-subpath
+              export package-path (get pkg-json "name") opts))
           pkg-jsons exports)))
     pkg-jsons pkg-jsons))
 

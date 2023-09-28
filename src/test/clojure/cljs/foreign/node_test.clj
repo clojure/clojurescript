@@ -29,14 +29,20 @@
 ;; =============================================================================
 ;; Tests
 
-(defn pkg-jsons []
-  (-> (util/module-file-seq {})
-    node/get-pkg-jsons))
+(defn pkg-jsons
+  ([]
+   (pkg-jsons {}))
+  ([opts]
+   (-> (util/module-file-seq opts)
+     (node/get-pkg-jsons opts))))
 
-(defn indexed-lib-specs []
-  (as-> (-> (util/module-file-seq {})
-          (node/node-file-seq->libs-spec* {}))
-    xs (zipmap (map :file xs) xs)))
+(defn indexed-lib-specs
+  ([]
+   (indexed-lib-specs {}))
+  ([opts]
+   (as-> (-> (util/module-file-seq opts)
+           (node/node-file-seq->libs-spec* opts))
+     xs (zipmap (map :file xs) xs))))
 
 (defn relpath->data
   ([index path]
@@ -60,27 +66,45 @@
 (deftest test-path->main-name
   (install :yarn "react-select" "5.7.2")
   (testing "Verify that path->main works as expected"
-    (is (= "react-select"
-           (node/path->main-name
+    (let [node-opts    {:package-json-resolution :nodejs}
+          webpack-opts {:package-json-resolution :webpack}]
+      (is (= "react-select"
+            (node/path->main-name
               (.getAbsolutePath (io/file "node_modules/react-select/dist/react-select.cjs.js"))
-              (relpath->data (pkg-jsons)
+              (relpath->data (pkg-jsons node-opts)
                 "node_modules/react-select/package.json" :find)
-              {:package-json-resolution :nodejs})))
-    (is (= "react-select/creatable"
+              node-opts)))
+      (is (= "react-select/creatable"
             (node/path->main-name
               (.getAbsolutePath (io/file "node_modules/react-select/creatable/dist/react-select-creatable.cjs.js"))
-              (relpath->data (pkg-jsons)
+              (relpath->data (pkg-jsons node-opts)
                 "node_modules/react-select/creatable/package.json" :find)
-              {:package-json-resolution :nodejs})))
-    (is (nil? (node/path->main-name
-                (.getAbsolutePath (io/file "node_modules/react-select/dist/react-select.cjs.js"))
-                (relpath->data (pkg-jsons)
-                  "node_modules/react-select/package.json" :find)
-                {:package-json-resolution :webpack})))))
+              node-opts)))
+      (is (nil? (node/path->main-name
+                  (.getAbsolutePath (io/file "node_modules/react-select/dist/react-select.cjs.js"))
+                  (relpath->data (pkg-jsons webpack-opts)
+                    "node_modules/react-select/package.json" :find)
+                  webpack-opts))))))
+
+(deftest test-exports-with-choices
+  (install :yarn "@mantine/core" "7.0.2")
+  (testing "Verify that complex exports are handled"
+    (let [node-opts    {:package-json-resolution :nodejs}
+          webpack-opts {:package-json-resolution :webpack}]
+      (is (= "@mantine/core"
+             (node/path->main-name
+               (.getAbsolutePath (io/file "node_modules/@mantine/core/cjs/index.js"))
+               (relpath->data (pkg-jsons node-opts)
+                 "node_modules/@mantine/core/package.json" :find)
+               node-opts)))
+      (is (= "@mantine/core"
+             (node/path->main-name
+               (.getAbsolutePath (io/file "node_modules/@mantine/core/esm/index.mjs"))
+               (relpath->data (pkg-jsons webpack-opts)
+                 "node_modules/@mantine/core/package.json" :find)
+               webpack-opts))))))
 
 (comment
-
   (test/run-tests)
   (cleanup)
-
   )
