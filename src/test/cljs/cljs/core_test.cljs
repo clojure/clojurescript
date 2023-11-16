@@ -1998,3 +1998,47 @@
     (let [a #js {}]
       (set! a -x false)
       (is (false? (.-x a))))))
+
+(deftest test-cljs-3406
+  (testing "ISwap/IReset protocols"
+    (let [a (atom {:x 0})
+          c (reify
+              IDeref
+              (-deref [_]
+                (:x @a))
+              
+              ISwap
+              (-swap! [o f]
+                (:x (swap! a update :x f)))
+              (-swap! [o f x]
+                (:x (swap! a update :x f x)))
+              (-swap! [o f x y]
+                (:x (swap! a update :x f x y)))
+              (-swap! [o f x y zs]
+                (:x (swap! a #(apply update % :x f x y zs))))
+              
+              IReset
+              (-reset! [o new-value]
+                (:x (swap! a assoc :x new-value))))]
+      (is (= 0 @c))
+      (is (= 1 (swap! c inc)))
+      (is (= 1 @c))
+      (is (= 2 (swap! c + 1)))
+      (is (= 2 @c))
+      (is (= 5 (swap! c + 1 2)))
+      (is (= 5 @c))
+      (is (= 11 (swap! c + 1 2 3)))
+      (is (= 11 @c))
+      (is (= 0 (reset! c 0)))
+      (is (= 0 @c))
+      
+      (is (= [0 1] (swap-vals! c inc)))
+      (is (= 1 @c))
+      (is (= [1 2] (swap-vals! c + 1)))
+      (is (= 2 @c))
+      (is (= [2 5] (swap-vals! c + 1 2)))
+      (is (= 5 @c))
+      (is (= [5 11] (swap-vals! c + 1 2 3)))
+      (is (= 11 @c))
+      (is (= [11 0] (reset-vals! c 0)))
+      (is (= 0 @c)))))
