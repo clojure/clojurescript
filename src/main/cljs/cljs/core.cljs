@@ -1315,7 +1315,6 @@
          (= y (first more)))
        false)))
 
-;; EXPERIMENTAL: subject to change
 (deftype ES6Iterator [^:mutable s]
   Object
   (next [_]
@@ -1326,7 +1325,7 @@
       #js {:value nil :done true})))
 
 (defn es6-iterator
-  "EXPERIMENTAL: Return a ES2015 compatible iterator for coll."
+  "Return a ES2015+ compatible iterator for coll."
   [coll]
   (ES6Iterator. (seq coll)))
 
@@ -1341,7 +1340,7 @@
     _rest))
 
 (defn es6-iterator-seq
-  "EXPERIMENTAL: Given an ES2015 compatible iterator return a seq."
+  "Given an ES2015+ compatible iterator return a seq."
   [iter]
   (let [v (.next iter)]
     (if (.-done v)
@@ -6668,7 +6667,6 @@ reduces them without incurring seq initialization"
       (.next ext-map-iter)))
   (remove [_] (js/Error. "Unsupported operation")))
 
-;; EXPERIMENTAL: subject to change
 (deftype ES6EntriesIterator [^:mutable s]
   Object
   (next [_]
@@ -6681,7 +6679,6 @@ reduces them without incurring seq initialization"
 (defn es6-entries-iterator [coll]
   (ES6EntriesIterator. (seq coll)))
 
-;; EXPERIMENTAL: subject to change
 (deftype ES6SetEntriesIterator [^:mutable s]
   Object
   (next [_]
@@ -6964,8 +6961,6 @@ reduces them without incurring seq initialization"
     (pr-str* coll))
   (equiv [this other]
     (-equiv this other))
-
-  ;; EXPERIMENTAL: subject to change
   (keys [coll]
     (es6-iterator (keys coll)))
   (entries [coll]
@@ -8080,8 +8075,6 @@ reduces them without incurring seq initialization"
     (pr-str* coll))
   (equiv [this other]
     (-equiv this other))
-
-  ;; EXPERIMENTAL: subject to change
   (keys [coll]
     (es6-iterator (keys coll)))
   (entries [coll]
@@ -8954,8 +8947,6 @@ reduces them without incurring seq initialization"
     (pr-str* coll))
   (equiv [this other]
     (-equiv this other))
-
-  ;; EXPERIMENTAL: subject to change
   (keys [coll]
     (es6-iterator (keys coll)))
   (entries [coll]
@@ -9384,8 +9375,6 @@ reduces them without incurring seq initialization"
     (pr-str* coll))
   (equiv [this other]
     (-equiv this other))
-
-  ;; EXPERIMENTAL: subject to change
   (keys [coll]
     (es6-iterator (seq coll)))
   (entries [coll]
@@ -9545,8 +9534,6 @@ reduces them without incurring seq initialization"
     (pr-str* coll))
   (equiv [this other]
     (-equiv this other))
-
-  ;; EXPERIMENTAL: subject to change
   (keys [coll]
     (es6-iterator (seq coll)))
   (entries [coll]
