@@ -317,7 +317,7 @@
   [reader f]
   (let [frame (.source-log-frames ^SourceLoggingPushbackReader reader)
         ^StringBuilder buffer (:buffer @frame)
-        new-frame (assoc-in @frame [:offset] (.length buffer))]
+        new-frame (assoc @frame :offset (.length buffer))]
     (with-bindings {frame new-frame}
       (let [ret (f)]
         (if (instance? clojure.lang.IObj ret)

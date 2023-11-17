@@ -7,7 +7,7 @@ cd src/main/clojure/cljs
 
 DJSON_RELEASE="2.4.0"
 TRANSIT_RELEASE="1.0.329"
-TREADER_RELEASE="1.3.6"
+TREADER_RELEASE="1.3.7"
 
 rm -rf data.json
 git clone -b "v$DJSON_RELEASE" --depth 1 git@github.com:clojure/data.json.git
