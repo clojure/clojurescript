@@ -475,6 +475,17 @@
                ["Object.renderInline;"])
             res)))))
 
+(deftest test-cljs-3408
+  (testing "inheritance of JS Types is inferred"
+    (let [ws  (atom [])
+          res (infer-test-helper
+                {:forms '[(ns foo.core)
+                          (.querySelectorAll js/document "div")]
+                 :warnings ws
+                 :warn true
+                 :with-core? true})]
+      (is (empty? @ws)))))
+
 (comment
   (binding [ana/*cljs-ns* ana/*cljs-ns*]
     (ana/no-warn
