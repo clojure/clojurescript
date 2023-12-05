@@ -313,7 +313,11 @@
 (defmethod emit-constant* nil [x] (emits "null"))
 
 #?(:clj
-   (defmethod emit-constant* Long [x] (emits "(" x ")")))
+   (defmethod emit-constant* Long [x]
+     (if (or (> x 9007199254740991)
+             (< x -9007199254740991))
+       (emits "new cljs.core.Integer(null," x "n," (hash x) ")")
+       (emits "(" x ")"))))
 
 #?(:clj
    (defmethod emit-constant* Integer [x] (emits x))) ; reader puts Integers in metadata
@@ -345,7 +349,14 @@
    (defmethod emit-constant* BigDecimal [x] (emits (.doubleValue ^BigDecimal x))))
 
 #?(:clj
-   (defmethod emit-constant* clojure.lang.BigInt [x] (emits (.doubleValue ^clojure.lang.BigInt x))))
+   (defmethod emit-constant* clojure.lang.BigInt [x]
+     (if (or (> x 9007199254740991)
+             (< x -9007199254740991))
+       ;; not we don't set hash code at compile time because this is difficult to replicate
+       (emits "new cljs.core.Integer(null, " (.toString ^clojure.lang.BigInt x) "n, null)")
+       (emits "new cljs.core.Integer("
+         (.toString ^clojure.lang.BigInt x) ", " (.toString ^clojure.lang.BigInt x)
+         "n,  null)"))))
 
 (defmethod emit-constant* #?(:clj String :cljs js/String) [x]
   (emits (wrap-in-double-quotes (escape-string x))))

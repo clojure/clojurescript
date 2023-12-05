@@ -250,10 +250,20 @@
     (.isArray js/Array x)
     (instance? js/Array x)))
 
+(declare Integer)
+
 (defn ^boolean number?
-  "Returns true if x is a JavaScript number."
+  "Returns true if x is a JavaScript Number or BigInt"
   [x]
-  (cljs.core/number? x))
+  (or (cljs.core/js-number? x)
+      (cljs.core/bigint? x)
+      (instance? Integer x)))
+
+(defn ^boolean bigint?
+  "Returns true if x is a JavaScript Number or BigInt"
+  [x]
+  (or (cljs.core/bigint? x)
+      (instance? Integer x)))
 
 (defn not
   "Returns true if x is logical false, false otherwise."
@@ -341,8 +351,12 @@
 
 (if (and (exists? js/Symbol)
          (identical? (goog/typeOf js/Symbol) "function"))
-  (def ITER_SYMBOL (.-iterator js/Symbol))
-  (def ITER_SYMBOL "@@iterator"))
+  (do
+    (def ITER_SYMBOL (.-iterator js/Symbol))
+    (def TO_PRIM_SYMBOL (.-toPrimitive js/Symbol)))
+  (do
+    (def ITER_SYMBOL "@@iterator")
+    (def TO_PRIM_SYMBOL "@@toPrimitive")))
 
 (def ^{:jsdoc ["@enum {string}"]}
   CHAR_MAP
@@ -1011,41 +1025,42 @@
         h
         (add-to-string-hash-cache k)))))
 
+(defn- safe-value? [n]
+  (and (<= n js/Number.MAX_SAFE_INTEGER)
+       (>= n js/Number.MIN_SAFE_INTEGER)))
+
+(declare hash)
+
+(defn hash-bigint [n]
+  (if (safe-value? n)
+    (hash (js/Number. n))
+    (hash-string (.toString n 32))))
+
+(defn hash-number [n]
+  (if ^boolean (js/isFinite n)
+    (js-mod (Math/floor n) 2147483647)
+    (case n
+      ##Inf 2146435072
+      ##-Inf -1048576
+      2146959360)))
+
 (defn hash
   "Returns the hash code of its argument. Note this is the hash code
    consistent with =."
   [o]
   (cond
-    (implements? IHash o)
-    (bit-xor (-hash o) 0)
-
-    (number? o)
-    (if ^boolean (js/isFinite o)
-      (js-mod (Math/floor o) 2147483647)
-      (case o
-        ##Inf
-        2146435072
-        ##-Inf
-        -1048576
-        2146959360))
-
+    (implements? IHash o) (bit-xor (-hash o) 0)
+    (bigint? o) (hash-bigint o)
+    (number? o) (hash-number o)
     ;; note: mirrors Clojure's behavior on the JVM, where the hashCode is
     ;; 1231 for true and 1237 for false
     ;; http://docs.oracle.com/javase/7/docs/api/java/lang/Boolean.html#hashCode%28%29
     (true? o) 1231
-
     (false? o) 1237
-
-    (string? o)
-    (m3-hash-int (hash-string o))
-
-    (instance? js/Date o)
-    (bit-xor (.valueOf o) 0)
-
+    (string? o) (m3-hash-int (hash-string o))
+    (instance? js/Date o) (bit-xor (.valueOf o) 0)
     (nil? o) 0
-
-    :else
-    (bit-xor (-hash o) 0)))
+    :else (bit-xor (-hash o) 0)))
 
 (defn hash-combine [seed hash]
   ; a la boost
@@ -1083,6 +1098,45 @@
    :default (garray/defaultCompare (.-name a) (.-name b))))
 
 (declare get)
+
+;; wrapper type to simplify bigint integration
+;; Integer has two fields, if number is null then beyond the range of
+;; JS safe integral values. bigint is set for comparisons.
+(deftype Integer [number bigint ^:mutable __hash]
+  Object
+  (toString [_]
+    (.toString bigint))
+  (equiv [this other] (-equiv this other))
+
+  IEquiv
+  (-equiv [_ other]
+    (cond
+      (instance? Integer other) (if (nil? number)
+                                  (== bigint (.-bigint other))
+                                  (== number (.-number other)))
+      (js-number? other) (== number other)
+      (bigint? other) (== bigint other)
+      :else false))
+
+  IHash
+  (-hash [_]
+    (if (nil? __hash)
+      (if (nil? bigint)
+        (set! __hash (hash-number number))
+        (set! __hash (hash-bigint bigint))))
+    __hash)
+
+  IPrintWithWriter
+  (-pr-writer [_ writer _]
+    (-write writer (or number bigint))
+    (-write writer "N")))
+
+(unchecked-set (.-prototype Integer) TO_PRIM_SYMBOL
+  (fn [hint]
+    (this-as this
+      (if (nil? (.-number this))
+        (.-bigint this)
+        (.-number this)))))
 
 (deftype Symbol [ns name str ^:mutable _hash _meta]
   Object
@@ -1432,7 +1486,19 @@
 
 (extend-type number
   IEquiv
-  (-equiv [x o] (identical? x o)))
+  (-equiv [x o]
+    (cond
+      (bigint? o) (coercive-= x o)
+      (instance? Integer o) (-equiv o x)
+      :else (identical? x o))))
+
+(extend-type bigint
+  IEquiv
+  (-equiv [x o]
+    (cond
+      (js-number? o) (coercive-= x o)
+      (instance? Integer o) (-equiv o x)
+      :else (identical? x o))))
 
 (declare with-meta)
 
@@ -2312,7 +2378,7 @@ reduces them without incurring seq initialization"
   "Returns true if n is a JavaScript number with no decimal part."
   [n]
   (and (number? n)
-       (not ^boolean (js/isNaN n))
+       (not ^boolean (js/Number.isNaN n))
        (not (identical? n js/Infinity))
        (== (js/parseFloat n) (js/parseInt n 10))))
 
@@ -6693,7 +6759,7 @@ reduces them without incurring seq initialization"
 
 ;;; PersistentArrayMap
 
-(defn- array-index-of-nil? [arr]
+(defn- array-index-of-nil [arr]
   (let [len (alength arr)]
     (loop [i 0]
       (cond
@@ -6701,7 +6767,7 @@ reduces them without incurring seq initialization"
         (nil? (aget arr i)) i
         :else (recur (+ i 2))))))
 
-(defn- array-index-of-keyword? [arr k]
+(defn- array-index-of-keyword [arr k]
   (let [len  (alength arr)
         kstr (.-fqn k)]
     (loop [i 0]
@@ -6711,7 +6777,7 @@ reduces them without incurring seq initialization"
              (identical? kstr (.-fqn (aget arr i)))) i
         :else (recur (+ i 2))))))
 
-(defn- array-index-of-symbol? [arr k]
+(defn- array-index-of-symbol [arr k]
   (let [len  (alength arr)
         kstr (.-str k)]
     (loop [i 0]
@@ -6719,6 +6785,17 @@ reduces them without incurring seq initialization"
         (<= len i) -1
         (and (symbol? (aget arr i))
              (identical? kstr (.-str (aget arr i)))) i
+        :else (recur (+ i 2))))))
+
+(defn- equal-number? [x y]
+  (and (number? x) (number? y) (-equiv x y)))
+
+(defn- array-index-of-number [arr k]
+  (let [len (alength arr)]
+    (loop [i 0]
+      (cond
+        (<= len i) -1
+        (equal-number? k (aget arr i)) i
         :else (recur (+ i 2))))))
 
 (defn- array-index-of-identical? [arr k]
@@ -6729,7 +6806,7 @@ reduces them without incurring seq initialization"
         (identical? k (aget arr i)) i
         :else (recur (+ i 2))))))
 
-(defn- array-index-of-equiv? [arr k]
+(defn- array-index-of-equiv [arr k]
   (let [len (alength arr)]
     (loop [i 0]
       (cond
@@ -6739,17 +6816,20 @@ reduces them without incurring seq initialization"
 
 (defn array-index-of [arr k]
   (cond
-    (keyword? k) (array-index-of-keyword? arr k)
+    (keyword? k) (array-index-of-keyword arr k)
 
-    (or (string? k) (number? k))
+    (string? k)
     (array-index-of-identical? arr k)
 
-    (symbol? k) (array-index-of-symbol? arr k)
+    (number? k)
+    (array-index-of-number arr k)
+
+    (symbol? k) (array-index-of-symbol arr k)
 
     (nil? k)
-    (array-index-of-nil? arr)
+    (array-index-of-nil arr)
 
-    :else (array-index-of-equiv? arr k)))
+    :else (array-index-of-equiv arr k)))
 
 (defn- array-map-index-of [m k]
   (array-index-of (.-arr m) k))
@@ -10506,10 +10586,10 @@ reduces them without incurring seq initialization"
         (number? obj)
         (-write writer
           (cond
-            ^boolean (js/isNaN obj) "##NaN"
+            ^boolean (js/Number.isNaN obj) "##NaN"
             (identical? obj js/Number.POSITIVE_INFINITY) "##Inf"
             (identical? obj js/Number.NEGATIVE_INFINITY) "##-Inf"
-            :else (str obj)))
+            :else (str obj (when (bigint? obj) "N"))))
 
         (object? obj)
         (do
@@ -12208,7 +12288,7 @@ reduces them without incurring seq initialization"
 (defn ^boolean NaN?
   "Returns true if num is NaN, else false"
   [val]
-  (js/isNaN val))
+  (js/Number.isNaN val))
 
 (defn ^:private parsing-err
   "Construct message for parsing for non-string parsing error"

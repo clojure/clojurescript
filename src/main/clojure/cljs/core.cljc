@@ -1007,8 +1007,11 @@
                `(let [c# ~c x# ~x]
                   (~'js* "(~{} instanceof ~{})" x# c#)))))
 
-(core/defmacro number? [x]
+(core/defmacro js-number? [x]
   (bool-expr (core/list 'js* "typeof ~{} === 'number'" x)))
+
+(core/defmacro bigint? [x]
+  (bool-expr (core/list 'js* "typeof ~{} === 'bigint'" x)))
 
 (core/defmacro symbol? [x]
   (bool-expr `(instance? Symbol ~x)))
@@ -1159,7 +1162,7 @@
 
 (core/defmacro ^::ana/numeric ==
   ([x] true)
-  ([x y] (bool-expr (core/list 'js* "(~{} === ~{})" x y)))
+  ([x y] (bool-expr (core/list 'js* "(~{} == ~{})" x y)))
   ([x y & more] `(and (== ~x ~y) (== ~y ~@more))))
 
 (core/defmacro ^::ana/numeric dec [x]
