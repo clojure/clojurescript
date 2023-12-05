@@ -73,7 +73,9 @@
             {:tag (get-tag ty)}
             (if (or (.isConstructor info) (.isInterface info))
               (let [qname (symbol (.. node getFirstChild getQualifiedName))]
-                (cond-> {:tag 'Function}
+                (cond-> (merge {:tag 'Function}
+                          (when (.hasBaseType info)
+                            {:super (get-tag (.getBaseType info))}))
                   (.isConstructor info) (merge {:ctor qname})
                   (.isInterface info) (merge {:iface qname})))
               (if (or (.hasReturnType info)

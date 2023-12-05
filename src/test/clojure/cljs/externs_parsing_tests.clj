@@ -10,7 +10,8 @@
   (:require [cljs.closure :as closure]
             [cljs.externs :as externs]
             [clojure.java.io :as io]
-            [clojure.test :as test :refer [deftest is]]))
+            [clojure.test :as test :refer [deftest is]])
+  (:import [com.google.javascript.jscomp CommandLineRunner]))
 
 (deftest cljs-3121
   (let [externs (externs/parse-externs
@@ -33,6 +34,16 @@
   (let [ns (externs/analyze-goog-file "goog/object/object.js")]
     (is (= 'any (get-in ns [:defs 'get :ret-tag])))
     (is (= 'array (get-in ns [:defs 'getKeys :ret-tag])))))
+
+(deftest test-parse-super
+  (let [info (->
+               (filter
+                 (fn [s]
+                   (= "externs.zip//w3c_dom2.js" (.getName s)))
+                 (CommandLineRunner/getDefaultExterns))
+               first externs/parse-externs externs/index-externs
+               (find 'HTMLDocument) first meta)]
+    (is (= 'Document (:super info)))))
 
 (comment
 
