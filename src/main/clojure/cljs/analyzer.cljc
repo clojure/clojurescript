@@ -1048,7 +1048,10 @@
                xmeta (meta x')]
            (if (and (= 'Function (:tag xmeta)) (:ctor xmeta))
              (or (has-extern?* (into '[prototype] (next pre)) externs' top)
-                 (has-extern?* (next pre) externs' top))
+                 (has-extern?* (next pre) externs' top)
+                 ;; check base type if it exists
+                 (when-let [super (:super xmeta)]
+                   (has-extern?* (into [super] (next pre)) externs top)))
              (recur (next pre) externs' top))))))))
 
 (defn has-extern?
