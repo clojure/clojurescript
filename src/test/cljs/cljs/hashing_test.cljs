@@ -93,3 +93,8 @@
 (deftest test-cljs-1818
   (is (= (hash true) 1231))
   (is (= (hash false) 1237)))
+
+(deftest test-cljs-3410
+  (testing "Small floats should not hash the same"
+    (is (not= (hash-double -0.32553251) (hash-double -0.0000032553251)))
+    (is (not= (hash -0.32553251) (hash -0.0000032553251)))))
