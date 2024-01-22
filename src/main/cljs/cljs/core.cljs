@@ -966,8 +966,8 @@
 (defn hash-double [f]
   (let [arr  (doto (js/Float64Array. 1) (aset 0 f))
         buf  (.-buffer arr)
-        low  (.getInt32 (js/DataView. buf 0 4))
-        high (.getInt32 (js/DataView. buf 4 4))]
+        high (.getInt32 (js/DataView. buf 0 4))
+        low  (.getInt32 (js/DataView. buf 4 4))]
     (hash-long high low)))
 
 (defn ^number m3-hash-unencoded-chars [in]
@@ -1031,7 +1031,7 @@
 
     (number? o)
     (if ^boolean (js/isFinite o)
-      (if-not (.isInteger js/Number o)
+      (if-not ^boolean (.isInteger js/Number o)
         (hash-double o)
         (js-mod (Math/floor o) 2147483647))
       (case o
