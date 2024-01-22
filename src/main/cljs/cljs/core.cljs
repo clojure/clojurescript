@@ -960,6 +960,16 @@
           h1 (m3-mix-H1 m3-seed k1)]
       (m3-fmix h1 4))))
 
+(defn hash-long [high low]
+  (bit-xor high low))
+
+(defn hash-double [f]
+  (let [arr  (doto (js/Float64Array. 1) (aset 0 f))
+        buf  (.-buffer arr)
+        high (.getInt32 (js/DataView. buf 0 4))
+        low  (.getInt32 (js/DataView. buf 4 4))]
+    (hash-long high low)))
+
 (defn ^number m3-hash-unencoded-chars [in]
   (let [h1 (loop [i 1 h1 m3-seed]
              (if (< i (.-length in))
@@ -1021,7 +1031,9 @@
 
     (number? o)
     (if ^boolean (js/isFinite o)
-      (js-mod (Math/floor o) 2147483647)
+      (if-not ^boolean (.isSafeInteger js/Number o)
+        (hash-double o)
+        (js-mod (Math/floor o) 2147483647))
       (case o
         ##Inf
         2146435072
