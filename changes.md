@@ -1,3 +1,36 @@
+## 1.11.132
+
+### Fixes
+* CLJS-3410: JavaScript double values should not hash to the same result
+* CLJS-3381: Invokable JS namespaces used as constructors not hinted properly
+* CLJS-3395: `(set! a -x false)` doesn't work
+* CLJS-3399: :as-alias does not work with symbols
+* CLJS-3401: dedupe '+ and '_PLUS symbols with :optimize-constants
+* CLJS-3400: macroexpand does not expand and and or without args correctly
+* CLJS-3398: Docstring of with-redefs should mention usage of ^:dynamic in production
+* CLJS-3386: defn varargs argument should be nil when no varargs are passed
+* CLJS-3384: get-in should not unreduce values.
+
+### Changes
+* CLJS-3378: Change default :language-in to :ecmascript-next
+* CLJS-3385: Extend empty? to counted? colls that arent seqable, such as transients
+* CLJS-3327 Add :node-modules-dirs configuration
+* CLJS-3391: add cljs.test/run-test
+* CLJS-3369: Speed up random-uuid by generating 4 digits at a time
+* CLJS-3014: Promote Error->map to be a core fn
+* CLJS-3394: Add ECMASCRIPT options for 2018-2021
+* CLJS-2268: Make clojure.string/escape consistent with Clojure
+* Bump closure lib to 2023 release
+* CLJS-3407: bump tools.reader to 1.3.7
+* remove EXPERIMENTAL from ES6 iterator support
+* CLJS-3406 implement reset-vals! and swap-vals! through protocol
+* CLJS-3363: reduce-kv on seq of map entries
+* CLJS-3393: Efficient drop, partition for persistent/algo colls
+* CLJS-3408: Handle @extends in externs
+* CLJS-3392: datafy support for js/Error and ExceptionInfo
+* CLJS-3379: Add support for node_modules with .cjs extension
+* CLJS-3387: Browser repl unable to serve wasm files
+
 ## 1.11.60
 
 ### Fixes
