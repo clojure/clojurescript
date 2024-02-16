@@ -25,7 +25,7 @@ CLJS_SCRIPT_MVN_OPTS=${CLJS_SCRIPT_MVN_OPTS:-""}
 # find the v0.0 tag and will always return the total number of commits (even
 # if the tag is v0.0.1).
 MAJOR="1"
-MINOR="11"
+MINOR="12"
 REVISION=`git --no-replace-objects describe --match v$MAJOR.$MINOR`
 
 # Extract the version number from the string.
