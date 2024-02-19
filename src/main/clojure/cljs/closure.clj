@@ -1462,7 +1462,7 @@
             (.sortInputsByDeps input closure-compiler))
         _ (when (or ana/*verbose* (:verbose opts))
             (util/debug-prn "Applying optimizations" (:optimizations opts) "to" (count sources) "sources"))
-        ^Result result (.compileModules closure-compiler externs inputs compiler-options)
+        ^Result result (.compileChunks closure-compiler externs inputs compiler-options)
         ^SourceMap source-map (when (:source-map opts)
                                 (.getSourceMap closure-compiler))]
     (assert (or (nil? (:source-map opts)) source-map)
