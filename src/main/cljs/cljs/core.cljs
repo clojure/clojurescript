@@ -7828,15 +7828,13 @@ reduces them without incurring seq initialization"
 
   (inode-lookup [inode shift hash key not-found]
     (let [idx (hash-collision-node-find-index arr cnt key)]
-      (cond (< idx 0)              not-found
-            (key-test key (aget arr idx)) (aget arr (inc idx))
-            :else                  not-found)))
+      (cond (< idx 0) not-found
+            :else     (aget arr (inc idx)))))
 
   (inode-find [inode shift hash key not-found]
     (let [idx (hash-collision-node-find-index arr cnt key)]
-      (cond (< idx 0)              not-found
-            (key-test key (aget arr idx)) (MapEntry. (aget arr idx) (aget arr (inc idx)) nil)
-            :else                  not-found)))
+      (cond (< idx 0) not-found
+            :else     (MapEntry. (aget arr idx) (aget arr (inc idx)) nil))))
 
   (inode-seq [inode]
     (create-inode-seq arr))
