@@ -1493,6 +1493,13 @@
             (:import goog))]))
     (is (= {} (get-in @cenv [::ana/namespaces 'test.foo :imports])))))
 
+(deftest test-cljs-3320
+  (let [ws (atom [])]
+    (ana/with-warning-handlers [(collecting-warning-handler ws)]
+      (binding [ana/*cljs-ns* 'cljs.user]
+        (analyze ns-env '(ns cljs3320.core (:require [cljs.js :as js])))))
+    (is (string/includes? (first @ws) "the alias name js is reserved for JavaScript interop"))))
+
 (deftest test-cljs-3371
   (let [ws (atom [])]
     (ana/with-warning-handlers [(collecting-warning-handler ws)]
