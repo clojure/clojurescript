@@ -352,15 +352,13 @@
         ;; name is not actually used by Closure in :modules case,
         ;; but we need to provide _something_ for Closure to not
         ;; complain
-        (set! (.sourceMapOutputPath compiler-options)
-              (str (io/file (util/output-directory opts)
-                            "cljs_modules.map")))
-        (set! (.sourceMapOutputPath compiler-options)
-              (:source-map opts)))
-      (set! (.sourceMapDetailLevel compiler-options)
-            SourceMap$DetailLevel/ALL)
-      (set! (.sourceMapFormat compiler-options)
-            SourceMap$Format/V3))
+        (.setSourceMapOutputPath compiler-options
+          (str (io/file (util/output-directory opts)
+                 "cljs_modules.map")))
+        (.setSourceMapOutputPath compiler-options
+          (:source-map opts)))
+      (.setSourceMapDetailLevel compiler-options SourceMap$DetailLevel/ALL)
+      (.setSourceMapFormat compiler-options SourceMap$Format/V3))
     (do
       (.setOptionsForCompilationLevel level compiler-options)
       (set-options opts compiler-options)

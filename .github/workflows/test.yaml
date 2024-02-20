@@ -9,6 +9,11 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '11'
+
       - uses: DeLaGuardo/setup-clojure@3.1
         with:
           tools-deps: '1.10.1.763'
@@ -61,6 +66,11 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '11'
+
       - uses: DeLaGuardo/setup-clojure@3.5
         with:
           cli: '1.10.1.763'
@@ -81,6 +91,11 @@ jobs:
     runs-on: macos-12
     steps:
       - uses: actions/checkout@v2
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '11'
 
       - uses: DeLaGuardo/setup-clojure@3.1
         with:
@@ -121,6 +136,11 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '11'
+
       - uses: DeLaGuardo/setup-clojure@3.1
         with:
           tools-deps: '1.10.1.763'
@@ -160,6 +180,11 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '11'
+
       - uses: DeLaGuardo/setup-clojure@3.1
         with:
           tools-deps: '1.10.1.763'
@@ -194,6 +219,11 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '11'
+
       - uses: DeLaGuardo/setup-clojure@3.5
         with:
           cli: '1.10.1.763'
@@ -210,6 +240,11 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 0
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '11'
 
       - uses: DeLaGuardo/setup-clojure@3.1
         with:
