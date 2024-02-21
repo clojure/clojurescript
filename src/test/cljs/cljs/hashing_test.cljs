@@ -102,3 +102,11 @@
     (is (= (hash 0.5) (hash 0.5)))
     (is (= (hash -0.32553251) (hash -0.32553251)))
     (is (= (hash -0.0000032553251) (hash -0.0000032553251)))))
+
+(deftest test-cljs-3290
+  (testing "JS Symbol hash"
+    (let [s (.for js/Symbol "foo")]
+      (is (number? (hash s)))
+      (is (== (hash s) (hash s)))
+      (let [m {s 2}]
+        (is (== 2 (get m s)))))))

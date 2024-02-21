@@ -1458,6 +1458,11 @@
   (-hash [o]
     (goog/getUid o)))
 
+(extend-type symbol
+  IHash
+  (-hash [o]
+    (hash (.toString o))))
+
 ;;this is primitive because & emits call to array-seq
 (defn inc
   "Returns a number one greater than num."
