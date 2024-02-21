@@ -108,5 +108,6 @@
     (let [s (.for js/Symbol "foo")]
       (is (number? (hash s)))
       (is (== (hash s) (hash s)))
+      (is (not (== (hash s) (hash (.for js/Symbol "bar")))))
       (let [m {s 2}]
         (is (== 2 (get m s)))))))
