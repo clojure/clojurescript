@@ -2006,7 +2006,7 @@
               IDeref
               (-deref [_]
                 (:x @a))
-              
+
               ISwap
               (-swap! [o f]
                 (:x (swap! a update :x f)))
@@ -2016,7 +2016,7 @@
                 (:x (swap! a update :x f x y)))
               (-swap! [o f x y zs]
                 (:x (swap! a #(apply update % :x f x y zs))))
-              
+
               IReset
               (-reset! [o new-value]
                 (:x (swap! a assoc :x new-value))))]
@@ -2031,7 +2031,7 @@
       (is (= 11 @c))
       (is (= 0 (reset! c 0)))
       (is (= 0 @c))
-      
+
       (is (= [0 1] (swap-vals! c inc)))
       (is (= 1 @c))
       (is (= [1 2] (swap-vals! c + 1)))
@@ -2042,3 +2042,15 @@
       (is (= 11 @c))
       (is (= [11 0] (reset-vals! c 0)))
       (is (= 0 @c)))))
+
+(defn cljs-3411-function
+  "this function adds two numbers"
+  {:test #(do
+            (assert (= (cljs-3411-function 2 3) 5))
+            (assert (= (cljs-3411-function 4 4) 8)))}
+  ([x y] (+ x y)))
+
+(deftest cljs-3411
+  (testing "cljs.core/test respects docstring"
+    (is (= :ok (test cljs-3411)))
+    (is (= :ok (test #'cljs-3411)))))

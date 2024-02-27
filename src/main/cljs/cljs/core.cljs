@@ -11886,10 +11886,17 @@ reduces them without incurring seq initialization"
     x))
 
 (defn test
-  "test [v] finds fn at key :test in var metadata and calls it,
-  presuming failure will throw exception"
+  "test [v] - if var, finds fn at key :test in var metadata, if function, finds
+  special test property. Calls it, presuming failure will throw exception.
+
+  Examples:
+
+  (test my-fn) ;; :ok
+  (test #'my-fn) ;; :ok"
   [v]
-  (let [f (.-cljs$lang$test v)]
+  (let [f (if (instance? Var v)
+            (-> v meta :test)
+            (some-> v .-cljs$lang$test))]
     (if f
       (do (f) :ok)
       :no-test)))
