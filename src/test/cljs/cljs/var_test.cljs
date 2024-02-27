@@ -7,7 +7,7 @@
 ;; You must not remove this notice, or any other, from this software.
 
 (ns cljs.var-test
-  (:require [cljs.test :refer-macros [deftest is]]))
+  (:require [cljs.test :refer-macros [deftest is testing]]))
 
 (defn cljs-3411-function
   "this function adds two numbers"
@@ -18,6 +18,5 @@
 
 (deftest cljs-3411
   (testing "cljs.core/test respects docstring"
-    (is (= :ok (test cljs-3411)))
-    ;(is (= :ok (test #'cljs-3411)))
-            ))
+    (is (= :ok (test cljs-3411-function)))
+    (is (= :ok (test #'cljs-3411-function)))))
