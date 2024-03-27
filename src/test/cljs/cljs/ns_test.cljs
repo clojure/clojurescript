@@ -47,4 +47,4 @@
 
 (deftest test-cljs-3399
   (is (= ::fake/foo :fake.ns/foo)
-      (= `fake/foo `fake.ns/foo)))
+  (is (= `fake/foo 'fake.ns/foo))))
