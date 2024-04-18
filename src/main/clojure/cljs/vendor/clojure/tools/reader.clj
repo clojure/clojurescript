@@ -27,6 +27,8 @@
            java.util.regex.Pattern
            (java.util List LinkedList)))
 
+(set! *warn-on-reflection* true)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; helpers
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -759,7 +761,7 @@
                   (ns-name *ns*)
 
                   (= \: (first token))
-                  (some-> token (subs 1) parse-symbol second' symbol resolve-ns ns-name)
+                  (some-> token (subs 1) parse-symbol second' symbol resolve-ns)
 
                   :else
                   (some-> token parse-symbol second'))]
@@ -1022,12 +1024,12 @@
   ([] (read+string (source-logging-push-back-reader *in*)))
   ([stream] (read+string stream true nil))
   ([^SourceLoggingPushbackReader stream eof-error? eof-value]
-   (let [^StringBuilder buf (doto (:buffer @(.source-log-frames stream)) (.setLength 0))
+   (let [^StringBuilder buf (doto ^StringBuilder (:buffer @(.source-log-frames stream)) (.setLength 0))
          o (log-source stream (read stream eof-error? eof-value))
          s (.trim (str buf))]
      [o s]))
   ([opts ^SourceLoggingPushbackReader stream]
-   (let [^StringBuilder buf (doto (:buffer @(.source-log-frames stream)) (.setLength 0))
+   (let [^StringBuilder buf (doto ^StringBuilder (:buffer @(.source-log-frames stream)) (.setLength 0))
          o (log-source stream (read opts stream))
          s (.trim (str buf))]
      [o s])))
