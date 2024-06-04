@@ -8,9 +8,10 @@
 
 (ns cljs.macro-test
   (:refer-clojure :exclude [==])
-  (:require [cljs.test :refer-macros [deftest is]])
+  (:require [cljs.test :as test :refer-macros [deftest is]])
   (:use-macros [cljs.macro-test.macros :only [== sm-cljs-3027]])
-  (:require-macros [cljs.macro-test.cljs2852]))
+  (:require-macros [cljs.macro-test.cljs2852]
+                   [single-seg-macros]))
 
 (deftest test-macros
   (is (= (== 1 1) 2)))
@@ -31,3 +32,6 @@
 
 (deftest test-cljs-3027
   (is (= {"a" "b"} (sm-cljs-3027))))
+
+(deftest test-cljs-3413
+  (is (= 5 (single-seg-macros/test-macro 2 3))))
