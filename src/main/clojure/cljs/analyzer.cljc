@@ -3957,6 +3957,7 @@
      :else
      (or (some-> env :ns :require-macros (get (symbol nstr)) #?(:clj  find-ns
                                                                 :cljs find-macros-ns))
+       ;; single segment namespace case
        #?(:clj  (find-ns (symbol nstr))
           :cljs (find-macros-ns (symbol nstr)))))))
 
