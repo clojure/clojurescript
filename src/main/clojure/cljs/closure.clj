@@ -3081,6 +3081,10 @@
                                     [(-compile (io/resource "cljs/nodejs.cljs")
                                        (assoc opts :output-file "nodejs.js"))]))
                                 deps/dependency-order
+                                ;; NOTE: :preloads are compiled *after*
+                                ;; user specified inputs. Thus user code cannot
+                                ;; depend on anything (i.e. fn/macros) defined
+                                ;; in preloads via global access pattern
                                 (add-preloads opts)
                                 remove-goog-base
                                 add-goog-base
