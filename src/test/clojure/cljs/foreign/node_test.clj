@@ -11,8 +11,8 @@
   ([f]
    (test-util/delete-node-modules)
    (doseq [f (map io/file
-               ["package.json" "package-lock.json" "yarn.lock"
-               "yarn-error.log"])]
+               ["package.json" "package-lock.json" "bun.lockb"
+                "pnpm-lock.yaml" "yarn.lock" "yarn-error.log"])]
      (when (.exists f)
        (io/delete-file f)))
    (f)))
@@ -21,7 +21,7 @@
   ([lib version]
    (install :npm lib version))
   ([cmd lib version]
-   (let [action ({:npm "install" :yarn "add"} cmd)]
+   (let [action ({:npm "install" :bun "add" :pnpm "add" :yarn "add"} cmd)]
      (sh/sh (name cmd) action (str lib "@" version)))))
 
 (test/use-fixtures :once cleanup)

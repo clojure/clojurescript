@@ -638,7 +638,7 @@ generic - the combinations must be explicitly supported"}
                                 :doc (str "Set the output directory to use. If "
                                        "supplied, cljsc_opts.edn in that directory "
                                        "will be used to set ClojureScript compiler "
-                                       "options") }
+                                       "options")}
       ["-w" "--watch"]         {:group ::compile :fn watch-opt
                                 :arg "paths"
                                 :doc (str "Continuously build, only effective with the "
@@ -649,7 +649,7 @@ generic - the combinations must be explicitly supported"}
                                 :doc "Set the output compiled file"}
       ["--deps-cmd"]           {:group ::compile :fn deps-cmd-opt
                                 :arg "string"
-                                :doc "Set the node dependency manager. Only npm or yarn supported"}
+                                :doc "Set the node dependency manager. Only npm, bun, pnpm, and yarn are supported"}
       ["-O" "--optimizations"] {:group ::compile :fn optimize-opt
                                 :arg "level"
                                 :doc
@@ -661,7 +661,7 @@ generic - the combinations must be explicitly supported"}
                                 :doc
                                 (str "The JavaScript target. Configures environment bootstrap and "
                                      "defaults to browser. Supported values: node or nodejs, "
-                                     "webworker, bundle, none") }
+                                     "webworker, bundle, none")}
       ["-ro" "--repl-opts"]    {:group ::main&compile :fn repl-env-opts-opt
                                 :arg "edn"
                                 :doc (str "Options to configure the repl-env, can be an EDN string or "
