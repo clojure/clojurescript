@@ -599,7 +599,7 @@ present"
 (def ^{:doc "Default commands for ClojureScript REPLs. :groups are to support
 printing organized output for --help. a :main option must come at the end, they
 specify things like running a -main fn, compile, repl, or web serving. Sometimes
-:main options can use be used together (i.e. --compile --repl), but this is not
+:main options can be used together (i.e. --compile --repl), but this is not
 generic - the combinations must be explicitly supported"}
   default-commands
   (add-commands
