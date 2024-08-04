@@ -435,7 +435,8 @@ present"
 (defn- main-opt
   "Call the -main function from a namespace with string arguments from
   the command line. Can be customized with ::cljs.cli/main fn entry in
-  the map returned by cljs.repl/IReplEnvOptions."
+  the map returned by cljs.repl/IReplEnvOptions. For default behavior
+  see default-main."
   [repl-env [_ ns & args] cfg]
   ((::main (repl/repl-options (repl-env)) default-main)
     repl-env (merge cfg {:main ns :args args})))
@@ -453,7 +454,8 @@ present"
 (defn- script-opt
   "If no main option was given (compile, repl, main), handles running in
   'script' mode. Can be customized with ::cljs.cli/main fn entry in
-  the map returned by cljs.repl/IReplEnvOptions."
+  the map returned by cljs.repl/IReplEnvOptions. For default behavior see
+  default-main."
   [repl-env [path & args] cfg]
   ((::main (repl/repl-options (repl-env)) default-main)
     repl-env (merge cfg {:script path :args args})))
@@ -545,7 +547,8 @@ present"
 
 (defn- compile-opt
   "Handle the compile flag. Custom compilation is possible by providing
-  :cljs.cli/compile fn in the map returned by cljs.repl/IReplEnvOptions."
+  :cljs.cli/compile fn in the map returned by cljs.repl/IReplEnvOptions.
+  For default behavior see default-compile."
   [repl-env [_ ns & args] cfg]
   ((::compile (repl/-repl-options (repl-env)) default-compile)
     repl-env (merge cfg {:args args :ns ns})))
@@ -561,7 +564,7 @@ present"
       keys set)))
 
 (defn get-flags-set
-  "See a get-options, this just provides a better name."
+  "See get-options, this just provides a better name."
   [commands phase]
   (get-options commands phase))
 
