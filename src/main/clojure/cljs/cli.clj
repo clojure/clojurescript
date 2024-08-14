@@ -341,6 +341,8 @@ present"
           inits)))))
 
 (defn default-main
+  "Default handler for the --main flag. Will start REPL, invoke -main with the
+  supplied arguments."
   [repl-env {:keys [main script args repl-env-options options inits] :as cfg}]
   (let [opts   (cond-> options
                  (not (:output-dir options))
@@ -432,7 +434,9 @@ present"
 
 (defn- main-opt
   "Call the -main function from a namespace with string arguments from
-  the command line."
+  the command line. Can be customized with ::cljs.cli/main fn entry in
+  the map returned by cljs.repl/IReplEnvOptions. For default behavior
+  see default-main."
   [repl-env [_ ns & args] cfg]
   ((::main (repl/repl-options (repl-env)) default-main)
     repl-env (merge cfg {:main ns :args args})))
@@ -448,6 +452,10 @@ present"
   (println (help-str repl-env)))
 
 (defn- script-opt
+  "If no main option was given (compile, repl, main), handles running in
+  'script' mode. Can be customized with ::cljs.cli/main fn entry in
+  the map returned by cljs.repl/IReplEnvOptions. For default behavior see
+  default-main."
   [repl-env [path & args] cfg]
   ((::main (repl/repl-options (repl-env)) default-main)
     repl-env (merge cfg {:script path :args args})))
@@ -538,17 +546,30 @@ present"
         (serve-opt repl-env args cfg)))))
 
 (defn- compile-opt
+  "Handle the compile flag. Custom compilation is possible by providing
+  :cljs.cli/compile fn in the map returned by cljs.repl/IReplEnvOptions.
+  For default behavior see default-compile."
   [repl-env [_ ns & args] cfg]
   ((::compile (repl/-repl-options (repl-env)) default-compile)
     repl-env (merge cfg {:args args :ns ns})))
 
-(defn get-options [commands k]
-  (if (= :all k)
+(defn get-options
+  "Given a commands map and a phase (:init or :main), return all flags
+  which can be handled as a set. If phase is :all will return the entire
+  flag set (:init + :main)."
+  [commands phase]
+  (if (= :all phase)
     (into (get-options commands :main) (get-options commands :init))
-    (-> (get commands (keyword (str (name k) "-dispatch")))
+    (-> (get commands (keyword (str (name phase) "-dispatch")))
       keys set)))
 
-(defn bool-init-options [commands]
+(defn get-flags-set
+  "See get-options, this just provides a better name."
+  [commands phase]
+  (get-options commands phase))
+
+(defn bool-init-options
+  [commands]
   (reduce
     (fn [ret [flags config]]
       (cond-> ret
@@ -556,20 +577,26 @@ present"
         (into flags)))
     #{} (:init commands)))
 
-(defn dispatch? [commands k opt]
-  (contains? (get-options commands k) opt))
+(defn dispatch?
+  "Given a commands map, a phase (:init or :main) and a command line flag,
+  return true if the flag has a handler."
+  [commands phase opt]
+  (contains? (get-flags-set commands phase) opt))
 
 (defn add-commands
+  "Given commands map (see below), create a commands map with :init-dispatch
+  and :main-dispatch keys where short and long arguments are mapped individually
+  to their processing fn."
   ([commands]
     (add-commands {:main-dispatch nil :init-dispatch nil} commands))
   ([commands {:keys [groups main init]}]
-   (letfn [(merge-dispatch [st k options]
-             (update-in st [k]
+   (letfn [(merge-dispatch [commands dispatch-key options]
+             (update-in commands [dispatch-key]
                (fn [m]
                  (reduce
-                   (fn [ret [cs csm]]
+                   (fn [ret [flag-names flag-config]]
                      (merge ret
-                       (zipmap cs (repeat (:fn csm)))))
+                       (zipmap flag-names (repeat (:fn flag-config)))))
                    m options))))]
      (-> commands
        (update-in [:groups] merge groups)
@@ -578,7 +605,12 @@ present"
        (merge-dispatch :init-dispatch init)
        (merge-dispatch :main-dispatch main)))))
 
-(def default-commands
+(def ^{:doc "Default commands for ClojureScript REPLs. :groups are to support
+printing organized output for --help. a :main option must come at the end, they
+specify things like running a -main fn, compile, repl, or web serving. Sometimes
+:main options can be used together (i.e. --compile --repl), but this is not
+generic - the combinations must be explicitly supported"}
+  default-commands
   (add-commands
     {:groups {::main&compile {:desc "init options"
                               :pseudos
@@ -662,9 +694,14 @@ present"
       ["-h" "--help" "-?"]     {:fn help-opt
                                 :doc "Print this help message and exit"}}}))
 
-(defn normalize [commands args]
+(defn normalize
+  "Given a commands map (flag + value -> option processor fn) and the sequence of
+  command line arguments passed to the process, normalize it. Boolean flags don't
+  need to specify anything, insert the implied trues and return the normalized
+  command line arguments."
+  [commands args]
   (letfn [(normalize* [args*]
-            (if (not (contains? (get-options commands :main) (first args*)))
+            (if (not (contains? (get-flags-set commands :main) (first args*)))
               (let [pred (complement (bool-init-options commands))
                     [pre post] ((juxt #(take-while pred %)
                                   #(drop-while pred %))
@@ -685,7 +722,11 @@ present"
         args'
         (recur args' (normalize* args'))))))
 
-(defn merged-commands [repl-env]
+(defn merged-commands
+  "Given a repl environment combine the default commands with the custom
+  REPL commands. Commands are a mapping from a command line argument
+  (flag + value) to a function to handle that particular flag + value."
+  [repl-env]
   (add-commands default-commands
     (::commands (repl/repl-options (repl-env)))))
 
