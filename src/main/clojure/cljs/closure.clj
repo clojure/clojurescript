@@ -252,7 +252,7 @@
     :ecmascript5-strict    CompilerOptions$LanguageMode/ECMASCRIPT5_STRICT
     :ecmascript6           CompilerOptions$LanguageMode/ECMASCRIPT_2015 ;; (deprecated and remapped)
     :ecmascript6-strict    CompilerOptions$LanguageMode/ECMASCRIPT_2015 ;; (deprecated and remapped)
-    :ecmasscript8          CompilerOptions$LanguageMode/ECMASCRIPT_2017
+    :ecmascript8          CompilerOptions$LanguageMode/ECMASCRIPT_2017
     :ecmascript-2015       CompilerOptions$LanguageMode/ECMASCRIPT_2015
     :ecmascript-2016       CompilerOptions$LanguageMode/ECMASCRIPT_2016
     :ecmascript-2017       CompilerOptions$LanguageMode/ECMASCRIPT_2017
