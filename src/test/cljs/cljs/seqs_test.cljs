@@ -443,7 +443,7 @@
     (partition 5 [1 2 3]) ()
 
     (partition 4 4 [0 0 0] (range 10)) '((0 1 2 3) (4 5 6 7) (8 9 0 0))
-             
+
     (partition -1 [1 2 3]) ()
     (partition -2 [1 2 3]) ())
 
@@ -523,3 +523,9 @@
                     :initk initk)))]
       (= (into [] (src))
         (into [] (seq (src)))))))
+
+(deftest cljs-3419-seq-js-iterable
+  (let [js-set (js/Set. #js [1 2 3 4])
+        js-map (js/Map. #js [#js [1 2] #js [3 4]])]
+    (is (seqable? js-set))
+    (is (seqable? js-map))))
