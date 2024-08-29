@@ -2307,10 +2307,11 @@ reduces them without incurring seq initialization"
   "Return true if the seq function is supported for s"
   [s]
   (or
-   (nil? s)
-   (satisfies? ISeqable s)
-   (array? s)
-   (string? s)))
+    (nil? s)
+    (satisfies? ISeqable s)
+    (js-iterable? s)
+    (array? s)
+    (string? s)))
 
 (defn boolean
   "Coerce to boolean"
