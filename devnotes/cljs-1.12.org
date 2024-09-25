@@ -19,7 +19,7 @@ ClojureScript 1.12 Dev Notes
 *** CLJS doesn't support anything but namespaces before the `/`
 **** So minimal breakage likely
 * `Classname/.instanceMethod` no precendent so also easy to handle
-*  `Classname/new` a special case so easy to handle
+* `Classname/new` a special case so easy to handle
 ** Again `non-namespace/foo` never worked before
 * Other considerations
 ** `^:param-tags`
@@ -28,7 +28,14 @@ ClojureScript 1.12 Dev Notes
 ** `goog.foo.Bar`
 *** Users do sometimes depend on global access to Closure libs
 *** externs parsing can let us know if `/` should be allowed or not
-** if something is `:referred` etc.
-*** Can also support `/`
+** js$foo.bar
+*** A proposed enhancement to use global libraries as namespaces
+*** `js$foo.bar.Baz/staticMethod` when `js$foo.bar` not required
+**** it's not a great pattern to encourage
+***** macros are a case where it can be useful
+****** i.e. macro depends on a require that the user didn't provide
+****** combining w/ js$ though seems gratuitous
+** if something is `:refer`ed etc.
+*** Can easily support `/`
 ** `js/foo/bar`
 *** Not supported
