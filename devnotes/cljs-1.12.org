@@ -35,6 +35,9 @@ ClojureScript 1.12 Dev Notes
 ***** macros are a case where it can be useful
 ****** i.e. macro depends on a require that the user didn't provide
 ****** combining w/ js$ though seems gratuitous
+***** that said, argument for consistency
+****** and no need to prioritize library writers
+****** convenient for solo developers on their blog etc.
 ** if something is `:refer`ed etc.
 *** Can easily support `/`
 ** `js/foo/bar`
