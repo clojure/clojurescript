@@ -10,7 +10,7 @@
   "This is intended to be a stable api for those who need programmatic access
   to the analyzer."
   (:refer-clojure :exclude [all-ns ns-interns ns-resolve resolve find-ns
-                            ns-publics remove-ns])
+                            ns-publics remove-ns the-ns])
   #?(:clj  (:require [cljs.analyzer :as ana]
                      [cljs.env :as env]
                      [cljs.util :as util]
@@ -227,6 +227,16 @@
    {:pre [(symbol? sym)]}
    (get-in @state [::ana/namespaces sym])))
 
+(defn the-ns
+  "Given a namespace return the corresponding namespace analysis map, throwing an
+  exception if not found. Analagous to clojure.core/the-ns."
+  ([ns]
+   (the-ns env/*compiler* ns))
+  ([state sym]
+   {:pre [(symbol? sym)]}
+   (or (find-ns state sym)
+       (throw (ex-info (str "No namespace found: " sym) {:ns sym})))))
+
 (defn ns-interns
   "Given a namespace return all the var analysis maps. Analagous to
   clojure.core/ns-interns but returns var analysis maps not vars."
@@ -234,9 +244,10 @@
    (ns-interns env/*compiler* ns))
   ([state ns]
    {:pre [(symbol? ns)]}
-   (merge
-     (get-in @state [::ana/namespaces ns :macros])
-     (get-in @state [::ana/namespaces ns :defs]))))
+   (let [ns (the-ns state ns)]
+     (merge
+      (:macros ns)
+      (:defs ns)))))
 
 (defn ns-publics
   "Given a namespace return all the public var analysis maps. Analagous to
@@ -245,9 +256,7 @@
    (ns-publics env/*compiler* ns))
   ([state ns]
    {:pre [(symbol? ns)]}
-   (->> (merge
-          (get-in @state [::ana/namespaces ns :macros])
-          (get-in @state [::ana/namespaces ns :defs]))
+   (->> (ns-interns state ns)
         (remove (fn [[k v]] (:private v)))
         (into {}))))
 
