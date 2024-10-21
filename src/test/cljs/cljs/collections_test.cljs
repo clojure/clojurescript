@@ -1151,6 +1151,14 @@
 (deftest test-cljs-3393
   (is (= '(0 2 4) (take 3 (filter even? (range 100000000))))))
 
+(deftest test-cljs-3420-lazy-seq-caching-bug
+  (testing "LazySeq should realize seq once"
+    (let [a (atom 0)
+          x (eduction (map (fn [_] (swap! a inc))) [nil])
+          l (lazy-seq x)]
+      (dotimes [_ 10]
+        (is (= [1] l))))))
+
 (comment
 
   (run-tests)

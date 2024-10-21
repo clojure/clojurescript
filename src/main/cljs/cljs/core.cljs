@@ -3514,7 +3514,10 @@ reduces them without incurring seq initialization"
     (if (nil? fn)
       s
       (do
-        (set! s (fn))
+        (loop [ls (fn)]
+          (if (instance? LazySeq ls)
+            (recur (.sval ls))
+            (set! s (seq ls))))
         (set! fn nil)
         s)))
   (indexOf [coll x]
@@ -3534,27 +3537,27 @@ reduces them without incurring seq initialization"
   (-with-meta [coll new-meta]
     (if (identical? new-meta meta)
       coll
-      (LazySeq. new-meta #(-seq coll) nil __hash)))
+      (LazySeq. new-meta #(.sval coll) nil __hash)))
 
   IMeta
   (-meta [coll] meta)
 
   ISeq
   (-first [coll]
-    (-seq coll)
+    (.sval coll)
     (when-not (nil? s)
-      (first s)))
+      (-first s)))
   (-rest [coll]
-    (-seq coll)
+    (.sval coll)
     (if-not (nil? s)
-      (rest s)
+      (-rest s)
       ()))
 
   INext
   (-next [coll]
-    (-seq coll)
+    (.sval coll)
     (when-not (nil? s)
-      (next s)))
+      (-next s)))
 
   ICollection
   (-conj [coll o] (cons o coll))
@@ -3570,14 +3573,7 @@ reduces them without incurring seq initialization"
   (-hash [coll] (caching-hash coll hash-ordered-coll __hash))
 
   ISeqable
-  (-seq [coll]
-    (.sval coll)
-    (when-not (nil? s)
-      (loop [ls s]
-        (if (instance? LazySeq ls)
-          (recur (.sval ls))
-          (do (set! s ls)
-            (seq s))))))
+  (-seq [coll] (.sval coll))
 
   IReduce
   (-reduce [coll f] (seq-reduce f coll))
@@ -7216,7 +7212,7 @@ reduces them without incurring seq initialization"
         extra-kvs (seq trailing)
         ret       (make-array (+ seed-cnt (* 2 (count extra-kvs))))
         ret       (array-copy seed 0 ret 0 seed-cnt)]
-    (loop [i seed-cnt extra-kvs extra-kvs]
+    (loop [i seed-cnt extra-kvs extra-kvs]00
       (if extra-kvs
         (let [kv (first extra-kvs)]
           (aset ret i (-key kv))
