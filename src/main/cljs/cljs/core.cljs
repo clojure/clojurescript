@@ -7212,7 +7212,7 @@ reduces them without incurring seq initialization"
         extra-kvs (seq trailing)
         ret       (make-array (+ seed-cnt (* 2 (count extra-kvs))))
         ret       (array-copy seed 0 ret 0 seed-cnt)]
-    (loop [i seed-cnt extra-kvs extra-kvs]00
+    (loop [i seed-cnt extra-kvs extra-kvs]
       (if extra-kvs
         (let [kv (first extra-kvs)]
           (aset ret i (-key kv))
