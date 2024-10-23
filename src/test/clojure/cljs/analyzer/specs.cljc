@@ -26,6 +26,20 @@
   (s/keys
     :req-un [::op ::env ::form]))
 
+(s/def ::name symbol?)
+(s/def :cljs.analyzer.specs.binding/local
+  #{:arg :catch :fn :let :letfn :loop :field})
+(s/def ::variadic? boolean?)
+(s/def ::init ::node)
+(s/def ::shadow ::node)
+
+(defmethod node ::binding [_]
+  (s/merge
+    ::base
+    (s/keys
+      :req-un [::name :cljs.analyzer.specs.binding/local]
+      :opt-un [::variadic? ::init ::shadow])))
+
 (defmethod node :if [_]
   (s/merge ::base
     (s/keys
@@ -96,6 +110,65 @@
   (s/merge ::base
     (s/keys
       :req-un [::tests ::then])))
+
+(defmethod node ::case-test [_]
+  (s/merge ::base
+    (s/keys
+      :req-un [::test])))
+
+(defmethod node ::case-then [_]
+  (s/merge ::base
+    (s/keys
+      :req-un [::then])))
+
+(s/def ::the-var ::node)
+
+(defmethod node ::def [_]
+  (s/merge ::base
+    (s/keys
+      :req-un [::name]
+      :opt-un [::init ::the-var])))
+
+(s/def ::body ::node)
+(s/def ::t symbol?)
+
+(defmethod node ::defrecord [_]
+  (s/merge ::base
+    (s/keys
+      :req-un [::t ::body])))
+
+(defmethod node ::deftype [_]
+  (s/merge ::base
+    (s/keys
+      :req-un [::t ::body])))
+
+(s/def ::statements ::node)
+(s/def ::ret ::node)
+(s/def ::body? boolean?)
+
+(defmethod node ::do [_]
+  (s/merge ::base
+    (s/keys
+      :req-un [::statements ::ret]
+      :opt-un [::body?])))
+
+(s/def ::local ::node)
+(s/def ::max-fixed-arity int?)
+(s/def ::methods (s/+ ::node))
+
+(defmethod node ::fn [_]
+  (s/merge ::base
+    (s/keys
+      :req-un [::variadic? ::max-fixed-arity ::methods]
+      :opt-un [::local])))
+
+(s/def ::fixed-arity int?)
+(s/def ::params (s/* ::node))
+
+(defmethod node ::fn-method [_]
+  (s/merge ::base
+    (s/keys
+      :req-un [::fixed-arity ::params ::body])))
 
 (comment
 
