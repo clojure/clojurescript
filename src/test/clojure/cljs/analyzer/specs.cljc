@@ -33,7 +33,7 @@
 (s/def ::init ::node)
 (s/def ::shadow ::node)
 
-(defmethod node ::binding [_]
+(defmethod node :binding [_]
   (s/merge
     ::base
     (s/keys
@@ -84,6 +84,13 @@
     (s/keys
       :req-un [::keys ::vals])))
 
+(s/def ::ns symbol?)
+
+(defmethod node :js-var [_]
+  (s/merge ::base
+    (s/keys
+      :req-un [::ns ::name])))
+
 (defmethod node :js-array [_]
   (s/merge ::base
     (s/keys
@@ -101,29 +108,29 @@
 (s/def ::nodes (s/* ::node))
 (s/def ::default ::node)
 
-(defmethod node ::case [_]
+(defmethod node :case [_]
   (s/merge ::base
     (s/keys
       :req-un [::test ::nodes ::default])))
 
-(defmethod node ::case-node [_]
+(defmethod node :case-node [_]
   (s/merge ::base
     (s/keys
       :req-un [::tests ::then])))
 
-(defmethod node ::case-test [_]
+(defmethod node :case-test [_]
   (s/merge ::base
     (s/keys
       :req-un [::test])))
 
-(defmethod node ::case-then [_]
+(defmethod node :case-then [_]
   (s/merge ::base
     (s/keys
       :req-un [::then])))
 
 (s/def ::the-var ::node)
 
-(defmethod node ::def [_]
+(defmethod node :def [_]
   (s/merge ::base
     (s/keys
       :req-un [::name]
@@ -132,12 +139,12 @@
 (s/def ::body ::node)
 (s/def ::t symbol?)
 
-(defmethod node ::defrecord [_]
+(defmethod node :defrecord [_]
   (s/merge ::base
     (s/keys
       :req-un [::t ::body])))
 
-(defmethod node ::deftype [_]
+(defmethod node :deftype [_]
   (s/merge ::base
     (s/keys
       :req-un [::t ::body])))
@@ -146,7 +153,7 @@
 (s/def ::ret ::node)
 (s/def ::body? boolean?)
 
-(defmethod node ::do [_]
+(defmethod node :do [_]
   (s/merge ::base
     (s/keys
       :req-un [::statements ::ret]
@@ -156,7 +163,7 @@
 (s/def ::max-fixed-arity int?)
 (s/def ::methods (s/+ ::node))
 
-(defmethod node ::fn [_]
+(defmethod node :fn [_]
   (s/merge ::base
     (s/keys
       :req-un [::variadic? ::max-fixed-arity ::methods]
@@ -165,10 +172,33 @@
 (s/def ::fixed-arity int?)
 (s/def ::params (s/* ::node))
 
-(defmethod node ::fn-method [_]
+(defmethod node :fn-method [_]
   (s/merge ::base
     (s/keys
       :req-un [::fixed-arity ::params ::body])))
+
+(s/def ::method symbol?)
+(s/def ::target ::node)
+(s/def ::args (s/* ::node))
+
+(defmethod node :host-call [_]
+  (s/merge ::base
+    (s/keys
+      :req-un [::method ::target ::args])))
+
+(s/def ::field symbol?)
+
+(defmethod node :host-field [_]
+  (s/merge ::base
+    (s/keys
+      :req-un [::field ::target])))
+
+(s/def ::fn ::node)
+
+(defmethod node :invoke [_]
+  (s/merge ::base
+    (s/keys
+      :req-un [::fn ::args])))
 
 (comment
 
