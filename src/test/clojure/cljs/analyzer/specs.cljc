@@ -84,17 +84,17 @@
     (s/keys
       :req-un [::keys ::vals])))
 
+(defmethod node :js-array [_]
+  (s/merge ::base
+    (s/keys
+      :req-un [::items])))
+
 (s/def ::ns symbol?)
 
 (defmethod node :js-var [_]
   (s/merge ::base
     (s/keys
       :req-un [::ns ::name])))
-
-(defmethod node :js-array [_]
-  (s/merge ::base
-    (s/keys
-      :req-un [::items])))
 
 (s/def ::var ::node)
 (s/def ::sym ::node)
@@ -199,6 +199,95 @@
   (s/merge ::base
     (s/keys
       :req-un [::fn ::args])))
+
+(s/def ::bindings (s/* ::node))
+
+(defmethod node :let [_]
+  (s/merge ::base
+    (s/keys
+      :req-un [::bindings ::body])))
+
+(defmethod node :letfn [_]
+  (s/merge ::base
+    (s/keys
+      :req-un [::bindings ::body])))
+
+(defmethod node :local [_]
+  (s/merge ::base
+    (s/keys
+      :req-un [:cljs.analyzer.specs.binding/local ::name])))
+
+(defmethod node :loop [_]
+  (s/merge ::base
+    (s/keys
+      :req-un [::bindings ::body])))
+
+(s/def ::class ::node)
+
+(defmethod node :new [_]
+  (s/merge ::base
+    (s/keys
+      :req-un [::class ::args])))
+
+(defmethod node :no-op [_]
+  ::base)
+
+(defmethod node :no-op [_]
+  ::base)
+
+(defmethod node :no-op [_]
+  ::base)
+
+(s/def ::expr ::node)
+
+(defmethod node :quote [_]
+  (s/merge ::base
+    (s/keys
+      :req-un [::expr ::literal?])))
+
+(s/def ::exprs (s/* ::nodes))
+
+(defmethod node :recur [_]
+  (s/merge ::base
+    (s/keys
+      :req-un [::exprs])))
+
+(defmethod node :set [_]
+  (s/merge ::base
+    (s/keys
+      :req-un [::items])))
+
+(defmethod node :set! [_]
+  (s/merge ::base
+    (s/keys
+      :req-un [::target ::val])))
+
+(s/def ::exception ::node)
+
+(defmethod node :throw [_]
+  (s/merge ::base
+    (s/keys
+      :req-un [::exception])))
+
+(s/def ::catch ::node)
+(s/def ::finally ::node)
+
+(defmethod node :try [_]
+  (s/merge ::base
+    (s/keys
+      :req-un [::body ::catch ::name ::finally])))
+
+(defmethod node :var [_]
+  (s/merge ::base
+    (s/keys
+      :req-un [::ns ::name])))
+
+(s/def ::meta ::node)
+
+(defmethod node :with-meta [_]
+  (s/merge ::base
+    (s/keys
+      :req-un [::meta ::expr])))
 
 (comment
 
