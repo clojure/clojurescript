@@ -151,7 +151,7 @@
     (s/keys
       :req-un [::t ::body])))
 
-(s/def ::statements ::node)
+(s/def ::statements (s/* ::node))
 (s/def ::ret ::node)
 (s/def ::body? boolean?)
 

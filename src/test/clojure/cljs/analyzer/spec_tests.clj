@@ -16,8 +16,22 @@
   (is (s/valid? ::a/node (analyze ns-env '(if true true))))
   (is (s/valid? ::a/node (analyze ns-env '(if true true false)))))
 
+(deftest test-do
+  (is (s/valid? ::a/node (analyze ns-env '(do))))
+  (is (s/valid? ::a/node (analyze ns-env '(do 1))))
+  (is (s/valid? ::a/node (analyze ns-env '(do 1 2 3)))))
+
+(deftest test-let
+  (is (s/valid? ::a/node (analyze ns-env '(let []))))
+  ;(is (s/valid? ::a/node (analyze ns-env '(let [x 1]))))
+  ;(is (s/valid? ::a/node (analyze ns-env '(let [x 1] x))))
+  )
+
 (comment
 
   (test/run-tests)
+
+  ;; binding is missing :form
+  (s/explain ::a/node (analyze ns-env '(let [x 1])))
 
   )
