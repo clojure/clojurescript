@@ -13,7 +13,8 @@
             [clojure.spec.alpha :as s]))
 
 (deftest test-if
-  (is '(s/valid? ::a/node (analyze ns-env '(if true true false)))))
+  (is (s/valid? ::a/node (analyze ns-env '(if true true))))
+  (is (s/valid? ::a/node (analyze ns-env '(if true true false)))))
 
 (comment
 
