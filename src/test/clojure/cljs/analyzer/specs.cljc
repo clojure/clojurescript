@@ -52,8 +52,10 @@
 (defmethod node :const [_]
   (s/merge ::base
     (s/keys
-      :req-un [::literal? ::val]
-      :opt-un [])))
+      :req-un [::val]
+      ;; ::literal? is required in the AST REF, but we don't actually use it
+      ;; should check tools.analyzer
+      :opt-un [::literal?])))
 
 (s/def ::keys (s/* ::node))
 (s/def ::vals (s/* ::node))
