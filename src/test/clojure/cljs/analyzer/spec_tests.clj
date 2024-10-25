@@ -13,6 +13,18 @@
             [clojure.test :as test :refer [deftest is]]
             [clojure.spec.alpha :as s]))
 
+(deftest test-const
+  (is (s/valid? ::a/node (analyze ns-env 1)))
+  (is (s/valid? ::a/node (analyze ns-env 1.2)))
+  (is (s/valid? ::a/node (analyze ns-env true)))
+  (is (s/valid? ::a/node (analyze ns-env "foo")))
+  (is (s/valid? ::a/node (analyze ns-env [])))
+  (is (s/valid? ::a/node (analyze ns-env [1 2 3])))
+  (is (s/valid? ::a/node (analyze ns-env {})))
+  (is (s/valid? ::a/node (analyze ns-env {1 2 3 4})))
+  (is (s/valid? ::a/node (analyze ns-env #{})))
+  (is (s/valid? ::a/node (analyze ns-env #{1 2 3}))))
+
 (deftest test-if
   (is (s/valid? ::a/node (analyze ns-env '(if true true))))
   (is (s/valid? ::a/node (analyze ns-env '(if true true false)))))
