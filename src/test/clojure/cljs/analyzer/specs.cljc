@@ -118,9 +118,8 @@
       :req-un [::test ::nodes ::default])))
 
 (defmethod node :case-node [_]
-  (s/merge ::base
-    (s/keys
-      :req-un [::tests ::then])))
+  (s/keys
+    :req-un [::op ::env ::tests ::then]))
 
 (defmethod node :case-test [_]
   (s/merge ::base
