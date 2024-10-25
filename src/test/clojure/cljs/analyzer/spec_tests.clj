@@ -18,38 +18,56 @@
   (is (s/valid? ::a/node (analyze ns-env 1.2)))
   (is (s/valid? ::a/node (analyze ns-env true)))
   (is (s/valid? ::a/node (analyze ns-env "foo")))
-  (is (s/valid? ::a/node (analyze ns-env [])))
+  (let [node (analyze ns-env [])]
+    (is (= :vector (:op node)))
+    (is (s/valid? ::a/node node)))
   (is (s/valid? ::a/node (analyze ns-env [1 2 3])))
   (is (s/valid? ::a/node (analyze ns-env {})))
-  (is (s/valid? ::a/node (analyze ns-env {1 2 3 4})))
+  (let [node (analyze ns-env {1 2 3 4})]
+    (is (= :map (:op node)))
+    (is (s/valid? ::a/node node)))
   (is (s/valid? ::a/node (analyze ns-env #{})))
-  (is (s/valid? ::a/node (analyze ns-env #{1 2 3}))))
+  (let [node (analyze ns-env #{1 2 3})]
+    (is (= :set (:op node)))
+    (is (s/valid? ::a/node node))))
 
 (deftest test-if
-  (is (s/valid? ::a/node (analyze ns-env '(if true true))))
+  (let [node (analyze ns-env '(if true true))]
+    (is (= :if (:op node)))
+    (is (s/valid? ::a/node node)))
   (is (s/valid? ::a/node (analyze ns-env '(if true true false)))))
 
 (deftest test-do
-  (is (s/valid? ::a/node (analyze ns-env '(do))))
+  (let [node (analyze ns-env '(do))]
+    (is (= :do (:op node)))
+    (is (s/valid? ::a/node node)))
   (is (s/valid? ::a/node (analyze ns-env '(do 1))))
   (is (s/valid? ::a/node (analyze ns-env '(do 1 2 3)))))
 
 (deftest test-let
-  (is (s/valid? ::a/node (analyze ns-env '(let []))))
+  (let [node (analyze ns-env '(let []))]
+    (is (= :let (:op node)))
+    (is (s/valid? ::a/node node)))
   (is (s/valid? ::a/node (analyze ns-env '(let [x 1]))))
   (is (s/valid? ::a/node (analyze ns-env '(let [x 1] x)))))
 
 (deftest test-throw
-  (is (s/valid? ::a/node (no-warn (analyze ns-env '(throw (js/Error. "foo")))))))
+  (let [node (no-warn (analyze ns-env '(throw (js/Error. "foo"))))]
+    (is (= :throw (:op node)))
+    (is (s/valid? ::a/node node))))
 
 (deftest test-def
-  (is (s/valid? ::a/node (no-warn (analyze ns-env '(def x)))))
+  (let [node (no-warn (analyze ns-env '(def x)))]
+    (is (= :def (:op node)))
+    (is (s/valid? ::a/node node)))
   (is (s/valid? ::a/node (no-warn (analyze ns-env '(def x 1)))))
   (is (s/valid? ::a/node (no-warn (analyze ns-env '(def x (fn []))))))
   (is (s/valid? ::a/node (no-warn (analyze ns-env '(def x (fn [y] y)))))))
 
 (deftest test-fn
-  (is (s/valid? ::a/node (no-warn (analyze ns-env '(fn [])))))
+  (let [node (no-warn (analyze ns-env '(fn [])))]
+    (is (= :fn (:op node)))
+    (is (s/valid? ::a/node node)))
   (is (s/valid? ::a/node (no-warn (analyze ns-env '(fn [] 1)))))
   (is (s/valid? ::a/node (no-warn (analyze ns-env '(fn [x])))))
   (is (s/valid? ::a/node (no-warn (analyze ns-env '(fn [x] 1))))))
@@ -60,7 +78,9 @@
   (is (s/valid? ::a/node (no-warn (analyze ns-env '(defn x [y] y))))))
 
 (deftest test-new
-  (is (s/valid? ::a/node (no-warn (analyze ns-env '(new String)))))
+  (let [node (no-warn (analyze ns-env '(new String)))]
+    (is (= :new (:op node)))
+    (is (s/valid? ::a/node node)))
   (is (s/valid? ::a/node (no-warn (analyze ns-env '(new js/String)))))
   (is (s/valid? ::a/node (no-warn (analyze ns-env '(String.)))))
   (is (s/valid? ::a/node (no-warn (analyze ns-env '(js/String.))))))
