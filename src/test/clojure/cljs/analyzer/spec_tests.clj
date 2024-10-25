@@ -27,6 +27,15 @@
   (is (s/valid? ::a/node (analyze ns-env '(let [x 1]))))
   (is (s/valid? ::a/node (analyze ns-env '(let [x 1] x)))))
 
+(deftest test-throw
+  (is (s/valid? ::a/node (no-warn (analyze ns-env '(throw (js/Error. "foo")))))))
+
+(deftest test-def
+  (is (s/valid? ::a/node (no-warn (analyze ns-env '(def x)))))
+  (is (s/valid? ::a/node (no-warn (analyze ns-env '(def x 1)))))
+  (is (s/valid? ::a/node (no-warn (analyze ns-env '(fn [])))))
+  (is (s/valid? ::a/node (no-warn (analyze ns-env '(fn [] 1))))))
+
 (deftest test-new
   (is (s/valid? ::a/node (no-warn (analyze ns-env '(new String)))))
   (is (s/valid? ::a/node (no-warn (analyze ns-env '(new js/String)))))
@@ -36,5 +45,14 @@
 (comment
 
   (test/run-tests)
+
+  (s/valid? ::a/node (no-warn (analyze ns-env '(case x 1 :foo 2 :bar))))
+  (s/explain ::a/node (no-warn (analyze ns-env '(case x 1 :foo 2 :bar))))
+
+  (s/valid? ::a/node (no-warn (analyze ns-env '(def x (fn [])))))
+  (s/explain ::a/node (no-warn (analyze ns-env '(def x (fn [])))))
+
+  (s/valid? ::a/node (no-warn (analyze ns-env '(fn [x]))))
+  (s/valid? ::a/node (no-warn (analyze ns-env '(fn [x] 1))))
 
   )
