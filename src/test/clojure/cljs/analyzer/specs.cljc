@@ -31,7 +31,9 @@
   #{:arg :catch :fn :let :letfn :loop :field})
 (s/def ::variadic? boolean?)
 (s/def ::init ::node)
-(s/def ::shadow ::node)
+(s/def ::shadow
+  (s/or :nil nil?
+        :node ::node))
 
 (defmethod node :binding [_]
   (s/merge

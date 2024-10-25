@@ -23,15 +23,11 @@
 
 (deftest test-let
   (is (s/valid? ::a/node (analyze ns-env '(let []))))
-  ;(is (s/valid? ::a/node (analyze ns-env '(let [x 1]))))
-  ;(is (s/valid? ::a/node (analyze ns-env '(let [x 1] x))))
-  )
+  (is (s/valid? ::a/node (analyze ns-env '(let [x 1]))))
+  (is (s/valid? ::a/node (analyze ns-env '(let [x 1] x)))))
 
 (comment
 
   (test/run-tests)
-
-  ;; next, problem - some fields are nil
-  (s/explain ::a/node (analyze ns-env '(let [x 1])))
 
   )
