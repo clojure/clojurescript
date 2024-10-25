@@ -31,7 +31,7 @@
 
   (test/run-tests)
 
-  ;; binding is missing :form
+  ;; next, problem - some fields are nil
   (s/explain ::a/node (analyze ns-env '(let [x 1])))
 
   )

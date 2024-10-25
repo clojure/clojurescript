@@ -2417,6 +2417,7 @@
                 shadow (or (handle-symbol-local name (get-in env [:locals name]))
                            (get-in env [:js-globals name]))
                 be {:name name
+                    :form name
                     :line line
                     :column col
                     :init init-expr
