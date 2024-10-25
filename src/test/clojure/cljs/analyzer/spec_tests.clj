@@ -7,7 +7,8 @@
 ;; You must not remove this notice, or any other, from this software.
 
 (ns cljs.analyzer.spec-tests
-  (:require [cljs.analyzer-tests :refer [analyze ns-env]]
+  (:require [cljs.analyzer.api :as ana :refer [no-warn]]
+            [cljs.analyzer-tests :refer [analyze ns-env]]
             [cljs.analyzer.specs :as a]
             [clojure.test :as test :refer [deftest is]]
             [clojure.spec.alpha :as s]))
@@ -25,6 +26,12 @@
   (is (s/valid? ::a/node (analyze ns-env '(let []))))
   (is (s/valid? ::a/node (analyze ns-env '(let [x 1]))))
   (is (s/valid? ::a/node (analyze ns-env '(let [x 1] x)))))
+
+(deftest test-new
+  (is (s/valid? ::a/node (no-warn (analyze ns-env '(new String)))))
+  (is (s/valid? ::a/node (no-warn (analyze ns-env '(new js/String)))))
+  (is (s/valid? ::a/node (no-warn (analyze ns-env '(String.)))))
+  (is (s/valid? ::a/node (no-warn (analyze ns-env '(js/String.))))))
 
 (comment
 
