@@ -60,30 +60,40 @@
   (let [node (no-warn (analyze ns-env '(def x)))]
     (is (= :def (:op node)))
     (is (s/valid? ::a/node node)))
-  (is (s/valid? ::a/node (no-warn (analyze ns-env '(def x 1)))))
-  (is (s/valid? ::a/node (no-warn (analyze ns-env '(def x (fn []))))))
-  (is (s/valid? ::a/node (no-warn (analyze ns-env '(def x (fn [y] y)))))))
+  (is (s/valid? ::a/node (analyze ns-env '(def x 1))))
+  (is (s/valid? ::a/node (analyze ns-env '(def x (fn [])))))
+  (is (s/valid? ::a/node (analyze ns-env '(def x (fn [y] y))))))
 
 (deftest test-fn
   (let [node (no-warn (analyze ns-env '(fn [])))]
     (is (= :fn (:op node)))
     (is (s/valid? ::a/node node)))
-  (is (s/valid? ::a/node (no-warn (analyze ns-env '(fn [] 1)))))
-  (is (s/valid? ::a/node (no-warn (analyze ns-env '(fn [x])))))
-  (is (s/valid? ::a/node (no-warn (analyze ns-env '(fn [x] 1))))))
+  (is (s/valid? ::a/node (analyze ns-env '(fn [] 1))))
+  (is (s/valid? ::a/node (analyze ns-env '(fn [x]))))
+  (is (s/valid? ::a/node (analyze ns-env '(fn [x] 1)))))
 
 (deftest test-defn
-  (is (s/valid? ::a/node (no-warn (analyze ns-env '(defn x [])))))
-  (is (s/valid? ::a/node (no-warn (analyze ns-env '(defn x [] 1)))))
-  (is (s/valid? ::a/node (no-warn (analyze ns-env '(defn x [y] y))))))
+  (is (s/valid? ::a/node (analyze ns-env '(defn x []))))
+  (is (s/valid? ::a/node (analyze ns-env '(defn x [] 1))))
+  (is (s/valid? ::a/node (analyze ns-env '(defn x [y] y)))))
 
 (deftest test-new
   (let [node (no-warn (analyze ns-env '(new String)))]
     (is (= :new (:op node)))
     (is (s/valid? ::a/node node)))
-  (is (s/valid? ::a/node (no-warn (analyze ns-env '(new js/String)))))
+  (is (s/valid? ::a/node (analyze ns-env '(new js/String))))
   (is (s/valid? ::a/node (no-warn (analyze ns-env '(String.)))))
-  (is (s/valid? ::a/node (no-warn (analyze ns-env '(js/String.))))))
+  (is (s/valid? ::a/node (analyze ns-env '(js/String.)))))
+
+(deftest test-defrecord
+  (let [node (no-warn (analyze ns-env '(defrecord A [])))
+        body (:body node)]
+    (is (= :defrecord (->> body :statements first :ret :op)))
+    (is (s/valid? ::a/node node))))
+
+; TODO: #js
+;(deftest test-js-object
+;  )
 
 (comment
 
