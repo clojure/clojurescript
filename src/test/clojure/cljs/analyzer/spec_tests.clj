@@ -112,6 +112,31 @@
     (is (= :host-field (:op node)))
     (is (s/valid? ::a/node node))))
 
+(deftest test-invoke
+  (let [node (no-warn (analyze ns-env '(count "foo")))]
+    (is (= :invoke (:op node)))
+    (is (s/valid? ::a/node node))))
+
+(deftest test-loop
+  (let [node (analyze ns-env '(loop []))]
+    (is (= :loop (:op node)))
+    (is (s/valid? ::a/node node)))
+  (let [node (analyze ns-env '(loop [x 1] x))]
+    (is (s/valid? ::a/node node)))
+  #_(let [node (analyze ns-env '(loop [x 1] (recur (inc x))))]
+    (is (s/valid? ::a/node node)))
+  #_(let [node (no-warn
+               (analyze ns-env
+                 '(loop [x 100]
+                    (if (pos? x)
+                      (recur (dec x))
+                      x))))]
+    (is (s/valid? ::a/node node))))
+
+;; leftfn
+
+;; local
+
 ; TODO: #js
 ;(deftest test-js-object
 ;  )
