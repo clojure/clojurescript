@@ -85,10 +85,15 @@
   (is (s/valid? ::a/node (no-warn (analyze ns-env '(String.)))))
   (is (s/valid? ::a/node (analyze ns-env '(js/String.)))))
 
+(deftest test-deftype
+  (let [node (no-warn (analyze ns-env '(deftype A [])))]
+    (is (= :deftype (-> node :statements first :op)))
+    (is (s/valid? ::a/node node))))
+
 (deftest test-defrecord
   (let [node (no-warn (analyze ns-env '(defrecord A [])))
         body (:body node)]
-    (is (= :defrecord (->> body :statements first :ret :op)))
+    (is (= :defrecord (-> body :statements first :ret :op)))
     (is (s/valid? ::a/node node))))
 
 ; TODO: #js
