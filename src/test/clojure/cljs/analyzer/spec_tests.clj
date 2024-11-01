@@ -96,6 +96,22 @@
     (is (= :defrecord (-> body :statements first :ret :op)))
     (is (s/valid? ::a/node node))))
 
+(deftest test-host-call
+  (let [node (analyze ns-env '(.substring "foo" 0 1))]
+    (is (= :host-call (:op node)))
+    (is (s/valid? ::a/node node)))
+  (let [node (analyze ns-env '(. "foo" (substring 0 1)))]
+    (is (= :host-call (:op node)))
+    (is (s/valid? ::a/node node))))
+
+(deftest test-host-field
+  (let [node (analyze ns-env '(.-length "foo"))]
+    (is (= :host-field (:op node)))
+    (is (s/valid? ::a/node node)))
+  (let [node (analyze ns-env '(. "foo" -length))]
+    (is (= :host-field (:op node)))
+    (is (s/valid? ::a/node node))))
+
 ; TODO: #js
 ;(deftest test-js-object
 ;  )
