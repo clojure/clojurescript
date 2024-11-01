@@ -123,9 +123,9 @@
     (is (s/valid? ::a/node node)))
   (let [node (analyze ns-env '(loop [x 1] x))]
     (is (s/valid? ::a/node node)))
-  #_(let [node (analyze ns-env '(loop [x 1] (recur (inc x))))]
+  (let [node (analyze ns-env '(loop [x 1] (recur (inc x))))]
     (is (s/valid? ::a/node node)))
-  #_(let [node (no-warn
+  (let [node (no-warn
                (analyze ns-env
                  '(loop [x 100]
                     (if (pos? x)
@@ -133,7 +133,15 @@
                       x))))]
     (is (s/valid? ::a/node node))))
 
-;; leftfn
+(deftest test-recur
+  (let [node (no-warn (analyze ns-env '(fn [x] (recur (inc x)))))]
+    (is (s/valid? ::a/node node))))
+
+(deftest test-case
+  (let [node (no-warn (analyze ns-env '(case x 1 :foo 2 :bar)))]
+    (is (s/valid? ::a/node node))))
+
+;; letfn
 
 ;; local
 
@@ -144,8 +152,5 @@
 (comment
 
   (test/run-tests)
-
-  (s/valid? ::a/node (no-warn (analyze ns-env '(case x 1 :foo 2 :bar))))
-  (s/explain ::a/node (no-warn (analyze ns-env '(case x 1 :foo 2 :bar))))
 
   )

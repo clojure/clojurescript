@@ -286,6 +286,13 @@
     (s/keys
       :req-un [::meta ::expr])))
 
+(s/def ::code string?)
+
+(defmethod node :js [_]
+  (s/merge ::base
+    (s/keys
+      :opt-un [::code])))
+
 (comment
 
   (s/valid? ::node 1)
