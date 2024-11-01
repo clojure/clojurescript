@@ -235,12 +235,6 @@
 (defmethod node :no-op [_]
   ::base)
 
-(defmethod node :no-op [_]
-  ::base)
-
-(defmethod node :no-op [_]
-  ::base)
-
 (s/def ::expr ::node)
 
 (defmethod node :quote [_]
@@ -248,7 +242,7 @@
     (s/keys
       :req-un [::expr ::literal?])))
 
-(s/def ::exprs (s/* ::nodes))
+(s/def ::exprs (s/* ::node))
 
 (defmethod node :recur [_]
   (s/merge ::base
