@@ -222,6 +222,10 @@
 (defmethod node :no-op [_]
   ::base)
 
+;; :ns
+
+;; :ns*
+
 (s/def ::expr ::node)
 
 (defmethod node :quote [_]

@@ -13,6 +13,14 @@
             [clojure.test :as test :refer [deftest is]]
             [clojure.spec.alpha :as s]))
 
+(deftest test-case
+  (let [node (no-warn (analyze ns-env '(case x 1 :foo 2 :bar)))]
+    (is (s/valid? ::a/node node))))
+
+;; case-node
+;; case-test
+;; case-then
+
 (deftest test-const
   (is (s/valid? ::a/node (analyze ns-env 1)))
   (is (s/valid? ::a/node (analyze ns-env 1.2)))
@@ -31,31 +39,6 @@
     (is (= :set (:op node)))
     (is (s/valid? ::a/node node))))
 
-(deftest test-if
-  (let [node (analyze ns-env '(if true true))]
-    (is (= :if (:op node)))
-    (is (s/valid? ::a/node node)))
-  (is (s/valid? ::a/node (analyze ns-env '(if true true false)))))
-
-(deftest test-do
-  (let [node (analyze ns-env '(do))]
-    (is (= :do (:op node)))
-    (is (s/valid? ::a/node node)))
-  (is (s/valid? ::a/node (analyze ns-env '(do 1))))
-  (is (s/valid? ::a/node (analyze ns-env '(do 1 2 3)))))
-
-(deftest test-let
-  (let [node (analyze ns-env '(let []))]
-    (is (= :let (:op node)))
-    (is (s/valid? ::a/node node)))
-  (is (s/valid? ::a/node (analyze ns-env '(let [x 1]))))
-  (is (s/valid? ::a/node (analyze ns-env '(let [x 1] x)))))
-
-(deftest test-throw
-  (let [node (no-warn (analyze ns-env '(throw (js/Error. "foo"))))]
-    (is (= :throw (:op node)))
-    (is (s/valid? ::a/node node))))
-
 (deftest test-def
   (let [node (no-warn (analyze ns-env '(def x)))]
     (is (= :def (:op node)))
@@ -63,6 +46,29 @@
   (is (s/valid? ::a/node (analyze ns-env '(def x 1))))
   (is (s/valid? ::a/node (analyze ns-env '(def x (fn [])))))
   (is (s/valid? ::a/node (analyze ns-env '(def x (fn [y] y))))))
+
+(deftest test-defn
+  (is (s/valid? ::a/node (analyze ns-env '(defn x []))))
+  (is (s/valid? ::a/node (analyze ns-env '(defn x [] 1))))
+  (is (s/valid? ::a/node (analyze ns-env '(defn x [y] y)))))
+
+(deftest test-defrecord
+  (let [node (no-warn (analyze ns-env '(defrecord A [])))
+        body (:body node)]
+    (is (= :defrecord (-> body :statements first :ret :op)))
+    (is (s/valid? ::a/node node))))
+
+(deftest test-deftype
+  (let [node (no-warn (analyze ns-env '(deftype A [])))]
+    (is (= :deftype (-> node :statements first :op)))
+    (is (s/valid? ::a/node node))))
+
+(deftest test-do
+  (let [node (analyze ns-env '(do))]
+    (is (= :do (:op node)))
+    (is (s/valid? ::a/node node)))
+  (is (s/valid? ::a/node (analyze ns-env '(do 1))))
+  (is (s/valid? ::a/node (analyze ns-env '(do 1 2 3)))))
 
 (deftest test-fn
   (let [node (no-warn (analyze ns-env '(fn [])))]
@@ -72,29 +78,7 @@
   (is (s/valid? ::a/node (analyze ns-env '(fn [x]))))
   (is (s/valid? ::a/node (analyze ns-env '(fn [x] 1)))))
 
-(deftest test-defn
-  (is (s/valid? ::a/node (analyze ns-env '(defn x []))))
-  (is (s/valid? ::a/node (analyze ns-env '(defn x [] 1))))
-  (is (s/valid? ::a/node (analyze ns-env '(defn x [y] y)))))
-
-(deftest test-new
-  (let [node (no-warn (analyze ns-env '(new String)))]
-    (is (= :new (:op node)))
-    (is (s/valid? ::a/node node)))
-  (is (s/valid? ::a/node (analyze ns-env '(new js/String))))
-  (is (s/valid? ::a/node (no-warn (analyze ns-env '(String.)))))
-  (is (s/valid? ::a/node (analyze ns-env '(js/String.)))))
-
-(deftest test-deftype
-  (let [node (no-warn (analyze ns-env '(deftype A [])))]
-    (is (= :deftype (-> node :statements first :op)))
-    (is (s/valid? ::a/node node))))
-
-(deftest test-defrecord
-  (let [node (no-warn (analyze ns-env '(defrecord A [])))
-        body (:body node)]
-    (is (= :defrecord (-> body :statements first :ret :op)))
-    (is (s/valid? ::a/node node))))
+;; fn-method
 
 (deftest test-host-call
   (let [node (analyze ns-env '(.substring "foo" 0 1))]
@@ -112,10 +96,37 @@
     (is (= :host-field (:op node)))
     (is (s/valid? ::a/node node))))
 
+(deftest test-if
+  (let [node (analyze ns-env '(if true true))]
+    (is (= :if (:op node)))
+    (is (s/valid? ::a/node node)))
+  (is (s/valid? ::a/node (analyze ns-env '(if true true false)))))
+
 (deftest test-invoke
   (let [node (no-warn (analyze ns-env '(count "foo")))]
     (is (= :invoke (:op node)))
     (is (s/valid? ::a/node node))))
+
+;; js-array
+
+;; js-object
+;(deftest test-js-object
+;  )
+
+;; js-var
+
+(deftest test-let
+  (let [node (analyze ns-env '(let []))]
+    (is (= :let (:op node)))
+    (is (s/valid? ::a/node node)))
+  (is (s/valid? ::a/node (analyze ns-env '(let [x 1]))))
+  (is (s/valid? ::a/node (analyze ns-env '(let [x 1] x)))))
+
+;; letfn
+
+;; list
+
+;; local
 
 (deftest test-loop
   (let [node (analyze ns-env '(loop []))]
@@ -133,21 +144,46 @@
                       x))))]
     (is (s/valid? ::a/node node))))
 
+;; map
+
+(deftest test-new
+  (let [node (no-warn (analyze ns-env '(new String)))]
+    (is (= :new (:op node)))
+    (is (s/valid? ::a/node node)))
+  (is (s/valid? ::a/node (analyze ns-env '(new js/String))))
+  (is (s/valid? ::a/node (no-warn (analyze ns-env '(String.)))))
+  (is (s/valid? ::a/node (analyze ns-env '(js/String.)))))
+
+;; no-op
+
+;; ns
+
+;; ns*
+
+;; quote
+
 (deftest test-recur
   (let [node (no-warn (analyze ns-env '(fn [x] (recur (inc x)))))]
     (is (s/valid? ::a/node node))))
 
-(deftest test-case
-  (let [node (no-warn (analyze ns-env '(case x 1 :foo 2 :bar)))]
+;; set
+
+;; set!
+
+;; the-var
+
+(deftest test-throw
+  (let [node (no-warn (analyze ns-env '(throw (js/Error. "foo"))))]
+    (is (= :throw (:op node)))
     (is (s/valid? ::a/node node))))
 
-;; letfn
+;; try
 
-;; local
+;; var
 
-; TODO: #js
-;(deftest test-js-object
-;  )
+;; vector
+
+;; with-meta
 
 (comment
 
