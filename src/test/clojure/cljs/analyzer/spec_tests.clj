@@ -13,6 +13,8 @@
             [clojure.test :as test :refer [deftest is]]
             [clojure.spec.alpha :as s]))
 
+;; binding
+
 (deftest test-case
   (let [node (no-warn (analyze ns-env '(case x 1 :foo 2 :bar)))]
     (is (s/valid? ::a/node node))))
