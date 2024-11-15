@@ -42,73 +42,6 @@
       :req-un [::name :cljs.analyzer.specs.binding/local]
       :opt-un [::variadic? ::init ::shadow])))
 
-(defmethod node :if [_]
-  (s/merge ::base
-    (s/keys
-      :req-un [::test ::then]
-      :opt-un [::else])))
-
-(s/def ::literal? boolean?)
-(s/def ::val any?)
-
-(defmethod node :const [_]
-  (s/merge ::base
-    (s/keys
-      :req-un [::val]
-      ;; ::literal? is required in the AST REF, but we don't actually use it
-      ;; should check tools.analyzer
-      :opt-un [::literal?])))
-
-(s/def ::keys (s/* ::node))
-(s/def ::vals (s/* ::node))
-
-(defmethod node :map [_]
-  (s/merge ::base
-    (s/keys :req-un [::keys ::vals])))
-
-(s/def ::items (s/* ::node))
-
-(defmethod node :list [_]
-  (s/merge ::base
-    (s/keys
-     :req-un [::items])))
-
-(defmethod node :vector [_]
-  (s/merge ::base
-    (s/keys
-      :req-un [::items])))
-
-(defmethod node :set [_]
-  (s/merge ::base
-    (s/keys
-      :req-un [::items])))
-
-(defmethod node :js-object [_]
-  (s/merge ::base
-    (s/keys
-      :req-un [::keys ::vals])))
-
-(defmethod node :js-array [_]
-  (s/merge ::base
-    (s/keys
-      :req-un [::items])))
-
-(s/def ::ns symbol?)
-
-(defmethod node :js-var [_]
-  (s/merge ::base
-    (s/keys
-      :req-un [::ns ::name])))
-
-(s/def ::var ::node)
-(s/def ::sym ::node)
-(s/def ::meta map?)
-
-(defmethod node :the-var [_]
-  (s/merge ::base
-    (s/keys
-      :opt-un [::var ::sym ::meta])))
-
 (s/def ::nodes (s/* ::node))
 (s/def ::default ::node)
 
@@ -131,7 +64,16 @@
     (s/keys
       :req-un [::then])))
 
-(s/def ::the-var ::node)
+(s/def ::literal? boolean?)
+(s/def ::val any?)
+
+(defmethod node :const [_]
+  (s/merge ::base
+    (s/keys
+      :req-un [::val]
+      ;; ::literal? is required in the AST REF, but we don't actually use it
+      ;; should check tools.analyzer
+      :opt-un [::literal?])))
 
 (defmethod node :def [_]
   (s/merge ::base
@@ -196,12 +138,42 @@
     (s/keys
       :req-un [::field ::target])))
 
+(defmethod node :if [_]
+  (s/merge ::base
+    (s/keys
+      :req-un [::test ::then]
+      :opt-un [::else])))
+
 (s/def ::fn ::node)
 
 (defmethod node :invoke [_]
   (s/merge ::base
     (s/keys
       :req-un [::fn ::args])))
+
+(s/def ::code string?)
+
+(defmethod node :js [_]
+  (s/merge ::base
+    (s/keys
+      :opt-un [::code])))
+
+(defmethod node :js-array [_]
+  (s/merge ::base
+    (s/keys
+      :req-un [::items])))
+
+(defmethod node :js-object [_]
+  (s/merge ::base
+    (s/keys
+      :req-un [::keys ::vals])))
+
+(s/def ::ns symbol?)
+
+(defmethod node :js-var [_]
+  (s/merge ::base
+    (s/keys
+      :req-un [::ns ::name])))
 
 (s/def ::bindings (s/* ::node))
 
@@ -215,6 +187,14 @@
     (s/keys
       :req-un [::bindings ::body])))
 
+(s/def ::items (s/* ::node))
+
+;; TODO: not in ast-ref
+(defmethod node :list [_]
+  (s/merge ::base
+    (s/keys
+      :req-un [::items])))
+
 (defmethod node :local [_]
   (s/merge ::base
     (s/keys
@@ -224,6 +204,13 @@
   (s/merge ::base
     (s/keys
       :req-un [::bindings ::body])))
+
+(s/def ::keys (s/* ::node))
+(s/def ::vals (s/* ::node))
+
+(defmethod node :map [_]
+  (s/merge ::base
+    (s/keys :req-un [::keys ::vals])))
 
 (s/def ::class ::node)
 
@@ -259,6 +246,17 @@
     (s/keys
       :req-un [::target ::val])))
 
+(s/def ::var ::node)
+(s/def ::sym ::node)
+(s/def ::meta map?)
+
+(defmethod node :the-var [_]
+  (s/merge ::base
+    (s/keys
+      :opt-un [::var ::sym ::meta])))
+
+(s/def ::the-var ::node)
+
 (s/def ::exception ::node)
 
 (defmethod node :throw [_]
@@ -281,17 +279,15 @@
 
 (s/def ::meta ::node)
 
+(defmethod node :vector [_]
+  (s/merge ::base
+    (s/keys
+      :req-un [::items])))
+
 (defmethod node :with-meta [_]
   (s/merge ::base
     (s/keys
       :req-un [::meta ::expr])))
-
-(s/def ::code string?)
-
-(defmethod node :js [_]
-  (s/merge ::base
-    (s/keys
-      :opt-un [::code])))
 
 (comment
 
