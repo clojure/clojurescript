@@ -12,7 +12,8 @@
             [cljs.analyzer-tests :refer [analyze ns-env]]
             [cljs.analyzer.specs :as a]
             [clojure.test :as test :refer [deftest is]]
-            [clojure.spec.alpha :as s]))
+            [clojure.spec.alpha :as s])
+  (:import [java.io StringReader]))
 
 (deftest test-binding
   (let [node (analyze ns-env '(let [x 1] x))
@@ -114,11 +115,19 @@
     (is (= :invoke (:op node)))
     (is (s/valid? ::a/node node))))
 
-;; js-array
+(deftest test-js-array
+  (let [node (analyze ns-env
+               (ana-api/with-state (ana-api/empty-state)
+                 (first (ana-api/forms-seq (StringReader. "#js [1 2 3]")))))]
+    (is (= :js-array (:op node)))
+    (is (s/valid? ::a/node node))))
 
-;; js-object
-;(deftest test-js-object
-;  )
+#_(deftest test-js-object
+  (let [node (analyze ns-env
+               (ana-api/with-state (ana-api/empty-state)
+                 (first (ana-api/forms-seq (StringReader. "#js {:foo 1 :bar 2}")))))]
+    (is (= :js-object (:op node)))
+    (is (s/valid? ::a/node node))))
 
 ;; js-var
 
