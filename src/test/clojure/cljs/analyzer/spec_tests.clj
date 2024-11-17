@@ -129,7 +129,10 @@
     (is (= :js-object (:op node)))
     (is (s/valid? ::a/node node))))
 
-;; js-var
+(deftest test-js-var
+  (let [node (analyze ns-env 'js/String)]
+    (is (= :js-var (:op node)))
+    (is (s/valid? ::a/node node))))
 
 (deftest test-let
   (let [node (analyze ns-env '(let []))]
@@ -211,7 +214,9 @@
     (is (= :set! (:op node)))
     (is (s/valid? ::a/node node))))
 
-;; the-var
+#_(deftest test-the-var
+  (let [node (no-warn (analyze ns-env '(var x)))]
+    (is (= :the-var (:op node)))))
 
 (deftest test-throw
   (let [node (no-warn (analyze ns-env '(throw (js/Error. "foo"))))]
@@ -230,7 +235,10 @@
     (is (= :vector (:op node)))
     (is (s/valid? ::a/node node))))
 
-;; with-meta
+(deftest test-with-meta
+  (let [node (analyze ns-env ^{:meta 2} {:foo 1})]
+    (is (= :with-meta (:op node)))
+    (is (s/valid? ::a/node node))))
 
 (comment
 
