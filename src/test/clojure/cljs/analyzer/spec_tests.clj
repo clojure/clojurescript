@@ -7,7 +7,8 @@
 ;; You must not remove this notice, or any other, from this software.
 
 (ns cljs.analyzer.spec-tests
-  (:require [cljs.analyzer.api :as ana :refer [no-warn]]
+  (:require [cljs.analyzer :as ana]
+            [cljs.analyzer.api :as ana-api :refer [no-warn]]
             [cljs.analyzer-tests :refer [analyze ns-env]]
             [cljs.analyzer.specs :as a]
             [clojure.test :as test :refer [deftest is]]
@@ -128,7 +129,10 @@
   (is (s/valid? ::a/node (analyze ns-env '(let [x 1]))))
   (is (s/valid? ::a/node (analyze ns-env '(let [x 1] x)))))
 
-;; letfn
+(deftest test-letfn
+  (let [node (analyze ns-env '(letfn [(foo [] (bar)) (bar [] (foo))]))]
+    (is (= :letfn (:op node)))
+    (is (s/valid? ::a/node node))))
 
 ;; list, no longer needed, subsumed by :quote
 
@@ -165,9 +169,19 @@
 
 ;; no-op
 
-;; ns
+(deftest test-ns
+  (let [node (no-warn
+               (binding [ana/*cljs-ns* 'cljs.user]
+                 (analyze ns-env '(ns foo (:require [goog.string])))))]
+    (is (= :ns (:op node)))
+    (is (s/valid? ::a/node node))))
 
-;; ns*
+#_(deftest test-ns*
+  (let [node (no-warn
+               (binding [ana/*cljs-ns* 'cljs.user]
+                 (analyze ns-env '(ns* foo '(:require [goog.string])))))]
+    (is (= :ns (:op node)))
+    (is (s/valid? ::a/node node))))
 
 (deftest test-quote
   (let [node (analyze ns-env ''(1 2 3))]
@@ -179,11 +193,14 @@
     (is (s/valid? ::a/node node))))
 
 (deftest test-set
-  (let [node (no-warn (analyze ns-env #{1 2 3}))]
+  (let [node (analyze ns-env #{1 2 3})]
     (is (= :set (:op node)))
     (is (s/valid? ::a/node node))))
 
-;; set!
+(deftest test-set!
+  (let [node (no-warn (analyze ns-env '(set! x 1)))]
+    (is (= :set! (:op node)))
+    (is (s/valid? ::a/node node))))
 
 ;; the-var
 
@@ -192,7 +209,10 @@
     (is (= :throw (:op node)))
     (is (s/valid? ::a/node node))))
 
-;; try
+#_(deftest test-try
+  (let [node (no-warn (analyze ns-env '(try 1 (catch :default e) (finally))))]
+    (is (= :try (:op node)))
+    (is (s/valid? ::a/node node))))
 
 ;; var
 

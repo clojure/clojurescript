@@ -222,9 +222,11 @@
 (defmethod node :no-op [_]
   ::base)
 
-;; :ns
+(defmethod node :ns [_]
+  ::base)
 
-;; :ns*
+(defmethod node :ns* [_]
+  ::base)
 
 (s/def ::expr ::node)
 
