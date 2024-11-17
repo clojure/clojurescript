@@ -218,7 +218,8 @@
 (deftest test-the-var
   (let [node (comp-api/with-core-cljs {}
                #(analyze ns-env '(var first)))]
-    (is (= :the-var (:op node)))))
+    (is (= :the-var (:op node)))
+    (is (s/valid? ::a/node node))))
 
 (deftest test-throw
   (let [node (no-warn (analyze ns-env '(throw (js/Error. "foo"))))]
