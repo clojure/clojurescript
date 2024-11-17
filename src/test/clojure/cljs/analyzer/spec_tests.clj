@@ -13,7 +13,11 @@
             [clojure.test :as test :refer [deftest is]]
             [clojure.spec.alpha :as s]))
 
-;; binding
+(deftest test-binding
+  (let [node (analyze ns-env '(let [x 1] x))
+        binding (-> node :bindings first)]
+    (is (= :binding (:op binding)))
+    (is (s/valid? ::a/node binding))))
 
 (deftest test-case
   (let [node (no-warn (analyze ns-env '(case x 1 :foo 2 :bar)))]
@@ -126,7 +130,7 @@
 
 ;; letfn
 
-;; list
+;; list, no longer needed, subsumed by :quote
 
 ;; local
 
@@ -174,7 +178,10 @@
   (let [node (no-warn (analyze ns-env '(fn [x] (recur (inc x)))))]
     (is (s/valid? ::a/node node))))
 
-;; set
+(deftest test-set
+  (let [node (no-warn (analyze ns-env #{1 2 3}))]
+    (is (= :set (:op node)))
+    (is (s/valid? ::a/node node))))
 
 ;; set!
 
@@ -189,7 +196,7 @@
 
 ;; var
 
-(deftest test-map
+(deftest test-vector
   (let [node (no-warn (analyze ns-env '[1 2]))]
     (is (= :vector (:op node)))
     (is (s/valid? ::a/node node))))
