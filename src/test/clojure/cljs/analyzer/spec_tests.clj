@@ -146,7 +146,10 @@
                       x))))]
     (is (s/valid? ::a/node node))))
 
-;; map
+(deftest test-map
+  (let [node (no-warn (analyze ns-env '{:foo 1 :bar 2}))]
+    (is (= :map (:op node)))
+    (is (s/valid? ::a/node node))))
 
 (deftest test-new
   (let [node (no-warn (analyze ns-env '(new String)))]
@@ -162,7 +165,10 @@
 
 ;; ns*
 
-;; quote
+(deftest test-quote
+  (let [node (analyze ns-env ''(1 2 3))]
+    (is (= :quote (:op node)))
+    (is (s/valid? ::a/node node))))
 
 (deftest test-recur
   (let [node (no-warn (analyze ns-env '(fn [x] (recur (inc x)))))]
@@ -183,7 +189,10 @@
 
 ;; var
 
-;; vector
+(deftest test-map
+  (let [node (no-warn (analyze ns-env '[1 2]))]
+    (is (= :vector (:op node)))
+    (is (s/valid? ::a/node node))))
 
 ;; with-meta
 

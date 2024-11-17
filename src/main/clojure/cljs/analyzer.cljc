@@ -2571,6 +2571,7 @@
     (throw (error env "Wrong number of args to quote")))
   (let [expr (analyze-const env x)]
     {:op :quote
+     :literal? true
      :expr expr
      :env env
      :form form
