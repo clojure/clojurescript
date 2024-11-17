@@ -176,11 +176,11 @@
     (is (= :ns (:op node)))
     (is (s/valid? ::a/node node))))
 
-#_(deftest test-ns*
+(deftest test-ns*
   (let [node (no-warn
                (binding [ana/*cljs-ns* 'cljs.user]
-                 (analyze ns-env '(ns* foo '(:require [goog.string])))))]
-    (is (= :ns (:op node)))
+                 (analyze ns-env '(ns* (:require '[goog.string])))))]
+    (is (= :ns* (:op node)))
     (is (s/valid? ::a/node node))))
 
 (deftest test-quote
