@@ -26,11 +26,18 @@
   (let [let-node (no-warn (analyze ns-env '(case x 1 :foo 2 :bar)))
         node     (-> let-node :body :ret)]
     (is (= :case (:op node)))
-    (is (s/valid? ::a/node node))))
-
-;; case-test
-;; case-node
-;; case-then
+    (is (s/valid? ::a/node node))
+    (let [nodes (-> node :nodes)
+          case-node (first nodes)]
+      (is (= :case-node (:op case-node)))
+      (is (s/valid? ::a/node case-node))
+      (let [case-tests (:tests case-node)
+            case-test  (first case-tests)
+            case-then  (:then case-node)]
+        (is (= :case-test (:op case-test)))
+        (is (s/valid? ::a/node case-test))
+        (is (= :case-then (:op case-then)))
+        (is (s/valid? ::a/node case-then))))))
 
 (deftest test-const
   (is (s/valid? ::a/node (analyze ns-env 1)))
