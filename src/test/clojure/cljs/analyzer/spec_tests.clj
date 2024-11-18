@@ -96,7 +96,15 @@
   (is (s/valid? ::a/node (analyze ns-env '(fn [x]))))
   (is (s/valid? ::a/node (analyze ns-env '(fn [x] 1)))))
 
-;; fn-method
+(deftest test-fn-method
+  (let [node (analyze ns-env '(fn ([]) ([x] x)))
+        methods (:methods node)
+        fn0 (first methods)
+        fn1 (second methods)]
+    (is (= :fn-method (:op fn0)))
+    (is (s/valid? ::a/node fn0))
+    (is (= :fn-method (:op fn1)))
+    (is (s/valid? ::a/node fn1))))
 
 (deftest test-host-call
   (let [node (analyze ns-env '(.substring "foo" 0 1))]
