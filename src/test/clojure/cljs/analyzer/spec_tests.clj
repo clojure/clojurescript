@@ -23,11 +23,13 @@
     (is (s/valid? ::a/node binding))))
 
 (deftest test-case
-  (let [node (no-warn (analyze ns-env '(case x 1 :foo 2 :bar)))]
+  (let [let-node (no-warn (analyze ns-env '(case x 1 :foo 2 :bar)))
+        node     (-> let-node :body :ret)]
+    (is (= :case (:op node)))
     (is (s/valid? ::a/node node))))
 
-;; case-node
 ;; case-test
+;; case-node
 ;; case-then
 
 (deftest test-const
