@@ -208,7 +208,11 @@
   (is (s/valid? ::a/node (no-warn (analyze ns-env '(String.)))))
   (is (s/valid? ::a/node (analyze ns-env '(js/String.)))))
 
-;; no-op
+(deftest test-no-op
+  (let [node (binding [ana/*unchecked-if* true]
+               (no-warn (analyze ns-env '(set! *unchecked-if* false))))]
+    (is (= :no-op (:op node)))
+    (is (s/valid? ::a/node node))))
 
 (deftest test-ns
   (let [node (no-warn

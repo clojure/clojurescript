@@ -220,7 +220,8 @@
       :req-un [::class ::args])))
 
 (defmethod node :no-op [_]
-  ::base)
+  (s/keys
+    :req-un [::env ::op]))
 
 (defmethod node :ns [_]
   ::base)
