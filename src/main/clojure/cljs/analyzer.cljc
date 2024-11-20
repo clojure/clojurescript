@@ -1883,7 +1883,8 @@
                          :column (get-col e env)
                          ;; :local is required for {:op :local ...} nodes
                          ;; but previously we had no way to figure this out
-                         ;; by adding it here we can recover it later
+                         ;; for `catch` locals, by adding it here we can recover
+                         ;; it later
                          :local :catch})
                  locals)
         catch (when cblock
