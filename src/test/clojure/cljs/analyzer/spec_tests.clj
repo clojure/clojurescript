@@ -166,7 +166,13 @@
 
 ;; list, no longer needed, subsumed by :quote
 
-;; local
+(deftest test-local
+  (let [node      (analyze ns-env '(fn [x] x))
+        fn-method (-> node :methods first)
+        body      (-> fn-method :body)
+        ret       (:ret body)]
+    (is (= :local (:op ret)))
+    (is (s/valid? ::a/node node))))
 
 (deftest test-loop
   (let [node (analyze ns-env '(loop []))]
