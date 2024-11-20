@@ -133,6 +133,11 @@
     (is (= :invoke (:op node)))
     (is (s/valid? ::a/node node))))
 
+(deftest test-js
+  (let [node (analyze ns-env '(js* "~{}" 1))]
+    (is (= :js (:op node)))
+    (is (s/valid? ::a/node node))))
+
 (deftest test-js-array
   (let [node (analyze ns-env
                (ana-api/with-state (ana-api/empty-state)
