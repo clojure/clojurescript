@@ -254,7 +254,13 @@
     (is (= :try (:op node)))
     (is (s/valid? ::a/node node))))
 
-;; var
+(deftest test-var
+  (let [node      (no-warn (analyze ns-env '(fn [] x)))
+        fn-method (-> node :methods first)
+        body      (-> fn-method :body)
+        ret       (:ret body)]
+    (is (= :var (:op ret)))
+    (is (s/valid? ::a/node node))))
 
 (deftest test-vector
   (let [node (no-warn (analyze ns-env '[1 2]))]
