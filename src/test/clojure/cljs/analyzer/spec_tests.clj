@@ -249,7 +249,7 @@
     (is (= :throw (:op node)))
     (is (s/valid? ::a/node node))))
 
-#_(deftest test-try
+(deftest test-try
   (let [node (no-warn (analyze ns-env '(try 1 (catch :default e) (finally))))]
     (is (= :try (:op node)))
     (is (s/valid? ::a/node node))))

@@ -1880,7 +1880,11 @@
                  (assoc locals e
                         {:name e
                          :line (get-line e env)
-                         :column (get-col e env)})
+                         :column (get-col e env)
+                         ;; :local is required for {:op :local ...} nodes
+                         ;; but previously we had no way to figure this out
+                         ;; by adding it here we can recover it later
+                         :local :catch})
                  locals)
         catch (when cblock
                 (disallowing-recur (analyze (assoc catchenv :locals locals) cblock)))
