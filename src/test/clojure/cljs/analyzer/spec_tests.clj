@@ -145,7 +145,7 @@
     (is (= :js-array (:op node)))
     (is (s/valid? ::a/node node))))
 
-#_(deftest test-js-object
+(deftest test-js-object
   (let [node (analyze ns-env
                (ana-api/with-state (ana-api/empty-state)
                  (first (ana-api/forms-seq (StringReader. "#js {:foo 1 :bar 2}")))))]

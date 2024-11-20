@@ -166,7 +166,7 @@
 (defmethod node :js-object [_]
   (s/merge ::base
     (s/keys
-      :req-un [::keys ::vals])))
+      :req-un [::vals])))
 
 (s/def ::ns symbol?)
 
@@ -205,7 +205,6 @@
     (s/keys
       :req-un [::bindings ::body])))
 
-(s/def ::keys (s/* ::node))
 (s/def ::vals (s/* ::node))
 
 (defmethod node :map [_]
