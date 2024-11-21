@@ -13,7 +13,8 @@
                           :main-opts ["-i" "src/test/cljs_cli/cljs_cli/test_runner.clj"
                                       "-e" "(cljs-cli.test-runner/-main)"]}
   :compiler.test         {:extra-paths ["src/test/cljs" "src/test/cljs_build" "src/test/cljs_cp"
-                                        "src/test/clojure" "src/test/self"]}
+                                        "src/test/clojure" "src/test/self"]
+                          :extra-deps {org.clojure/spec.alpha {:mvn/version "0.5.238"}}}
   :compiler.test.run     {:main-opts ["-i" "src/test/clojure/cljs/test_runner.clj"
                                       "-e" "(cljs.test-runner/-main)"]}
   :runtime.test.build    {:extra-paths ["src/test/cljs"]

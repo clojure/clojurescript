@@ -1880,7 +1880,12 @@
                  (assoc locals e
                         {:name e
                          :line (get-line e env)
-                         :column (get-col e env)})
+                         :column (get-col e env)
+                         ;; :local is required for {:op :local ...} nodes
+                         ;; but previously we had no way to figure this out
+                         ;; for `catch` locals, by adding it here we can recover
+                         ;; it later
+                         :local :catch})
                  locals)
         catch (when cblock
                 (disallowing-recur (analyze (assoc catchenv :locals locals) cblock)))
@@ -2143,6 +2148,7 @@
                    {:line line :column column})
           param  {:op :binding
                   :name name
+                  :form name
                   :line line
                   :column column
                   :tag tag
@@ -2205,8 +2211,10 @@
           shadow   (or (handle-symbol-local name (get locals name))
                        (get-in env [:js-globals name]))
           fn-scope (:fn-scope env)
-          name-var {:name name
-                    :op :binding
+          name-var {:op :binding
+                    :env env
+                    :form name
+                    :name name
                     :local :fn
                     :info {:fn-self-name true
                            :fn-scope fn-scope
@@ -2326,8 +2334,10 @@
                   (let [ret-tag (-> n meta :tag)
                         fexpr (no-warn (analyze env (n->fexpr n)))
                         be (cond->
-                             {:name n
-                              :op :binding
+                             {:op :binding
+                              :name n
+                              :form n
+                              :env env
                               :fn-var true
                               :line (get-line n env)
                               :column (get-col n env)
@@ -2416,7 +2426,9 @@
                 col (get-col name env)
                 shadow (or (handle-symbol-local name (get-in env [:locals name]))
                            (get-in env [:js-globals name]))
-                be {:name name
+                be {:op :binding
+                    :name name
+                    :form name
                     :line line
                     :column col
                     :init init-expr
@@ -2425,7 +2437,6 @@
                     :shadow shadow
                     ;; Give let* bindings same shape as var so
                     ;; they get routed correctly in the compiler
-                    :op :binding
                     :env {:line line :column col}
                     :info {:name name
                            :shadow shadow}
@@ -2565,6 +2576,7 @@
     (throw (error env "Wrong number of args to quote")))
   (let [expr (analyze-const env x)]
     {:op :quote
+     :literal? true
      :expr expr
      :env env
      :form form
