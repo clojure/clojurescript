@@ -8,7 +8,8 @@
 
 (ns cljs.closure
   (:refer-clojure :exclude [compile])
-  (:require [cljs.util :as util :refer [distinct-by]]
+  (:require [cljs.externs :as externs]
+            [cljs.util :as util :refer [distinct-by]]
             [cljs.core :as cljsm]
             [cljs.compiler :as comp]
             [cljs.analyzer :as ana]
@@ -402,7 +403,7 @@
       (cond->
         (if use-only-custom-externs
           all-sources
-          (into all-sources (CommandLineRunner/getDefaultExterns)))
+          (into all-sources (externs/default-externs)))
         infer-externs
         (conj (js-source-file nil
                 (io/file (util/output-directory opts) "inferred_externs.js")))))))

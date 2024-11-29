@@ -40,7 +40,7 @@
                (filter
                  (fn [s]
                    (= "externs.zip//w3c_dom2.js" (.getName s)))
-                 (CommandLineRunner/getDefaultExterns))
+                 (externs/default-externs))
                first externs/parse-externs externs/index-externs
                (find 'HTMLDocument) first meta)]
     (is (= 'Document (:super info)))))
