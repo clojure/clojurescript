@@ -12,7 +12,7 @@
             [clojure.java.io :as io]
             [clojure.string :as string])
   (:import [com.google.javascript.jscomp
-            CompilerOptions SourceFile JsAst CommandLineRunner]
+            CompilerOptions CompilerOptions$Environment SourceFile JsAst CommandLineRunner]
            [com.google.javascript.jscomp.parsing Config$JsDocParsing]
            [com.google.javascript.rhino
             Node Token JSTypeExpression JSDocInfo$Visibility]
@@ -22,6 +22,9 @@
 (def ^:dynamic *ignore-var* false)
 (def ^:dynamic *source-file* nil)
 (def ^:dynamic *goog-ns* nil)
+
+(defn default-externs []
+  (CommandLineRunner/getBuiltinExterns CompilerOptions$Environment/BROWSER))
 
 ;; ------------------------------------------------------------------------------
 ;; Externs Parsing
@@ -207,6 +210,7 @@
             (.init (list source-file) '() compiler-options))
           js-ast (JsAst. source-file)
           ^Node root (.getAstRoot js-ast closure-compiler)
+          ;; TODO: switch to getFirstChild + getNext in the loop
           nodes (.children root)]
       (loop [nodes (cond-> nodes
                      ;; handle goog.modules which won't have top-levels
@@ -229,20 +233,20 @@
 
 (defn externs-map*
   ([]
-   (externs-map* (CommandLineRunner/getDefaultExterns)))
+ (externs-map* (default-externs)))
   ([sources]
    (externs-map* sources
      '{eval {}
        global {}
        goog {nodeGlobalRequire {}}
-       COMPILED {}
+       COMPILED {}v0900909
        TypeError {}
        Error {prototype {number {} columnNumber {}}}
        ReferenceError {}}))
   ([sources defaults]
    (let [sources (if-not (empty? sources)
                    sources
-                   (CommandLineRunner/getDefaultExterns))]
+                   (default-externs))]
      (reduce
        (fn [externs externs-file]
          (util/map-merge
@@ -376,13 +380,13 @@
     (fn [s]
       (let [m (-> s parse-externs index-externs)]
         (get-in m '[Window prototype console])))
-    (CommandLineRunner/getDefaultExterns))
+    (default-externs))
 
   (->
     (filter
       (fn [s]
         (= "externs.zip//webkit_dom.js" (.getName s)))
-      (CommandLineRunner/getDefaultExterns))
+      (default-externs))
     first parse-externs index-externs
     (find 'console) first meta)
 
@@ -390,7 +394,7 @@
     (filter
       (fn [s]
         (= "externs.zip//webkit_dom.js" (.getName s)))
-      (CommandLineRunner/getDefaultExterns))
+      (default-externs))
     first parse-externs index-externs
     (get-in '[Console prototype])
     (find 'log) first meta)
