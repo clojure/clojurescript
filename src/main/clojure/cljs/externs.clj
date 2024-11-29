@@ -239,7 +239,7 @@
      '{eval {}
        global {}
        goog {nodeGlobalRequire {}}
-       COMPILED {}v0900909
+       COMPILED {}
        TypeError {}
        Error {prototype {number {} columnNumber {}}}
        ReferenceError {}}))
