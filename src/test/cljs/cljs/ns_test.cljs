@@ -48,3 +48,7 @@
 (deftest test-cljs-3399
   (is (= ::fake/foo :fake.ns/foo)
   (is (= `fake/foo 'fake.ns/foo))))
+
+(deftest test-cljs-2292
+  (is (= false (exists? mapv)))
+  (is (= true (exists? core-mapv))))

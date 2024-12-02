@@ -2907,7 +2907,7 @@
           (parse-ns-error-msg spec
             "Each of :as and :refer options may only be specified once in :require / :require-macros"))))))
 
-(defn parse-ns-excludes [env args]
+(defn- parse-ns-excludes-impl [env args]
   (reduce
     (fn [s [k & filters]]
       (if (= k :refer-clojure)
@@ -2946,6 +2946,10 @@
         s))
     {:excludes #{}
      :renames {}} args))
+
+(defn parse-ns-excludes [env args]
+  (let [s (parse-ns-excludes-impl env args)]
+    (update s :excludes into (keys (:renames s)))))
 
 (defn use->require [env [lib & filters :as spec]]
   (when-not (and (symbol? lib) (odd? (count spec)))

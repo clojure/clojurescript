@@ -338,7 +338,7 @@
                         '(ns foo.core
                            (:refer-clojure :rename {when always
                                                     map  core-map}))))]
-      (is (= (-> parsed-ns :excludes) #{}))
+      (is (= (-> parsed-ns :excludes) '#{when map}))
       (is (= (-> parsed-ns :rename-macros) '{always cljs.core/when}))
       (is (= (-> parsed-ns :renames) '{core-map cljs.core/map})))
     (is (thrown? Exception (env/with-compiler-env test-cenv
@@ -377,6 +377,14 @@
     (is (= parsed
            {:excludes #{}
             :renames {}}))
+    (is (set? (:excludes parsed)))))
+
+
+(deftest test-cljs-2292
+  (let [parsed (ana/parse-ns-excludes {} '((:refer-clojure :rename {map clj-map})))]
+    (is (= parsed
+          '{:excludes #{map}
+            :renames  {map clj-map}}))
     (is (set? (:excludes parsed)))))
 
 (deftest test-cljs-1785-js-shadowed-by-local
