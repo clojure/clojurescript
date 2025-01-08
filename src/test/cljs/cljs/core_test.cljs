@@ -2042,3 +2042,17 @@
       (is (= 11 @c))
       (is (= [11 0] (reset-vals! c 0)))
       (is (= 0 @c)))))
+
+(defn test-keys [& {:as opts, :keys [a b]}]
+  [a b opts])
+
+(deftest test-cljs-3299-trailing-keys
+  (testing "verify proper handling of trailing keys"
+    (is (= (test-keys :a 1, :b 2)
+           [1 2 {:a 1, :b 2}]))
+    (is (= (test-keys {:a 1, :b 2})
+           [1 2 {:a 1, :b 2}]))
+    (is (= (test-keys {:a 1, :b 2, :c 3})
+           [1 2 {:a 1, :b 2, :c 3}]))
+    (is (= (test-keys :d 4 {:a 1, :b 2, :c 3})
+           [1 nil {:d 4, :a 1, :c 3, nil nil}]))))
