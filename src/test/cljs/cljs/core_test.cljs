@@ -2043,10 +2043,10 @@
       (is (= [11 0] (reset-vals! c 0)))
       (is (= 0 @c)))))
 
-#_(defn test-keys [& {:as opts, :keys [a b]}]
+(defn test-keys [& {:as opts, :keys [a b]}]
   [a b opts])
 
-#_(deftest test-cljs-3299-trailing-keys
+(deftest test-cljs-3299-trailing-keys
   (testing "verify proper handling of trailing keys"
     (is (= (test-keys :a 1, :b 2)
            [1 2 {:a 1, :b 2}]))

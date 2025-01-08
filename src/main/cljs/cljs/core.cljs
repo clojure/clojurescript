@@ -7217,7 +7217,7 @@ reduces them without incurring seq initialization"
         (let [kv (first extra-kvs)]
           (aset ret i (-key kv))
           (aset ret (inc i) (-val kv))
-          (recur (+ 2 seed-cnt) (next extra-kvs)))
+          (recur (+ 2 i) (next extra-kvs)))
         ret))))
 
 (set! (.-createAsIfByAssoc PersistentArrayMap)
