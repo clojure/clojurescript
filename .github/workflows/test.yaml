@@ -56,7 +56,7 @@ jobs:
 
       - name: Run tests
         run: |
-          /System/Library/Frameworks/JavaScriptCore.framework/Versions/A/Helpers/jsc WebKit/WebKitBuild/Release/bin/jsc builds/out-adv/core-advanced-test.js | tee test-out.txt
+          /System/Library/Frameworks/JavaScriptCore.framework/Versions/A/Helpers/jsc builds/out-adv/core-advanced-test.js | tee test-out.txt
           grep -qxF '0 failures, 0 errors.' test-out.txt
 
     # Runtime Tests
