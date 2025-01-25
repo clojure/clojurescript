@@ -2771,14 +2771,22 @@ reduces them without incurring seq initialization"
 (defn ^number max
   "Returns the greatest of the nums."
   ([x] x)
-  ([x y] (cljs.core/max x y))
+  ([x y]
+   (cond
+     (.isNaN js/Number x) x
+     (.isNaN js/Number y) y
+     :else (cljs.core/max x y)))
   ([x y & more]
    (reduce max (cljs.core/max x y) more)))
 
 (defn ^number min
   "Returns the least of the nums."
   ([x] x)
-  ([x y] (cljs.core/min x y))
+  ([x y]
+   (cond
+     (.isNaN js/Number x) x
+     (.isNaN js/Number y) y
+     :else (cljs.core/min x y)))
   ([x y & more]
    (reduce min (cljs.core/min x y) more)))
 
