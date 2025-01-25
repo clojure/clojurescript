@@ -124,6 +124,8 @@
   (when (> (.getChildCount node) 0)
     (parse-extern-node (.getFirstChild node))))
 
+;; Handle:
+;;   Math.hypot = function(...) {...};
 (defmethod parse-extern-node Token/ASSIGN [^Node node]
   (when (> (.getChildCount node) 0)
     (let [ty  (get-var-info node)
@@ -253,7 +255,20 @@
            externs (index-externs (parse-externs externs-file))))
        defaults sources))))
 
-(def externs-map (memoize externs-map*))
+(def ^{:doc "Returns a map of externs in the form:
+
+    {foo {bar {baz {}
+     woz {...}}
+
+  JavaScript var information is not held in the map itself, but on the
+  symbols in the map. See the helper `info` for grabbing the metadata.
+  The metadata map matches the layout of var info of the ClojureScript
+  analyzer: :file & :line, method info, :ret-tag, :tag, :doc, etc.
+  are all available.
+
+  See also `parse-externs`."}
+  externs-map
+  (memoize externs-map*))
 
 (defn ns-match? [ns-segs var-segs]
   (or
@@ -313,6 +328,16 @@
                 (parse-externs (resource->source-file rsrc))
                 (:module desc))}))))
 
+(defn info
+  "Helper for grabbing var info from an externs map.
+
+  See `externs-map`"
+  [externs props]
+  (-> externs
+    (get-in (butlast props))
+    (find (last props))
+    first meta))
+
 (comment
   (require '[clojure.java.io :as io]
            '[cljs.closure :as closure]
@@ -354,8 +379,7 @@
         [(closure/js-source-file "goog/date/date.js"
            (io/input-stream (io/resource "goog/date/date.js")))]
         {})
-    (get-in '[goog date month])
-    )
+    (get-in '[goog date month]))
 
   (pprint (analyze-goog-file "goog/date/date.js" 'goog.date.month))
 
@@ -385,7 +409,7 @@
   (->
     (filter
       (fn [s]
-        (= "externs.zip//webkit_dom.js" (.getName s)))
+        (= "externs.zip//whatwg_console.js" (.getName s)))
       (default-externs))
     first parse-externs index-externs
     (find 'console) first meta)
@@ -393,7 +417,7 @@
   (->
     (filter
       (fn [s]
-        (= "externs.zip//webkit_dom.js" (.getName s)))
+        (= "externs.zip//whatwg_console.js" (.getName s)))
       (default-externs))
     first parse-externs index-externs
     (get-in '[Console prototype])
@@ -402,8 +426,11 @@
   (require '[clojure.java.io :as io]
            '[cljs.closure :as cc])
 
+  ;; react.ext.js needs to be available
   (-> (cc/js-source-file nil (io/file "react.ext.js"))
     parse-externs index-externs
     (get 'React)
     (find 'Component) first meta)
+
+  (-> (info (externs-map) '[Number isNaN]) :ret-tag) ;; => boolean
   )
