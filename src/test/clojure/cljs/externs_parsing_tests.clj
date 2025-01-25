@@ -7,7 +7,10 @@
 ;; You must not remove this notice, or any other, from this software.
 
 (ns cljs.externs-parsing-tests
-  (:require [cljs.closure :as closure]
+  (:require [cljs.analyzer :as ana]
+            [cljs.closure :as closure]
+            [cljs.compiler :as comp]
+            [cljs.env :as env]
             [cljs.externs :as externs]
             [clojure.java.io :as io]
             [clojure.test :as test :refer [deftest is]])
@@ -45,7 +48,15 @@
                (find 'HTMLDocument) first meta)]
     (is (= 'Document (:super info)))))
 
+;; TODO:
+;; analyze (.isNaN js/NaN 1)
+;; node :tag should be js/Boolean
+
 (comment
+
+  ;; js/Boolean
+  (env/with-compiler-env (env/default-compiler-env)
+    (ana/js-tag '[Number isNaN] :ret-tag))
 
   (externs/parse-externs
     (externs/resource->source-file (io/resource "goog/object/object.js")))
