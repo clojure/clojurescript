@@ -432,5 +432,6 @@
     (get 'React)
     (find 'Component) first meta)
 
+  (info (externs-map) '[Number])
   (-> (info (externs-map) '[Number isNaN]) :ret-tag) ;; => boolean
   )

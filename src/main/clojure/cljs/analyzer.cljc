@@ -3542,6 +3542,12 @@
                  (list* '. dot-form) " with classification "
                  (classify-dot-form dot-form))))))
 
+(defn js-global?
+  "Return true if the expr is a JS global"
+  [expr]
+  (and (= 'js (:ns expr))
+       (some? (get-in (get-externs) [(-> (:name expr) name symbol)]))))
+
 (defn analyze-dot [env target field member+ form]
   (let [v [target field member+]
         {:keys [dot-action target method field args]} (build-dot-form v)
@@ -3550,11 +3556,14 @@
         form-meta  (meta form)
         target-tag (:tag targetexpr)
         prop       (or field method)
-        tag        (or (:tag form-meta)
-                       (and (js-tag? target-tag)
-                            (vary-meta (normalize-js-tag target-tag)
-                              update-in [:prefix] (fnil conj '[Object]) prop))
-                       nil)]
+        tag        (if (js-global? targetexpr)
+                     ;; we have a known global, don't treat as instance of some type
+                     (with-meta 'js {:prefix [(-> targetexpr :name name symbol) prop]})
+                     (or (:tag form-meta)
+                         (and (js-tag? target-tag)
+                              (vary-meta (normalize-js-tag target-tag)
+                                update-in [:prefix] (fnil conj '[Object]) prop))
+                         nil))]
     (when (and (not= 'constructor prop)
                (not (string/starts-with? (str prop) "cljs$"))
                (not (-> prop meta :protocol-prop)))
