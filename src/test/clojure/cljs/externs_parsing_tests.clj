@@ -7,7 +7,10 @@
 ;; You must not remove this notice, or any other, from this software.
 
 (ns cljs.externs-parsing-tests
-  (:require [cljs.closure :as closure]
+  (:require [cljs.analyzer :as ana]
+            [cljs.closure :as closure]
+            [cljs.compiler :as comp]
+            [cljs.env :as env]
             [cljs.externs :as externs]
             [clojure.java.io :as io]
             [clojure.test :as test :refer [deftest is]])
@@ -45,7 +48,34 @@
                (find 'HTMLDocument) first meta)]
     (is (= 'Document (:super info)))))
 
+(deftest test-number-infer-test
+  (let [cenv (env/default-compiler-env)
+        aenv (ana/empty-env)]
+    (is (= (env/with-compiler-env cenv
+             (:tag (ana/analyze aenv '(.isNaN js/Number 1))))
+           'js/Boolean))))
+
+;; TODO: js/subtle.crypto
+
 (comment
+
+  (externs/info
+    (::ana/externs @(env/default-compiler-env))
+    '[Number])
+
+  (externs/info
+    (::ana/externs @(env/default-compiler-env))
+    '[Number isNaN])
+
+  ;; js/Boolean
+  (env/with-compiler-env (env/default-compiler-env)
+    (ana/js-tag '[Number isNaN] :ret-tag))
+
+  ;; js
+  (let [cenv (env/default-compiler-env)
+        aenv (ana/empty-env)]
+    (->> (env/with-compiler-env cenv
+           (:tag (ana/analyze aenv '(.isNaN js/Number 1))))))
 
   (externs/parse-externs
     (externs/resource->source-file (io/resource "goog/object/object.js")))
