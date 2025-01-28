@@ -330,6 +330,8 @@
 
 (defn info
   "Helper for grabbing var info from an externs map.
+  Example:
+    (info externs '[Number isNaN])
 
   See `externs-map`"
   [externs props]
