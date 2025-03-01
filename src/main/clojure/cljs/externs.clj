@@ -38,6 +38,22 @@
       (into [] (butlast props))
       (with-meta (last props) ty))))
 
+(def token->kw
+  {Token/BANG      :bang
+   Token/BLOCK     :block
+   Token/PIPE      :pipe
+   Token/STRINGLIT :string-lit})
+
+(defn parse-texpr [^Node root]
+  (let [token    (get token->kw (.getToken root))
+        children (.children root)]
+    (merge
+      {:type token}
+      (when-not (empty? children)
+        {:children (vec (map parse-texpr (.children root)))})
+      (when (= :string-lit token)
+        {:value (.getString root)}))))
+
 (defn get-tag [^JSTypeExpression texpr]
   (when-let [root (.getRoot texpr)]
     (if (.isString root)
