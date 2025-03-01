@@ -313,6 +313,24 @@
                 (parse-externs (resource->source-file rsrc))
                 (:module desc))}))))
 
+(defn info
+  "Helper for grabbing var info from an externs map.
+  Example:
+    (info externs '[Number isNaN])
+  See `externs-map`"
+  [externs props]
+  (-> externs
+    (get-in (butlast props))
+    (find (last props))
+    first meta))
+
+(defn filtered-externs [f]
+  (->>
+    (filter
+      #(= f (.getName %))
+      (default-externs))
+    first parse-externs index-externs))
+
 (comment
   (require '[clojure.java.io :as io]
            '[cljs.closure :as closure]

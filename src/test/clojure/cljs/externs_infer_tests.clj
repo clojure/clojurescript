@@ -487,6 +487,21 @@
       (is (empty? @ws)))))
 
 (comment
+
+  (externs/info
+    (::ana/externs @(env/default-compiler-env))
+    '[console])
+
+  (externs/info
+    (::ana/externs @(env/default-compiler-env))
+    '[crypto])
+
+  (-> (externs/filtered-externs "externs.zip//w3c_webcrypto.js")
+    (externs/info '[crypto]))
+
+  )
+
+(comment
   (binding [ana/*cljs-ns* ana/*cljs-ns*]
     (ana/no-warn
       (env/with-compiler-env externs-cenv
