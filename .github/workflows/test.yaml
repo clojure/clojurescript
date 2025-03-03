@@ -19,7 +19,7 @@ jobs:
           tools-deps: '1.10.1.763'
 
       - name: Cache maven
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         env:
           cache-name: cache-maven
         with:
@@ -29,7 +29,7 @@ jobs:
             ${{ runner.os }}-${{ env.cache-name }}-
 
       - name: Cache gitlibs
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         env:
           cache-name: cache-gitlibs
         with:
@@ -39,7 +39,7 @@ jobs:
             ${{ runner.os }}-${{ env.cache-name }}-
 
       # - name: Cache JSC
-      #   uses: actions/cache@v2
+      #   uses: actions/cache@v4
       #   env:
       #     cache-name: cache-jsc
       #   with:
@@ -102,7 +102,7 @@ jobs:
           tools-deps: '1.10.1.763'
 
       - name: Cache maven
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         env:
           cache-name: cache-maven
         with:
@@ -112,7 +112,7 @@ jobs:
             ${{ runner.os }}-${{ env.cache-name }}-
 
       - name: Cache gitlibs
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         env:
           cache-name: cache-gitlibs
         with:
@@ -146,7 +146,7 @@ jobs:
           tools-deps: '1.10.1.763'
 
       - name: Cache maven
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         env:
           cache-name: cache-maven
         with:
@@ -156,7 +156,7 @@ jobs:
             ${{ runner.os }}-${{ env.cache-name }}-
 
       - name: Cache gitlibs
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         env:
           cache-name: cache-gitlibs
         with:
@@ -190,7 +190,7 @@ jobs:
           tools-deps: '1.10.1.763'
 
       - name: Cache maven
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         env:
           cache-name: cache-maven
         with:
@@ -200,7 +200,7 @@ jobs:
             ${{ runner.os }}-${{ env.cache-name }}-
 
       - name: Cache gitlibs
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         env:
           cache-name: cache-gitlibs
         with:
@@ -251,7 +251,7 @@ jobs:
           tools-deps: '1.10.1.763'
 
       - name: Cache maven
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         env:
           cache-name: cache-maven
         with:
@@ -261,7 +261,7 @@ jobs:
             ${{ runner.os }}-${{ env.cache-name }}-
 
       - name: Cache gitlibs
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         env:
           cache-name: cache-gitlibs
         with:
