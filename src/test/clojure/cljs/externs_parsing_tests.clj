@@ -8,9 +8,11 @@
 
 (ns cljs.externs-parsing-tests
   (:require [cljs.closure :as closure]
+            [cljs.analyzer :as ana]
+            [cljs.env :as env]
             [cljs.externs :as externs]
             [clojure.java.io :as io]
-            [clojure.test :as test :refer [deftest is]])
+            [clojure.test :as test :refer [deftest is testing]])
   (:import [com.google.javascript.jscomp CommandLineRunner]))
 
 (deftest cljs-3121
@@ -44,6 +46,15 @@
                first externs/parse-externs externs/index-externs
                (find 'HTMLDocument) first meta)]
     (is (= 'Document (:super info)))))
+
+(deftest test-parse-closure-type-annotations
+  (let [externs (::ana/externs @(env/default-compiler-env))]
+    (testing "JS global console has tag Console"
+      (let [info (externs/info externs '[console])]
+        (is (= 'Console (:tag info)))))
+    (testing "JS global crypto has tag webCrypto.Crypto"
+      (let [info (externs/info externs '[crypto])]
+        (is (= 'webCrypto.Crypto (:tag info)))))))
 
 (comment
 
