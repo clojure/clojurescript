@@ -65,7 +65,7 @@
         (let [info (externs/info externs '[webCrypto SubtleCrypto prototype deriveKey])]
           (is (= 'Promise (:ret-tag info)))))
       (testing "@return {!Int8Array|!Uint8Array|!Uint8ClampedArray|!Int16Array|!Uint16Array|!Int32Array|!Uint32Array|!BigInt64Array|!BigUint64Array}"
-        (let [info (externs/info externs '[webCrypto SubtleCrypto prototype getRandomValues])]
+        (let [info (externs/info externs '[webCrypto Crypto prototype getRandomValues])]
           (is (= 'any (:ret-tag info))))))))
 
 (comment
