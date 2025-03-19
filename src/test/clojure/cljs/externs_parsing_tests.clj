@@ -52,11 +52,26 @@
     (testing "JS global console has tag Console"
       (let [info (externs/info externs '[console])]
         (is (= 'Console (:tag info)))))
-    (testing "JS global crypto has tag webCrypto.Crypto"
+    (testing "JS global crypto has tag webCrypto.Crypto from:
+    @type {!webCrypto.Crypto|undefined}"
       (let [info (externs/info externs '[crypto])]
-        (is (= 'webCrypto.Crypto (:tag info)))))))
+        (is (= 'webCrypto.Crypto (:tag info)))))
+    (testing "Generic return type on crypto methods returns ClojureScript relevant
+    type info:"
+      (testing "@return {!Promise<!ArrayBuffer>}"
+        (let [info (externs/info externs '[webCrypto SubtleCrypto prototype encrypt])]
+          (is (= 'Promise (:ret-tag info)))))
+      (testing "@return {!Promise<!webCrypto.CryptoKey|!webCrypto.CryptoKeyPair>}"
+        (let [info (externs/info externs '[webCrypto SubtleCrypto prototype deriveKey])]
+          (is (= 'Promise (:ret-tag info)))))
+      (testing "@return {!Int8Array|!Uint8Array|!Uint8ClampedArray|!Int16Array|!Uint16Array|!Int32Array|!Uint32Array|!BigInt64Array|!BigUint64Array}"
+        (let [info (externs/info externs '[webCrypto SubtleCrypto prototype getRandomValues])]
+          (is (= 'any (:ret-tag info))))))))
 
 (comment
+
+  (let [externs (::ana/externs @(env/default-compiler-env))]
+    (externs/info externs '[webCrypto Crypto prototype getRandomValues]))
 
   (externs/parse-externs
     (externs/resource->source-file (io/resource "goog/object/object.js")))
