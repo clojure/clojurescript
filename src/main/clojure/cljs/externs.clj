@@ -38,13 +38,43 @@
       (into [] (butlast props))
       (with-meta (last props) ty))))
 
+(def token->kw
+  {Token/BANG      :bang
+   Token/BLOCK     :block
+   Token/PIPE      :pipe
+   Token/STRINGLIT :string-lit
+   Token/QMARK     :qmark
+   Token/STAR      :star})
+
+(defn parse-texpr [^Node root]
+  (when-let [token (get token->kw (.getToken root))]
+    (let [children (.children root)]
+      (merge
+        {:type token}
+        (when-not (empty? children)
+          {:children (vec (map parse-texpr (.children root)))})
+        (when (= :string-lit token)
+          {:value (.getString root)})))))
+
+(defn undefined?
+  [{:keys [type value] :as texpr}]
+  (and (= type :string-lit)
+       (= "undefined" value)))
+
+(defn simplify-texpr
+  [texpr]
+  (case (:type texpr)
+    :string-lit    (some-> (:value texpr) symbol)
+    (:star :qmark) 'any
+    :bang          (simplify-texpr (-> texpr :children first))
+    :pipe          (let [[x y] (:children texpr)]
+                     (if (undefined? y)
+                       (simplify-texpr x)
+                       'any))
+    'any))
+
 (defn get-tag [^JSTypeExpression texpr]
-  (when-let [root (.getRoot texpr)]
-    (if (.isString root)
-      (symbol (.getString root))
-      (if-let [child (.. root getFirstChild)]
-        (if (.isString child)
-          (symbol (.. child getString)))))))
+  (some-> (.getRoot texpr) parse-texpr simplify-texpr))
 
 (defn params->method-params [xs]
   (letfn [(not-opt? [x]
@@ -156,7 +186,7 @@
           [lhs])
         []))))
 
-(defmethod parse-extern-node Token/GETPROP [node]
+(defmethod parse-extern-node Token/GETPROP [^Node node]
   (when-not *ignore-var*
     (let [props (map symbol (string/split (.getQualifiedName node) #"\."))]
       [(if-let [ty (get-var-info node)]
@@ -165,7 +195,7 @@
 
 ;; JavaScript Object literal
 ;; { ... }
-(defmethod parse-extern-node Token/OBJECTLIT [node]
+(defmethod parse-extern-node Token/OBJECTLIT [^Node node]
   (when (> (.getChildCount node) 0)
     (loop [nodes (.children node)
            externs []]
@@ -215,8 +245,8 @@
       (loop [nodes (cond-> nodes
                      ;; handle goog.modules which won't have top-levels
                      ;; need to look at internal children
-                     (= Token/MODULE_BODY (some-> nodes first .getToken))
-                     (-> first .children))
+                     (= Token/MODULE_BODY (some-> nodes ^Node (first) .getToken))
+                     (-> ^Node (first) .children))
              externs []]
         (if (empty? nodes)
           externs
@@ -312,6 +342,24 @@
         :defs (parsed->defs
                 (parse-externs (resource->source-file rsrc))
                 (:module desc))}))))
+
+(defn info
+  "Helper for grabbing var info from an externs map.
+  Example:
+    (info externs '[Number isNaN])
+  See `externs-map`"
+  [externs props]
+  (-> externs
+    (get-in (butlast props))
+    (find (last props))
+    first meta))
+
+(defn filtered-externs [f]
+  (->>
+    (filter
+      #(= f (.getName %))
+      (default-externs))
+    first parse-externs index-externs))
 
 (comment
   (require '[clojure.java.io :as io]
