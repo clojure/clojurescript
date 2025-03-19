@@ -245,8 +245,8 @@
       (loop [nodes (cond-> nodes
                      ;; handle goog.modules which won't have top-levels
                      ;; need to look at internal children
-                     (= Token/MODULE_BODY (some-> nodes first .getToken))
-                     (-> first .children))
+                     (= Token/MODULE_BODY (some-> nodes ^Node (first) .getToken))
+                     (-> ^Node (first) .children))
              externs []]
         (if (empty? nodes)
           externs
