@@ -35,6 +35,25 @@
     (is (true? (ana/has-extern? '[baz] externs)))
     (is (false? (ana/has-extern? '[Baz] externs)))))
 
+(comment
+
+  (def externs
+    (externs/externs-map
+      (closure/load-externs
+        {:externs                 ["src/test/externs/test.js"]
+         :use-only-custom-externs true})))
+
+  ;; working
+  (externs/info externs '[baz])
+  (externs/info externs '[Foo gozMethod])
+
+  (ana/extern-var-info '[baz] externs)
+  (ana/extern-var-info '[Foo gozMethod] externs)
+
+  (ana/has-extern? '[Foo] externs)
+
+  )
+
 (deftest test-has-extern?-defaults
   (let [externs (externs/externs-map)]
     (is (true? (ana/has-extern? '[console] externs)))
@@ -188,6 +207,12 @@
     (is (some-> @ws first
           (string/starts-with?
             "Cannot resolve property gozMethod for inferred type js/Foo")))))
+
+(comment
+
+  (clojure.test/test-vars [#'test-type-hint-infer-unknown-method])
+
+  )
 
 (deftest test-infer-unknown-method-from-externs
   (let [ws  (atom [])

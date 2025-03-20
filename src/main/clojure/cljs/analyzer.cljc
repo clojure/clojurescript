@@ -1030,7 +1030,7 @@
     boolean  Boolean
     symbol   Symbol})
 
-(defn has-extern?*
+(defn extern-var-info
   ([pre externs]
    (let [pre (if-some [me (find
                             (get-in externs '[Window prototype])
@@ -1039,25 +1039,29 @@
                  (into [tag 'prototype] (next pre))
                  pre)
                pre)]
-     (has-extern?* pre externs externs)))
-  ([pre externs top]
+     (extern-var-info pre externs externs nil)))
+  ([pre externs top info]
    (cond
-     (empty? pre) true
+     (empty? pre) info
      :else
      (let [x  (first pre)
            me (find externs x)]
        (cond
-         (not me) false
+         (not me) nil
          :else
          (let [[x' externs'] me
-               xmeta (meta x')]
-           (if (and (= 'Function (:tag xmeta)) (:ctor xmeta))
-             (or (has-extern?* (into '[prototype] (next pre)) externs' top)
-                 (has-extern?* (next pre) externs' top)
+               info' (meta x')]
+           (if (and (= 'Function (:tag info')) (:ctor info'))
+             (or (extern-var-info (into '[prototype] (next pre)) externs' top nil)
+                 (extern-var-info (next pre) externs' top info')
                  ;; check base type if it exists
-                 (when-let [super (:super xmeta)]
-                   (has-extern?* (into [super] (next pre)) externs top)))
-             (recur (next pre) externs' top))))))))
+                 (when-let [super (:super info')]
+                   (extern-var-info (into [super] (next pre)) externs top nil)))
+             (recur (next pre) externs' top info'))))))))
+
+(defn has-extern?*
+  [pre externs]
+  (boolean (extern-var-info pre externs)))
 
 (defn has-extern?
   ([pre]
@@ -3569,6 +3573,7 @@
             {:warn-type :target :form form :property prop}))
         ;; Unresolveable property on existing extern
         (let [[pre' pre] ((juxt butlast identity) (-> tag meta :prefix))]
+          (println ">>>>>" pre' pre)
           (when (and (has-extern? pre') (not (has-extern? pre)))
             (warning :infer-warning env
               {:warn-type :property :form form
