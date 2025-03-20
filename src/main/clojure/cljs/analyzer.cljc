@@ -3573,7 +3573,6 @@
             {:warn-type :target :form form :property prop}))
         ;; Unresolveable property on existing extern
         (let [[pre' pre] ((juxt butlast identity) (-> tag meta :prefix))]
-          (println ">>>>>" pre' pre)
           (when (and (has-extern? pre') (not (has-extern? pre)))
             (warning :infer-warning env
               {:warn-type :property :form form
