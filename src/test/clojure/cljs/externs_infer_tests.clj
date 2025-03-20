@@ -35,6 +35,25 @@
     (is (true? (ana/has-extern? '[baz] externs)))
     (is (false? (ana/has-extern? '[Baz] externs)))))
 
+(comment
+
+  (def externs
+    (externs/externs-map
+      (closure/load-externs
+        {:externs                 ["src/test/externs/test.js"]
+         :use-only-custom-externs true})))
+
+  ;; working
+  (externs/info externs '[baz])
+  (externs/info externs '[Foo gozMethod])
+
+  (ana/extern-var-info '[baz] externs)
+  (ana/extern-var-info '[Foo gozMethod] externs)
+
+  (ana/has-extern? '[Foo] externs)
+
+  )
+
 (deftest test-has-extern?-defaults
   (let [externs (externs/externs-map)]
     (is (true? (ana/has-extern? '[console] externs)))
@@ -158,9 +177,9 @@
                :warnings ws})]
     (is (= (unsplit-lines ["Foo.Boo.prototype.wozz;"]) res))
     (is (= 1 (count @ws)))
-    (is (string/starts-with?
-          (first @ws)
-          "Cannot resolve property wozz for inferred type js/Foo.Boo"))))
+    (is (some-> @ws first
+          (string/starts-with?
+            "Cannot resolve property wozz for inferred type js/Foo.Boo")))))
 
 (deftest test-type-hint-infer-unknown-property-in-chain
   (let [ws  (atom [])
@@ -172,9 +191,9 @@
                :warnings ws})]
     (is (= (unsplit-lines ["Foo.Boo.prototype.wozz;"]) res))
     (is (= 1 (count @ws)))
-    (is (string/starts-with?
-          (first @ws)
-          "Cannot resolve property wozz for inferred type js/Foo.Boo"))))
+    (is (some-> @ws first
+          (string/starts-with?
+            "Cannot resolve property wozz for inferred type js/Foo.Boo")))))
 
 (deftest test-type-hint-infer-unknown-method
   (let [ws  (atom [])
@@ -185,9 +204,15 @@
                :warnings ws})]
     (is (= (unsplit-lines ["Foo.prototype.gozMethod;"]) res))
     (is (= 1 (count @ws)))
-    (is (string/starts-with?
-          (first @ws)
-          "Cannot resolve property gozMethod for inferred type js/Foo"))))
+    (is (some-> @ws first
+          (string/starts-with?
+            "Cannot resolve property gozMethod for inferred type js/Foo")))))
+
+(comment
+
+  (clojure.test/test-vars [#'test-type-hint-infer-unknown-method])
+
+  )
 
 (deftest test-infer-unknown-method-from-externs
   (let [ws  (atom [])
@@ -197,9 +222,9 @@
                :warnings ws})]
     (is (= (unsplit-lines ["Foo.prototype.gozMethod;"]) res))
     (is (= 1 (count @ws)))
-    (is (string/starts-with?
-          (first @ws)
-          "Cannot resolve property gozMethod for inferred type js/Foo"))))
+    (is (some-> @ws first
+          (string/starts-with?
+            "Cannot resolve property gozMethod for inferred type js/Foo")))))
 
 (deftest test-infer-js-require
   (let [ws  (atom [])
@@ -211,9 +236,9 @@
                :warnings ws})]
     (is (= (unsplit-lines ["var require;" "Object.Component;"]) res))
     (is (= 1 (count @ws)))
-    (is (string/starts-with?
-          (first @ws)
-          "Adding extern to Object for property Component"))))
+    (is (some-> @ws first
+          (string/starts-with?
+            "Adding extern to Object for property Component")))))
 
 (deftest test-set-warn-on-infer
   (let [ws  (atom [])
@@ -227,7 +252,9 @@
                :warn false
                :with-core? true})]
     (is (= 1 (count @ws)))
-    (is (string/starts-with? (first @ws) "Cannot infer target type"))))
+    (is (some-> @ws first
+          (string/starts-with?
+            "Cannot infer target type")))))
 
 (deftest test-cljs-1970-infer-with-cljs-literals
   (let [ws  (atom [])
