@@ -2624,7 +2624,11 @@
         (let [proc (-> (ProcessBuilder.
                          (into (cond->>
                                  [deps-cmd
-                                  ({"npm" "install" "yarn" "add"} deps-cmd)
+                                  ({"npm" "install"
+                                    "bun" "add"
+                                    "pnpm" "add"
+                                    "yarn" "add"}
+                                   deps-cmd)
                                   "@cljs-oss/module-deps"]
                                  util/windows? (into ["cmd" "/c"]))
                            (map (fn [[dep version]] (str (name dep) "@" version)))
@@ -2668,7 +2672,9 @@
                 (string/replace "CLJS_TARGET" (str "" (when target (name target))))
                 (string/replace "MAIN_ENTRIES" main-entries)
                 (string/replace "FILE_SEPARATOR" (escape-backslashes File/separator)))
-         proc (-> (ProcessBuilder. ["node" "--eval" code])
+         proc (-> (ProcessBuilder. (case (:deps-cmd opts)
+                                     "bun" ["bun" "--eval" code]
+                                     ["node" "--eval" code]))
                 .start)
          is   (.getInputStream proc)
          iw   (StringWriter. (* 16 1024 1024))
