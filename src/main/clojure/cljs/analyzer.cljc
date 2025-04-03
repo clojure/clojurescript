@@ -982,8 +982,7 @@
   (if-not (= 'js x)
     (with-meta 'js
       {:prefix (conj (->> (string/split (name x) #"\.")
-                       (map symbol) vec)
-                 'prototype)})
+                       (map symbol) vec))})
     x))
 
 (defn ->type-set
@@ -1030,7 +1029,9 @@
     boolean  Boolean
     symbol   Symbol})
 
-(defn extern-var-info
+(defn resolve-extern
+  "Given a foreign js property list, return a resolved js property list and the
+  extern var info"
   ([pre externs]
    (let [pre (if-some [me (find
                             (get-in externs '[Window prototype])
@@ -1039,10 +1040,10 @@
                  (into [tag 'prototype] (next pre))
                  pre)
                pre)]
-     (extern-var-info pre externs externs nil)))
-  ([pre externs top info]
+     (resolve-extern pre externs externs {:resolved [] :info nil})))
+  ([pre externs top ret]
    (cond
-     (empty? pre) info
+     (empty? pre) ret
      :else
      (let [x  (first pre)
            me (find externs x)]
@@ -1052,16 +1053,31 @@
          (let [[x' externs'] me
                info' (meta x')]
            (if (and (= 'Function (:tag info')) (:ctor info'))
-             (or (extern-var-info (into '[prototype] (next pre)) externs' top nil)
-                 (extern-var-info (next pre) externs' top info')
-                 ;; check base type if it exists
+             (or
+                 ;; first look for a property on the prototype
+                 (resolve-extern (into '[prototype] (next pre)) externs' top
+                   (-> ret
+                     (update :resolved conj 'prototype)
+                     (assoc :info nil)))
+                 ;; then check for "static" property
+                 (resolve-extern (next pre) externs' top
+                   (-> ret
+                     (update :resolved conj x)
+                     (assoc :info info')))
+                 ;; finally check the super class if there is one
                  (when-let [super (:super info')]
-                   (extern-var-info (into [super] (next pre)) externs top nil)))
-             (recur (next pre) externs' top info'))))))))
+                   (resolve-extern (into [super] (next pre)) externs top
+                     (-> ret
+                       (update :resolved conj x)
+                       (assoc :info nil)))))
+             (recur (next pre) externs' top
+               (-> ret
+                 (update :resolved conj x)
+                 (assoc :info info'))))))))))
 
 (defn has-extern?*
   [pre externs]
-  (boolean (extern-var-info pre externs)))
+  (boolean (resolve-extern pre externs)))
 
 (defn has-extern?
   ([pre]

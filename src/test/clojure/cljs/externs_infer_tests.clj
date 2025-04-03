@@ -23,6 +23,15 @@
    "goog.isArrayLike;" "Java.type;" "Object.out;" "Object.out.println;"
    "Object.error;" "Object.error.println;"])
 
+(deftest test-resolve-extern
+  (let [externs
+        (externs/externs-map
+          (closure/load-externs
+            {:externs                 ["src/test/externs/test.js"]
+             :use-only-custom-externs true}))]
+    (is (some? (ana/resolve-extern '[baz] externs)))
+    (is (nil? (ana/resolve-extern '[Foo gozMethod] externs)))))
+
 (deftest test-has-extern?-basic
   (let [externs (externs/externs-map
                   (closure/load-externs
@@ -37,18 +46,11 @@
 
 (comment
 
-  (def externs
-    (externs/externs-map
-      (closure/load-externs
-        {:externs                 ["src/test/externs/test.js"]
-         :use-only-custom-externs true})))
+  (clojure.test/test-vars [#'test-resolve-extern])
 
   ;; working
   (externs/info externs '[baz])
   (externs/info externs '[Foo gozMethod])
-
-  (ana/extern-var-info '[baz] externs)
-  (ana/extern-var-info '[Foo gozMethod] externs)
 
   (ana/has-extern? '[Foo] externs)
 
