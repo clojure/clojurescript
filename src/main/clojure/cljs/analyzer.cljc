@@ -1033,14 +1033,7 @@
   "Given a foreign js property list, return a resolved js property list and the
   extern var info"
   ([pre externs]
-   (let [pre (if-some [me (find
-                            (get-in externs '[Window prototype])
-                            (first pre))]
-               (if-some [tag (-> me first meta :tag)]
-                 (into [tag 'prototype] (next pre))
-                 pre)
-               pre)]
-     (resolve-extern pre externs externs {:resolved [] :info nil})))
+   (resolve-extern pre externs externs {:resolved [] :info nil}))
   ([pre externs top ret]
    (cond
      (empty? pre) ret
@@ -1054,16 +1047,18 @@
                info' (meta x')]
            (if (and (= 'Function (:tag info')) (:ctor info'))
              (or
+               ;; then check for "static" property
+               (resolve-extern (next pre) externs' top
+                 (-> ret
+                   (update :resolved conj x)
+                   (assoc :info info')))
+
                  ;; first look for a property on the prototype
                  (resolve-extern (into '[prototype] (next pre)) externs' top
                    (-> ret
-                     (update :resolved conj 'prototype)
-                     (assoc :info nil)))
-                 ;; then check for "static" property
-                 (resolve-extern (next pre) externs' top
-                   (-> ret
                      (update :resolved conj x)
-                     (assoc :info info')))
+                     (assoc :info nil)))
+
                  ;; finally check the super class if there is one
                  (when-let [super (:super info')]
                    (resolve-extern (into [super] (next pre)) externs top

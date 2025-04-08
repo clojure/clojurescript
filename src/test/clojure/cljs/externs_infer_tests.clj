@@ -44,15 +44,22 @@
     (is (true? (ana/has-extern? '[baz] externs)))
     (is (false? (ana/has-extern? '[Baz] externs)))))
 
+(deftest test-resolve-extern
+  (let [externs (externs/externs-map)]
+    (is (= '[Number]
+            (-> (ana/resolve-extern '[Number] externs) :resolved)))
+    (is (= '[Number prototype valueOf]
+            (-> (ana/resolve-extern '[Number valueOf] externs) :resolved)))))
+
 (comment
 
-  (clojure.test/test-vars [#'test-resolve-extern])
+  (def externs (externs/externs-map))
 
-  ;; working
-  (externs/info externs '[baz])
-  (externs/info externs '[Foo gozMethod])
+  ;; succeeds
+  (ana/resolve-extern '[console] externs)
 
-  (ana/has-extern? '[Foo] externs)
+  ;; this one fails
+  (ana/resolve-extern '[console log] externs)
 
   )
 
