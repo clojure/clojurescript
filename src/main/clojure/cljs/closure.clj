@@ -194,7 +194,6 @@
    :underscore DiagnosticGroups/UNDERSCORE
    :unknown-defines DiagnosticGroups/UNKNOWN_DEFINES
    :unused-local-variable DiagnosticGroups/UNUSED_LOCAL_VARIABLE
-   :unused-private-property DiagnosticGroups/UNUSED_PRIVATE_PROPERTY
    :violated-module-dep DiagnosticGroups/VIOLATED_MODULE_DEP
    :visibility DiagnosticGroups/VISIBILITY})
 
