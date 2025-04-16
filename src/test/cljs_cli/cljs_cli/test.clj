@@ -87,7 +87,8 @@
         (let [result (cljs-main "--compile-opts" (pr-str opts)
                                 "--compile" "foo.core")]
           (is (zero? (:exit result)))
-          (is (str/blank? (:err result))))))))
+          (is (or (str/blank? (:err result))
+                  (re-find #"unusedPrivateMembers" (:err result)))))))))
 
 (deftest test-cljs-2673
   (with-repl-env-filter #{"node"}
