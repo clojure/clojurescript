@@ -4,7 +4,7 @@
   com.cognitect/transit-java {:mvn/version "1.0.362"}
   org.clojure/clojure {:mvn/version "1.10.0"}
   org.clojure/core.specs.alpha {:mvn/version "0.1.24"}
-  org.clojure/google-closure-library {:mvn/version "0.0-20250417-0eb1e76c"}
+  org.clojure/google-closure-library {:mvn/version "0.0-20250418-2ce9ab6d"}
   org.clojure/spec.alpha {:mvn/version "0.1.143"}
   org.clojure/tools.reader {:mvn/version "1.3.6"}
   org.clojure/test.check {:mvn/version "1.1.1"}}
