@@ -30,12 +30,12 @@
         <dependency>
             <groupId>com.google.javascript</groupId>
             <artifactId>closure-compiler-unshaded</artifactId>
-            <version>v20210202</version>
+            <version>v20250402</version>
         </dependency>
         <dependency>
             <groupId>org.clojure</groupId>
             <artifactId>google-closure-library</artifactId>
-            <version>0.0-20201211-3e6c510d</version>
+            <version>0.0-20250418-2ce9ab6d</version>
         </dependency>
         <dependency>
             <groupId>org.clojure</groupId>
@@ -374,8 +374,8 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.1</version>
                 <configuration>
-                    <source>1.8</source>
-                    <target>1.8</target>
+                    <source>21</source>
+                    <target>21</target>
                 </configuration>
             </plugin>
 	    <plugin>

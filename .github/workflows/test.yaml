@@ -12,7 +12,7 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '11'
+          java-version: '21'
 
       - uses: DeLaGuardo/setup-clojure@3.1
         with:
@@ -69,7 +69,7 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '11'
+          java-version: '21'
 
       - uses: DeLaGuardo/setup-clojure@3.5
         with:
@@ -95,7 +95,7 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '11'
+          java-version: '21'
 
       - uses: DeLaGuardo/setup-clojure@3.1
         with:
@@ -139,7 +139,7 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '11'
+          java-version: '21'
 
       - uses: DeLaGuardo/setup-clojure@3.1
         with:
@@ -183,7 +183,7 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '11'
+          java-version: '21'
 
       - uses: DeLaGuardo/setup-clojure@3.1
         with:
@@ -222,7 +222,7 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '11'
+          java-version: '21'
 
       - uses: DeLaGuardo/setup-clojure@3.5
         with:
@@ -244,7 +244,7 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '11'
+          java-version: '21'
 
       - uses: DeLaGuardo/setup-clojure@3.1
         with:
