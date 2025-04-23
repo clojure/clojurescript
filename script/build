@@ -17,6 +17,8 @@ POM_TEMPLATE="pom.template.xml"
 POM_FILE="pom.xml"
 CLJS_SCRIPT_MVN_OPTS=${CLJS_SCRIPT_MVN_OPTS:-""}
 
+export MAVEN_OPTS="${MAVEN_OPTS} --add-opens java.base/java.util=ALL-UNNAMED"
+
 # The command `git describe --match v0.0` will return a string like
 #
 # v0.0-856-g329708b
