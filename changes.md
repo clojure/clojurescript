@@ -1,4 +1,4 @@
-## 1.12.33
+## 1.12.35
 
 ### Changes
 * Update Google Closure Compiler dependency to v20250402
