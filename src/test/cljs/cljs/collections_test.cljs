@@ -1159,6 +1159,10 @@
       (dotimes [_ 10]
         (is (= [1] l))))))
 
+(deftest test-cljs-3240-overflow-regress
+  (let [things (zipmap (range 15000) (repeat 0))]
+    (is (zero? (count (filter #(-> % key string?) things))))))
+
 (comment
 
   (run-tests)
