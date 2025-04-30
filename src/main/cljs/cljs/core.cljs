@@ -3503,7 +3503,6 @@ reduces them without incurring seq initialization"
                 :else name)]
      (Keyword. ns name (str (when ns (str ns "/")) name) nil))))
 
-
 (deftype LazySeq [meta ^:mutable fn ^:mutable s ^:mutable __hash]
   Object
   (toString [coll]
@@ -3514,10 +3513,7 @@ reduces them without incurring seq initialization"
     (if (nil? fn)
       s
       (do
-        (loop [ls (fn)]
-          (if (instance? LazySeq ls)
-            (recur (.sval ls))
-            (set! s (seq ls))))
+        (set! s (fn))
         (set! fn nil)
         s)))
   (indexOf [coll x]
@@ -3537,27 +3533,27 @@ reduces them without incurring seq initialization"
   (-with-meta [coll new-meta]
     (if (identical? new-meta meta)
       coll
-      (LazySeq. new-meta #(.sval coll) nil __hash)))
+      (LazySeq. new-meta #(-seq coll) nil __hash)))
 
   IMeta
   (-meta [coll] meta)
 
   ISeq
   (-first [coll]
-    (.sval coll)
+    (-seq coll)
     (when-not (nil? s)
-      (-first s)))
+      (first s)))
   (-rest [coll]
-    (.sval coll)
+    (-seq coll)
     (if-not (nil? s)
-      (-rest s)
+      (rest s)
       ()))
 
   INext
   (-next [coll]
-    (.sval coll)
+    (-seq coll)
     (when-not (nil? s)
-      (-next s)))
+      (next s)))
 
   ICollection
   (-conj [coll o] (cons o coll))
@@ -3573,7 +3569,14 @@ reduces them without incurring seq initialization"
   (-hash [coll] (caching-hash coll hash-ordered-coll __hash))
 
   ISeqable
-  (-seq [coll] (.sval coll))
+  (-seq [coll]
+    (.sval coll)
+    (when-not (nil? s)
+      (loop [ls s]
+        (if (instance? LazySeq ls)
+          (recur (.sval ls))
+          (do (set! s ls)
+              (seq s))))))
 
   IReduce
   (-reduce [coll f] (seq-reduce f coll))
