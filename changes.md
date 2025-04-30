@@ -1,4 +1,4 @@
-## 1.12.35
+## 1.12.38
 
 ### Changes
 * Update Google Closure Compiler dependency to v20250402
@@ -11,7 +11,6 @@
 ### Fixes
 * CLJS-3242: trailing keys bug
 * CLJS-2292: refer-clojure rename should also exclude
-* CLJS-3240: lazy-seq does not cache result of calling seq
 * CLJS-3418: Some Closure libraries are not lowered
 * CLJS-3413: Macros not loaded w/ single segment namespace loaded via `:preloads`
 * CLJS-3411: cljs.core/test behavior does not match docstring (#226)
