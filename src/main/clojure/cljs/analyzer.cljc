@@ -982,8 +982,7 @@
   (if-not (= 'js x)
     (with-meta 'js
       {:prefix (conj (->> (string/split (name x) #"\.")
-                       (map symbol) vec)
-                 'prototype)})
+                       (map symbol) vec))})
     x))
 
 (defn ->type-set
@@ -1030,34 +1029,50 @@
     boolean  Boolean
     symbol   Symbol})
 
-(defn has-extern?*
+(defn resolve-extern
+  "Given a foreign js property list, return a resolved js property list and the
+  extern var info"
   ([pre externs]
-   (let [pre (if-some [me (find
-                            (get-in externs '[Window prototype])
-                            (first pre))]
-               (if-some [tag (-> me first meta :tag)]
-                 (into [tag 'prototype] (next pre))
-                 pre)
-               pre)]
-     (has-extern?* pre externs externs)))
-  ([pre externs top]
+   (resolve-extern pre externs externs {:resolved [] :info nil}))
+  ([pre externs top ret]
    (cond
-     (empty? pre) true
+     (empty? pre) ret
      :else
      (let [x  (first pre)
            me (find externs x)]
        (cond
-         (not me) false
+         (not me) nil
          :else
          (let [[x' externs'] me
-               xmeta (meta x')]
-           (if (and (= 'Function (:tag xmeta)) (:ctor xmeta))
-             (or (has-extern?* (into '[prototype] (next pre)) externs' top)
-                 (has-extern?* (next pre) externs' top)
-                 ;; check base type if it exists
-                 (when-let [super (:super xmeta)]
-                   (has-extern?* (into [super] (next pre)) externs top)))
-             (recur (next pre) externs' top))))))))
+               info' (meta x')]
+           (if (and (= 'Function (:tag info')) (:ctor info'))
+             (or
+               ;; then check for "static" property
+               (resolve-extern (next pre) externs' top
+                 (-> ret
+                   (update :resolved conj x)
+                   (assoc :info info')))
+
+                 ;; first look for a property on the prototype
+                 (resolve-extern (into '[prototype] (next pre)) externs' top
+                   (-> ret
+                     (update :resolved conj x)
+                     (assoc :info nil)))
+
+                 ;; finally check the super class if there is one
+                 (when-let [super (:super info')]
+                   (resolve-extern (into [super] (next pre)) externs top
+                     (-> ret
+                       (update :resolved conj x)
+                       (assoc :info nil)))))
+             (recur (next pre) externs' top
+               (-> ret
+                 (update :resolved conj x)
+                 (assoc :info info'))))))))))
+
+(defn has-extern?*
+  [pre externs]
+  (boolean (resolve-extern pre externs)))
 
 (defn has-extern?
   ([pre]
