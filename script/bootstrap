@@ -45,7 +45,7 @@ cd closure/library
 if [ "$1" = "--closure-library-head" ] ; then
     echo "Building against HEAD of Google Closure library..."
 
-    # Existing checkout?0
+    # Existing checkout?
     if [ -d closure-library ] ; then
         echo "Updating Google Closure library from HEAD..."
         cd closure-library
