@@ -7,6 +7,7 @@ SPEC_ALPHA_RELEASE="0.1.143"
 CORE_SPECS_ALPHA_RELEASE="0.1.24"
 CLOSURE_RELEASE="20250402"
 GCLOSURE_LIB_RELEASE="0.0-20250515-f04e4c0e"
+TREADER_RELEASE="1.3.6"
 TEST_CHECK_RELEASE="1.1.1"
 
 # check dependencies
@@ -44,7 +45,7 @@ cd closure/library
 if [ "$1" = "--closure-library-head" ] ; then
     echo "Building against HEAD of Google Closure library..."
 
-    # Existing checkout?
+    # Existing checkout?0
     if [ -d closure-library ] ; then
         echo "Updating Google Closure library from HEAD..."
         cd closure-library
@@ -99,6 +100,12 @@ if [ "$1" = "--closure-library-head" ] ; then
     mv orig-base.js closure/library/closure-library/third_party/closure/goog/base.js
     mv orig-deps.js closure/library/closure-library/third_party/closure/goog/deps.js
 fi
+
+echo "Fetching tools.reader $TREADER_RELEASE ..."
+curl --retry 3 -O -s https://repo1.maven.org/maven2/org/clojure/tools.reader/$TREADER_RELEASE/tools.reader-$TREADER_RELEASE.jar || { echo "Download failed."; exit 1; }
+
+echo "Moving tools.reader.jar to lib/tools.reader.jar"
+mv tools.reader-$TREADER_RELEASE.jar lib/tools.reader-$TREADER_RELEASE.jar
 
 echo "Fetching test.check $TEST_CHECK_RELEASE ..."
 curl --retry 3 -O -s https://repo1.maven.org/maven2/org/clojure/test.check/$TEST_CHECK_RELEASE/test.check-$TEST_CHECK_RELEASE.jar || { echo "Download failed."; exit 1; }
