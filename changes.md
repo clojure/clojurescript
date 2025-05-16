@@ -1,8 +1,12 @@
-## 1.12.38
+## 1.12.40
 
 ### Changes
 * Update Google Closure Compiler dependency to v20250402
-* Depend on Clojure fork of Google Closure Library
+* Depend on Clojure fork of Google Closure Library, 0.0-20250515-f04e4c0e
+  - restores goog.dom.query
+  - restores goog.isString and other simple fns to goog.base that were unnecessarily removed
+  - restore debug loader as default
+  - remove unused Closure directive `unusedPrivateMembers`
 * CLJS-3290: implement IHash for js Symbol (#225)
 * Updated vendorized tools.reader to 1.4.2
 * CLJS-3419: JS Map & Set should return true for seqable?
