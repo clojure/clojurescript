@@ -30,17 +30,12 @@
         <dependency>
             <groupId>com.google.javascript</groupId>
             <artifactId>closure-compiler-unshaded</artifactId>
-            <version>v20240317</version>
+            <version>v20250402</version>
         </dependency>
         <dependency>
             <groupId>org.clojure</groupId>
             <artifactId>google-closure-library</artifactId>
-            <version>0.0-20230227-c7c0a541</version>
-        </dependency>
-        <dependency>
-            <groupId>org.clojure</groupId>
-            <artifactId>tools.reader</artifactId>
-            <version>1.3.6</version>
+            <version>0.0-20250515-f04e4c0e</version>
         </dependency>
         <dependency>
             <groupId>com.cognitect</groupId>
@@ -52,6 +47,11 @@
                     <artifactId>clojure</artifactId>
                 </exclusion>
             </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>org.clojure</groupId>
+            <artifactId>tools.reader</artifactId>
+            <version>1.3.6</version>
         </dependency>
         <dependency>
             <groupId>org.clojure</groupId>
