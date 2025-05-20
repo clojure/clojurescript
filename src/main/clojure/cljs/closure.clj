@@ -1389,11 +1389,12 @@
         (let [source (first sources)]
           (recur
             (next sources)
-            (let [{:keys [provides source-url]} source]
-              (if (and provides source-url)
+            (let [{:keys [provides]} source
+                  url (or (:source-url source) (:url source))]
+              (if (and provides url)
                 (assoc relpaths
-                  (.getPath ^URL source-url)
-                  (util/ns->relpath (first provides) (util/ext source-url)))
+                  (.getPath ^URL url)
+                  (util/ns->relpath (first provides) (util/ext url)))
                 relpaths))
             (if-let [url (:url source)]
               (let [path (.getPath ^URL url)]
@@ -1410,19 +1411,19 @@
         (spit
           (io/file name)
           (sm/encode merged
-            {:preamble-line-count (+ (:preamble-line-count opts 0)
-                                     (:foreign-deps-line-count opts 0))
-             :lines (+ (:lineCount sm-json)
-                       (:preamble-line-count opts 0)
-                       (:foreign-deps-line-count opts 0)
-                       2)
-             :file name
-             :output-dir (util/output-directory opts)
-             :source-map (:source-map opts)
-             :source-map-path (:source-map-path opts)
-             :source-map-timestamp (:source-map-timestamp opts)
+            {:preamble-line-count     (+ (:preamble-line-count opts 0)
+                                        (:foreign-deps-line-count opts 0))
+             :lines                   (+ (:lineCount sm-json)
+                                        (:preamble-line-count opts 0)
+                                        (:foreign-deps-line-count opts 0)
+                                        2)
+             :file                    name
+             :output-dir              (util/output-directory opts)
+             :source-map              (:source-map opts)
+             :source-map-path         (:source-map-path opts)
+             :source-map-timestamp    (:source-map-timestamp opts)
              :source-map-pretty-print (:source-map-pretty-print opts)
-             :relpaths relpaths}))))))
+             :relpaths                relpaths}))))))
 
 (defn write-variable-maps [^Result result opts]
   (let [var-out (:closure-variable-map-out opts)]
