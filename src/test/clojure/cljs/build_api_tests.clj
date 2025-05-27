@@ -849,15 +849,21 @@
       (test/delete-node-modules)
       (let [{:keys [inputs opts]} {:inputs (str (io/file "src" "test" "cljs_build"))
                                    :opts   {:main               'cljs-3346-as-alias.core
-                                            :output-to          (io/file out "main.js")
-                                            :source-map         (io/file out "main.js.map")
+                                            :output-to          (.getPath (io/file out "main.js"))
+                                            :source-map         (.getPath (io/file out "main.js.map"))
                                             :output-dir         out
                                             :optimizations      :advanced
-                                            :closure-source-map true
-                                            :closure-warnings   {:check-types :off}}}
+                                            :closure-source-map true}}
             cenv (env/default-compiler-env)]
         (build/build (build/inputs (io/file inputs "adv_src_map/core.cljs")) opts cenv))
-      (let [cljs-src-map    (slurp (io/file out "adv_src_map/main.js.map"))
-            closure-src-map (slurp (io/file out "adv_src_map/main.js.map.closure"))]
-        )
+      (let [cljs-src-map    (->> (io/file out "main.js.map") slurp json/read-str)
+            closure-src-map (->> (io/file out "main.js.map.closure") slurp json/read-str)]
+        (println (get closure-src-map "sources"))
+        (println (get cljs-src-map "sources")))
       (test/delete-out-files out))))
+
+#_(comment
+
+  (clojure.test/test-vars [#'test-advanced-source-maps])
+
+  )
