@@ -840,3 +840,24 @@
       (.delete (io/file "package.json"))
       (test/delete-node-modules)
       (test/delete-out-files out))))
+
+#_(deftest test-advanced-source-maps
+  (testing "Test that the `sources` of the final merged source map matches the
+  one in the original Closure Compiler generated advanced source map"
+    (let [out (.getPath (io/file (test/tmp-dir) "adv-src-map"))]
+      (test/delete-out-files out)
+      (test/delete-node-modules)
+      (let [{:keys [inputs opts]} {:inputs (str (io/file "src" "test" "cljs_build"))
+                                   :opts   {:main               'cljs-3346-as-alias.core
+                                            :output-to          (io/file out "main.js")
+                                            :source-map         (io/file out "main.js.map")
+                                            :output-dir         out
+                                            :optimizations      :advanced
+                                            :closure-source-map true
+                                            :closure-warnings   {:check-types :off}}}
+            cenv (env/default-compiler-env)]
+        (build/build (build/inputs (io/file inputs "adv_src_map/core.cljs")) opts cenv))
+      (let [cljs-src-map    (slurp (io/file out "adv_src_map/main.js.map"))
+            closure-src-map (slurp (io/file out "adv_src_map/main.js.map.closure"))]
+        )
+      (test/delete-out-files out))))
