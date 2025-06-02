@@ -229,6 +229,15 @@
               <groupId>org.apache.maven.plugins</groupId>
               <artifactId>maven-source-plugin</artifactId>
               <version>3.3.1</version>
+              <executions>
+                <execution>
+                  <id>attach-sources</id>
+                  <phase>package</phase>
+                  <goals>
+                    <goal>jar</goal>
+                  </goals>
+                </execution>
+              </executions>
             </plugin>
 
             <plugin>
@@ -317,6 +326,19 @@
                             </includes>
                         </configuration>
                     </execution>
+                    <execution>
+                      <id>javadoc-jar</id>
+                      <phase>package</phase>
+                      <goals>
+                        <goal>jar</goal>
+                      </goals>
+                      <configuration>
+                        <excludes>
+                          <exclude>**</exclude>
+                        </excludes>
+                        <classifier>javadoc</classifier>
+                      </configuration>
+                    </execution>
                 </executions>
             </plugin>
             <plugin>
@@ -355,10 +377,10 @@
                 <artifactId>maven-gpg-plugin</artifactId>
                 <version>3.1.0</version>
                 <configuration>
-									<gpgArguments>
-										<arg>--pinentry-mode</arg>
-										<arg>loopback</arg>
-									</gpgArguments>
+                  <gpgArguments>
+                    <arg>--pinentry-mode</arg>
+                    <arg>loopback</arg>
+                  </gpgArguments>
                 </configuration>
             </plugin>
             <plugin>

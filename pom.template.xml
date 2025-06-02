@@ -221,7 +221,7 @@
         <id>central-snapshot</id>
         <url>https://central.sonatype.com/repository/maven-snapshots/</url>
       </snapshotRepository>
-  </distributionManagement>
+    </distributionManagement>
 
     <build>
         <plugins>
@@ -229,8 +229,17 @@
               <groupId>org.apache.maven.plugins</groupId>
               <artifactId>maven-source-plugin</artifactId>
               <version>3.3.1</version>
+              <executions>
+                <execution>
+                  <id>attach-sources</id>
+                  <phase>package</phase>
+                  <goals>
+                    <goal>jar</goal>
+                  </goals>
+                </execution>
+              </executions>
             </plugin>
-          
+
             <plugin>
                 <!-- Add Clojure sources to the project's source directories -->
                 <groupId>org.codehaus.mojo</groupId>
@@ -289,7 +298,7 @@
             </plugin>
             <plugin>
                 <artifactId>maven-jar-plugin</artifactId>
-                <version>2.4.2</version>
+                <version>3.4.2</version>
                 <configuration>
                     <archive>
                         <manifest>
@@ -316,6 +325,19 @@
                                 <include>**/*.png</include>
                             </includes>
                         </configuration>
+                    </execution>
+                    <execution>
+                      <id>javadoc-jar</id>
+                      <phase>package</phase>
+                      <goals>
+                        <goal>jar</goal>
+                      </goals>
+                      <configuration>
+                        <excludes>
+                          <exclude>**</exclude>
+                        </excludes>
+                        <classifier>javadoc</classifier>
+                      </configuration>
                     </execution>
                 </executions>
             </plugin>
