@@ -1,6 +1,6 @@
 (defproject org.clojure/clojurescript "0.0-SNAPSHOT"
   :description "ClojureScript compiler and core runtime library"
-  :parent [org.clojure/pom.contrib "0.1.2"]
+  :parent [org.clojure/pom.contrib "1.3.0"]
   :url "https://github.com/clojure/clojurescript"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}

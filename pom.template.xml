@@ -203,20 +203,6 @@
         <url>https://github.com/clojure/clojurescript</url>
     </scm>
 
-    <!--
-    <parent>
-        <groupId>org.clojure</groupId>
-        <artifactId>pom.contrib</artifactId>
-        <version>0.1.2</version>
-    </parent>
-    -->
-
-    <parent>
-        <groupId>org.sonatype.oss</groupId>
-        <artifactId>oss-parent</artifactId>
-        <version>7</version>
-    </parent>
-
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <clojure.source.dir>src/main/clojure</clojure.source.dir>
@@ -226,13 +212,39 @@
         <directlinking>true</directlinking>
     </properties>
 
+    <distributionManagement>
+      <repository>
+        <id>central</id>
+        <url>https://central.sonatype.com</url>
+      </repository>
+      <snapshotRepository>
+        <id>central-snapshot</id>
+        <url>https://central.sonatype.com/repository/maven-snapshots/</url>
+      </snapshotRepository>
+    </distributionManagement>
+
     <build>
         <plugins>
+            <plugin>
+              <groupId>org.apache.maven.plugins</groupId>
+              <artifactId>maven-source-plugin</artifactId>
+              <version>3.3.1</version>
+              <executions>
+                <execution>
+                  <id>attach-sources</id>
+                  <phase>package</phase>
+                  <goals>
+                    <goal>jar</goal>
+                  </goals>
+                </execution>
+              </executions>
+            </plugin>
+
             <plugin>
                 <!-- Add Clojure sources to the project's source directories -->
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>build-helper-maven-plugin</artifactId>
-                <version>1.5</version>
+                <version>3.0.0</version>
                 <executions>
                     <execution>
                         <id>add-clojure-source-dirs</id>
@@ -286,7 +298,7 @@
             </plugin>
             <plugin>
                 <artifactId>maven-jar-plugin</artifactId>
-                <version>2.4</version>
+                <version>3.4.2</version>
                 <configuration>
                     <archive>
                         <manifest>
@@ -314,11 +326,24 @@
                             </includes>
                         </configuration>
                     </execution>
+                    <execution>
+                      <id>javadoc-jar</id>
+                      <phase>package</phase>
+                      <goals>
+                        <goal>jar</goal>
+                      </goals>
+                      <configuration>
+                        <excludes>
+                          <exclude>**</exclude>
+                        </excludes>
+                        <classifier>javadoc</classifier>
+                      </configuration>
+                    </execution>
                 </executions>
             </plugin>
             <plugin>
                 <artifactId>maven-assembly-plugin</artifactId>
-                <version>2.4</version>
+                <version>3.7.1</version>
                 <executions>
                     <execution>
                         <id>aot-jar</id>
@@ -352,62 +377,71 @@
                 <artifactId>maven-gpg-plugin</artifactId>
                 <version>3.1.0</version>
                 <configuration>
-			<gpgArguments>
-				<arg>--pinentry-mode</arg>
-				<arg>loopback</arg>
-			</gpgArguments>
+                  <gpgArguments>
+                    <arg>--pinentry-mode</arg>
+                    <arg>loopback</arg>
+                  </gpgArguments>
                 </configuration>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.1</version>
+                <version>3.8.1</version>
                 <configuration>
                     <source>21</source>
                     <target>21</target>
                 </configuration>
             </plugin>
+
+            <plugin>
+              <!-- do not push pre-deployment SCM changes to upstream repo
+                   with maven release plugin; if the release/deploy fails,
+                   we're stuck with manually fixing up version numbers, git
+                   history, etc -->
+              <groupId>org.apache.maven.plugins</groupId>
+              <artifactId>maven-release-plugin</artifactId>
+              <version>2.5.3</version>
+              <configuration>
+              </configuration>
+            </plugin>
+
+            <!-- deploy artifacts to sonatype -->
+            <plugin>
+              <groupId>org.sonatype.central</groupId>
+              <artifactId>central-publishing-maven-plugin</artifactId>
+              <version>0.7.0</version>
+              <extensions>true</extensions>
+              <configuration>
+                <publishingServerId>central</publishingServerId>
+                <autoPublish>true</autoPublish>
+              </configuration>
+            </plugin>
+
         </plugins>
     </build>
 
     <profiles>
         <profile>
-            <id>sonatype-oss-release</id>
-            <!-- This profile is enabled automatically by the Sonatype
-                 oss-parent POM when invoking the Maven Release Plugin -->
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-deploy-plugin</artifactId>
-                        <version>2.7</version>
-                        <configuration>
-                            <skip>true</skip>
-                        </configuration>
-                    </plugin>
-                    <plugin>
-                        <groupId>org.sonatype.plugins</groupId>
-                        <artifactId>nexus-staging-maven-plugin</artifactId>
-                        <version>1.7.0</version>
-                        <executions>
-                            <execution>
-                                <id>default-deploy</id>
-                                <phase>deploy</phase>
-                                <!-- By default, this is the phase deploy goal will bind to -->
-                                <goals>
-                                    <goal>deploy</goal>
-                                </goals>
-                            </execution>
-                        </executions>
-                        <configuration>
-                            <!-- The Base URL of Nexus instance where we want to stage -->
-                            <nexusUrl>https://oss.sonatype.org/</nexusUrl>
-                            <!-- The server "id" element from settings to use authentication from -->
-                            <serverId>sonatype-nexus-staging</serverId>
-                        </configuration>
-                    </plugin>
-                </plugins>
-            </build>
+          <id>sign</id>
+          <build>
+            <plugins>
+              <!-- sign artifacts for deployment -->
+              <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-gpg-plugin</artifactId>
+                <version>1.5</version>
+                <executions>
+                  <execution>
+                    <id>sign-artifacts</id>
+                    <phase>verify</phase>
+                    <goals>
+                      <goal>sign</goal>
+                    </goals>
+                  </execution>
+                </executions>
+              </plugin>
+            </plugins>
+          </build>
         </profile>
     </profiles>
 </project>
