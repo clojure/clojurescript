@@ -852,12 +852,12 @@
 (core/defmacro str
   ([] "")
   ([x]
-   (if (typed-expr? &env x '#{string number})
+   (if (typed-expr? &env x '#{string})
      x
      (string-expr (core/list 'js* "cljs.core.str.cljs$core$IFn$_invoke$arity$1(~{})" x))))
   ([x & ys]
    (core/let [interpolate (core/fn [x]
-                            (if (typed-expr? &env x '#{string number clj-nil})
+                            (if (typed-expr? &env x '#{string clj-nil})
                               "~{}"
                               "cljs.core.str.cljs$core$IFn$_invoke$arity$1(~{})"))
               strs        (core/->> (core/list* x ys)
@@ -3287,9 +3287,9 @@
                            argseq#))))
                   (if (:macro meta)
                     `(throw (js/Error.
-                             (str "Invalid arity: " (- (alength (js-arguments)) 2))))
+                             (.join (array "Invalid arity: " (- (alength (js-arguments)) 2)) "")))
                     `(throw (js/Error.
-                             (str "Invalid arity: " (alength (js-arguments))))))))))
+                             (.join (array "Invalid arity: " (alength (js-arguments))) ""))))))))
          ~@(map #(fn-method name %) fdecl)
          ;; optimization properties
          (set! (. ~name ~'-cljs$lang$maxFixedArity) ~maxfa)
