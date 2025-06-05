@@ -720,6 +720,19 @@
     (build/build (build/inputs (io/file inputs "trivial/core.cljs")) opts cenv)
     (is (< (.length out-file) 10000))))
 
+(deftest trivial-output-size-protocol
+  (let [out (.getPath (io/file (test/tmp-dir) "trivial-output-protocol-test-out"))
+        out-file (io/file out "main.js")
+        {:keys [inputs opts]} {:inputs (str (io/file "src" "test" "cljs_build"))
+                               :opts {:main 'trivial.core2
+                                      :output-dir out
+                                      :output-to (.getPath out-file)
+                                      :optimizations :advanced}}
+        cenv (env/default-compiler-env)]
+    (test/delete-out-files out)
+    (build/build (build/inputs (io/file inputs "trivial/core2.cljs")) opts cenv)
+    (is (< (.length out-file) 10000))))
+
 (deftest cljs-3255-nil-inputs-build
   (let [out (.getPath (io/file (test/tmp-dir) "3255-test-out"))
         out-file (io/file out "main.js")

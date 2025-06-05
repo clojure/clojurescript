@@ -852,12 +852,12 @@
 (core/defmacro str
   ([] "")
   ([x]
-   (if (typed-expr? &env x '#{string})
+   (if (typed-expr? &env x '#{string number})
      x
      (string-expr (core/list 'js* "cljs.core.str.cljs$core$IFn$_invoke$arity$1(~{})" x))))
   ([x & ys]
    (core/let [interpolate (core/fn [x]
-                            (if (typed-expr? &env x '#{string clj-nil})
+                            (if (typed-expr? &env x '#{string number clj-nil})
                               "~{}"
                               "cljs.core.str.cljs$core$IFn$_invoke$arity$1(~{})"))
               strs        (core/->> (core/list* x ys)
