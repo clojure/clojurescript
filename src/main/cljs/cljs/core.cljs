@@ -1648,7 +1648,7 @@ reduces them without incurring seq initialization"
   (-first [_] (aget arr i))
   (-rest [_] (if (< (inc i) (alength arr))
                (IndexedSeq. arr (inc i) nil)
-               (list)))
+               ()))
 
   INext
   (-next [_] (if (< (inc i) (alength arr))
