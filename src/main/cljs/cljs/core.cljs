@@ -909,7 +909,7 @@
         writer (StringBufferWriter. sb)]
     (-pr-writer obj writer (pr-opts))
     (-flush writer)
-    (str sb)))
+    (.toString sb)))
 
 ;;;;;;;;;;;;;;;;;;; Murmur3 ;;;;;;;;;;;;;;;
 
@@ -1648,7 +1648,7 @@ reduces them without incurring seq initialization"
   (-first [_] (aget arr i))
   (-rest [_] (if (< (inc i) (alength arr))
                (IndexedSeq. arr (inc i) nil)
-               (list)))
+               ()))
 
   INext
   (-next [_] (if (< (inc i) (alength arr))
@@ -3206,8 +3206,7 @@ reduces them without incurring seq initialization"
 
 (deftype EmptyList [meta]
   Object
-  (toString [coll]
-    (pr-str* coll))
+  (toString [coll] "()")
   (equiv [this other]
     (-equiv this other))
   (indexOf [coll x]

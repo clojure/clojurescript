@@ -1365,7 +1365,7 @@
   [& impls]
   (core/let [t        (with-meta
                         (gensym
-                          (core/str "t_"
+                          (core/str "t_reify_"
                             (string/replace (core/str (munge ana/*cljs-ns*)) "." "$")))
                         {:anonymous true})
              meta-sym (gensym "meta")
@@ -1382,7 +1382,11 @@
            IMeta
            (~'-meta [~this-sym] ~meta-sym)
            ~@impls))
-       (new ~t ~@locals ~(ana/elide-reader-meta (meta &form))))))
+       (new ~t ~@locals
+         ;; if the form meta is empty, emit nil
+         ~(core/let [form-meta (ana/elide-reader-meta (meta &form))]
+            (core/when-not (empty? form-meta)
+              form-meta))))))
 
 (core/defmacro specify!
   "Identical to reify but mutates its first argument."
@@ -1789,17 +1793,22 @@
   [t fields & impls]
   (validate-fields "deftype" t fields)
   (core/let [env &env
-             r (:name (cljs.analyzer/resolve-var (dissoc env :locals) t))
+             v (cljs.analyzer/resolve-var (dissoc env :locals) t)
+             r (:name v)
              [fpps pmasks] (prepare-protocol-masks env impls)
              protocols (collect-protocols impls env)
              t (vary-meta t assoc
                  :protocols protocols
-                 :skip-protocol-flag fpps) ]
+                 :skip-protocol-flag fpps)]
     `(do
        (deftype* ~t ~fields ~pmasks
          ~(if (seq impls)
             `(extend-type ~t ~@(dt->et t impls fields))))
-       (set! (.-getBasis ~t) (fn [] '[~@fields]))
+       ;; don't emit static basis method w/ reify
+       ;; nor for core types
+       ~@(core/when-not (core/or (string/starts-with? (name t) "t_reify")
+                                 (= 'cljs.core (:ns v)))
+           [`(set! (.-getBasis ~t) (fn [] '[~@fields]))])
        (set! (.-cljs$lang$type ~t) true)
        (set! (.-cljs$lang$ctorStr ~t) ~(core/str r))
        (set! (.-cljs$lang$ctorPrWriter ~t) (fn [this# writer# opt#] (-write writer# ~(core/str r))))
