@@ -1806,8 +1806,8 @@
             `(extend-type ~t ~@(dt->et t impls fields))))
        ;; don't emit static basis method w/ reify
        ;; nor for core types
-       ~@(when-not (or (string/starts-with? (name t) "t_reify")
-                       (= 'cljs.core (:ns v)))
+       ~@(core/when-not (core/or (string/starts-with? (name t) "t_reify")
+                                 (= 'cljs.core (:ns v)))
            [`(set! (.-getBasis ~t) (fn [] '[~@fields]))])
        (set! (.-cljs$lang$type ~t) true)
        (set! (.-cljs$lang$ctorStr ~t) ~(core/str r))
