@@ -909,7 +909,7 @@
         writer (StringBufferWriter. sb)]
     (-pr-writer obj writer (pr-opts))
     (-flush writer)
-    (str sb)))
+    (.toString sb)))
 
 ;;;;;;;;;;;;;;;;;;; Murmur3 ;;;;;;;;;;;;;;;
 
