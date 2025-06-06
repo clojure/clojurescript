@@ -3206,8 +3206,7 @@ reduces them without incurring seq initialization"
 
 (deftype EmptyList [meta]
   Object
-  (toString [coll]
-    (pr-str* coll))
+  (toString [coll] "()")
   (equiv [this other]
     (-equiv this other))
   (indexOf [coll x]
