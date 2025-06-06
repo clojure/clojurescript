@@ -3287,9 +3287,9 @@
                            argseq#))))
                   (if (:macro meta)
                     `(throw (js/Error.
-                             (str "Invalid arity: " (- (alength (js-arguments)) 2))))
+                             (.join (array "Invalid arity: " (- (alength (js-arguments)) 2)) "")))
                     `(throw (js/Error.
-                             (str "Invalid arity: " (alength (js-arguments))))))))))
+                             (.join (array "Invalid arity: " (alength (js-arguments))) ""))))))))
          ~@(map #(fn-method name %) fdecl)
          ;; optimization properties
          (set! (. ~name ~'-cljs$lang$maxFixedArity) ~maxfa)
