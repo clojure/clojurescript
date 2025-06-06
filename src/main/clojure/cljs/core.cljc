@@ -636,7 +636,7 @@
                                           gfirst (gensym "first__")
                                           has-rest (some #{'&} b)]
                                  (core/loop [ret (core/let [ret (conj bvec gvec val)]
-                                                   (if has-rest
+                                                   (if has-rests
                                                      (conj ret gseq (core/list `seq gvec))
                                                      ret))
                                              n 0
@@ -1804,7 +1804,9 @@
          ~(if (seq impls)
             `(extend-type ~t ~@(dt->et t impls fields))))
        ;; don't emit static basis method w/ reify
-       ~@(when-not (.startsWith (name t) "t_reify")
+       ;; nor for core types
+       ~@(when-not (or (string/starts-with? (name t) "t_reify")
+                       (= 'cljs.core (:ns v)))
            [`(set! (.-getBasis ~t) (fn [] '[~@fields]))])
        (set! (.-cljs$lang$type ~t) true)
        (set! (.-cljs$lang$ctorStr ~t) ~(core/str r))
