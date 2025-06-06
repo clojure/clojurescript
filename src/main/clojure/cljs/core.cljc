@@ -1365,7 +1365,7 @@
   [& impls]
   (core/let [t        (with-meta
                         (gensym
-                          (core/str "t_"
+                          (core/str "t_reify_"
                             (string/replace (core/str (munge ana/*cljs-ns*)) "." "$")))
                         {:anonymous true})
              meta-sym (gensym "meta")
@@ -1382,7 +1382,11 @@
            IMeta
            (~'-meta [~this-sym] ~meta-sym)
            ~@impls))
-       (new ~t ~@locals ~(ana/elide-reader-meta (meta &form))))))
+       (new ~t ~@locals
+         ;; if the form meta is empty, emit nil
+         ~(let [form-meta (ana/elide-reader-meta (meta &form))]
+            (when-not (empty? form-meta)
+              form-meta))))))
 
 (core/defmacro specify!
   "Identical to reify but mutates its first argument."
@@ -1799,7 +1803,9 @@
        (deftype* ~t ~fields ~pmasks
          ~(if (seq impls)
             `(extend-type ~t ~@(dt->et t impls fields))))
-       (set! (.-getBasis ~t) (fn [] '[~@fields]))
+       ;; don't emit static basis method w/ reify
+       ~@(when-not (.startsWith (name t) "t_reify")
+           [`(set! (.-getBasis ~t) (fn [] '[~@fields]))])
        (set! (.-cljs$lang$type ~t) true)
        (set! (.-cljs$lang$ctorStr ~t) ~(core/str r))
        (set! (.-cljs$lang$ctorPrWriter ~t) (fn [this# writer# opt#] (-write writer# ~(core/str r))))
