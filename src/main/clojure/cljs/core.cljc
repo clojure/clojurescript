@@ -1384,8 +1384,8 @@
            ~@impls))
        (new ~t ~@locals
          ;; if the form meta is empty, emit nil
-         ~(let [form-meta (ana/elide-reader-meta (meta &form))]
-            (when-not (empty? form-meta)
+         ~(core/let [form-meta (ana/elide-reader-meta (meta &form))]
+            (core/when-not (empty? form-meta)
               form-meta))))))
 
 (core/defmacro specify!
