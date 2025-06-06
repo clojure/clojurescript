@@ -936,6 +936,18 @@
              (core/list 'js* "debugger")
              nil))
 
+(core/defmacro js-doc
+  [comment]
+  (core/let [[x & ys] (string/split comment #"\n")]
+    (core/list 'js*
+      (core/str
+        "/**\n"
+        (core/str " * " x "\n")
+        (core/->> ys
+          (map #(core/str " * " (string/replace % #"^   " "") "\n"))
+          (reduce core/str ""))
+        " */"))))
+
 (core/defmacro js-comment
   "Emit a top-level JavaScript multi-line comment. New lines will create a
   new comment line. Comment block will be preceded and followed by a newline"
@@ -1485,12 +1497,16 @@
         ~@body))))
 
 (core/defn- add-obj-methods [type type-sym sigs]
-  (map (core/fn [[f & meths :as form]]
-         (core/let [[f meths] (if (vector? (first meths))
-                                [f [(rest form)]]
-                                [f meths])]
-           `(set! ~(extend-prefix type-sym f)
-              ~(with-meta `(fn ~@(map #(adapt-obj-params type %) meths)) (meta form)))))
+  (mapcat
+    (core/fn [[f & meths :as form]]
+      (core/let [[f meths] (if (vector? (first meths))
+                             [f [(rest form)]]
+                             [f meths])
+                 exp       [`(set! ~(extend-prefix type-sym f)
+                               ~(with-meta `(fn ~@(map #(adapt-obj-params type %) meths)) (meta form)))]]
+        (if (= f 'toString)
+          (into [`(js-doc "@return {string}\n@override")] exp)
+          exp)))
     sigs))
 
 (core/defn- ifn-invoke-methods [type type-sym [f & meths :as form]]

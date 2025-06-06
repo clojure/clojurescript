@@ -3393,7 +3393,7 @@ reduces them without incurring seq initialization"
                   nsc)))
    :default (garray/defaultCompare (.-name a) (.-name b))))
 
-(deftype Keyword [ns name fqn ^:mutable _hash]
+(deftype Keyword [ns name ^string fqn ^:mutable _hash]
   Object
   (toString [_] (str ":" fqn))
   (equiv [this other]
