@@ -1793,12 +1793,13 @@
   [t fields & impls]
   (validate-fields "deftype" t fields)
   (core/let [env &env
-             r (:name (cljs.analyzer/resolve-var (dissoc env :locals) t))
+             v (cljs.analyzer/resolve-var (dissoc env :locals) t)
+             r (:name v)
              [fpps pmasks] (prepare-protocol-masks env impls)
              protocols (collect-protocols impls env)
              t (vary-meta t assoc
                  :protocols protocols
-                 :skip-protocol-flag fpps) ]
+                 :skip-protocol-flag fpps)]
     `(do
        (deftype* ~t ~fields ~pmasks
          ~(if (seq impls)
