@@ -636,7 +636,7 @@
                                           gfirst (gensym "first__")
                                           has-rest (some #{'&} b)]
                                  (core/loop [ret (core/let [ret (conj bvec gvec val)]
-                                                   (if has-rests
+                                                   (if has-rest
                                                      (conj ret gseq (core/list `seq gvec))
                                                      ret))
                                              n 0
