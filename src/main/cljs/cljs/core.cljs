@@ -181,13 +181,6 @@
     :jsdoc ["@type {*}"]}
   *loaded-libs* nil)
 
-(defn- pr-opts []
-  {:flush-on-newline *flush-on-newline*
-   :readably *print-readably*
-   :meta *print-meta*
-   :dup *print-dup*
-   :print-length *print-length*})
-
 (declare into-array)
 
 (defn enable-console-print!
@@ -895,6 +888,46 @@
      returned coll implements IDrop for subsequent use in a partition-like scenario."))
 
 ;; Printing support
+
+(defn- pr-opts*
+  [flush-on-newline readably meta dup print-length]
+  (reify
+    ILookup
+    (-lookup [this k]
+      (-lookup this k nil))
+    (-lookup [this k not-found]
+      (case k
+        :flush-on-newline flush-on-newline
+        :readably readably
+        :meta meta
+        :dup dup
+        :print-length print-length
+        not-found))
+    IAssociative
+    (-contains-key? [coll k]
+      (case k
+        :flush-on-newline true
+        :readably true
+        :meta true
+        :dup true
+        :print-length true
+        false))
+    (-assoc [this k v]
+      (case k
+        :flush-on-newline (pr-opts* v readably meta dup print-length)
+        :readably (pr-opts* flush-on-newline v meta dup print-length)
+        :meta (pr-opts* flush-on-newline readably v dup print-length)
+        :dup (pr-opts* flush-on-newline readably meta v print-length)
+        :print-length (pr-opts* flush-on-newline readably meta dup v)
+        this))))
+
+(defn pr-opts []
+  (pr-opts*
+    *flush-on-newline*
+    *print-readably*
+    *print-meta*
+    *print-dup*
+    *print-length*))
 
 (deftype StringBufferWriter [sb]
   IWriter
@@ -10442,18 +10475,18 @@ reduces them without incurring seq initialization"
       (do
         (-write writer begin)
         (if (zero? (:print-length opts))
-          (when (seq coll)
+          (when (-seq coll)
             (-write writer (or (:more-marker opts) "...")))
-          (do
-            (when (seq coll)
-              (print-one (first coll) writer opts))
-            (loop [coll (next coll) n (dec (:print-length opts))]
+          (let [coll (-seq coll)]
+            (when coll
+              (print-one (-first coll) writer opts))
+            (loop [coll (-next coll) n (dec (:print-length opts))]
               (if (and coll (or (nil? n) (not (zero? n))))
                 (do
                   (-write writer sep)
-                  (print-one (first coll) writer opts)
-                  (recur (next coll) (dec n)))
-                (when (and (seq coll) (zero? n))
+                  (print-one (-first coll) writer opts)
+                  (recur (-next coll) (dec n)))
+                (when (and (-seq coll) (zero? n))
                   (-write writer sep)
                   (-write writer (or (:more-marker opts) "...")))))))
         (-write writer end)))))
@@ -11794,6 +11827,15 @@ reduces them without incurring seq initialization"
       this)))
 
 (set! (.. ExceptionInfo -prototype -__proto__) js/Error.prototype)
+
+(extend-protocol ISeqable
+  nil
+  (-seq [this] nil)
+
+  array
+  (-seq [this]
+    (when-not (zero? (alength this))
+      (IndexedSeq. this 0 nil))))
 
 (extend-type ExceptionInfo
   IPrintWithWriter
