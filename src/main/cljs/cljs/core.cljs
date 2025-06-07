@@ -10477,8 +10477,8 @@ reduces them without incurring seq initialization"
         (if (zero? (:print-length opts))
           (when (-seq coll)
             (-write writer (or (:more-marker opts) "...")))
-          (let [coll (-seq coll)]
-            (when coll
+          (do
+            (when-let [coll (-seq coll)]
               (print-one (-first coll) writer opts))
             (loop [coll (-next coll) n (dec (:print-length opts))]
               (if (and coll (or (nil? n) (not (zero? n))))
