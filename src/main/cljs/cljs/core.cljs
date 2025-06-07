@@ -10495,6 +10495,13 @@ reduces them without incurring seq initialization"
   (doseq [s ss]
     (-write writer s)))
 
+(defn write-all-array [writer arr]
+  (let [len (alength arr)]
+    (loop [i 0]
+      (when (< i len)
+        (-write writer (aget arr i))
+        (recur (inc i))))))
+
 (defn string-print [x]
   (when (nil? *print-fn*)
     (throw (js/Error. "No *print-fn* fn set for evaluation environment")))
@@ -10516,10 +10523,9 @@ reduces them without incurring seq initialization"
 
 (defn ^:private quote-string
   [s]
-  (str \"
-       (.replace s (js/RegExp "[\\\\\"\b\f\n\r\t]" "g")
-         (fn [match] (unchecked-get char-escapes match)))
-       \"))
+  (let [s' ^string (.replace s (js/RegExp "[\\\\\"\b\f\n\r\t]" "g")
+                     (fn [match] (unchecked-get char-escapes match)))]
+    (str \" s' \")))
 
 (declare print-map)
 
@@ -10548,7 +10554,7 @@ reduces them without incurring seq initialization"
         (-pr-writer obj writer opts)
 
         (or (true? obj) (false? obj))
-        (-write writer (str obj))
+        (-write writer (.toString obj))
 
         (number? obj)
         (-write writer
@@ -10556,15 +10562,19 @@ reduces them without incurring seq initialization"
             ^boolean (js/isNaN obj) "##NaN"
             (identical? obj js/Number.POSITIVE_INFINITY) "##Inf"
             (identical? obj js/Number.NEGATIVE_INFINITY) "##-Inf"
-            :else (str obj)))
+            :else (.toString obj)))
 
         (object? obj)
         (do
           (-write writer "#js ")
           (print-map
-            (map (fn [k]
-                   (MapEntry. (cond-> k (some? (re-matches #"[A-Za-z_\*\+\?!\-'][\w\*\+\?!\-']*" k)) keyword) (unchecked-get obj k) nil))
-              (js-keys obj))
+            (prim-seq
+              (.map
+                (fn [k]
+                  (MapEntry.
+                    (cond-> k (some? (re-matches #"[A-Za-z_\*\+\?!\-'][\w\*\+\?!\-']*" k)) keyword)
+                    (unchecked-get obj k) nil))
+                (js-keys obj)))
             pr-writer writer opts))
 
         (array? obj)
@@ -10580,45 +10590,48 @@ reduces them without incurring seq initialization"
               name (if (or (nil? name) (gstring/isEmpty name))
                      "Function"
                      name)]
-          (write-all writer "#object[" name
-            (if *print-fn-bodies*
-              (str " \"" (str obj) "\"")
-              "")
-            "]"))
+          (write-all-array writer
+            (array
+              "#object[" name
+              (if *print-fn-bodies*
+                (str " \"" ^string (.toString obj) "\"")
+                "")
+              "]")))
 
         (instance? js/Date obj)
         (let [normalize (fn [n len]
-                          (loop [ns (str n)]
+                          (loop [ns (.toString n)]
                             (if (< (count ns) len)
-                              (recur (str "0" ns))
+                              (recur (str "0" ^string ns))
                               ns)))]
-          (write-all writer
-            "#inst \""
-            (normalize (.getUTCFullYear obj) 4)     "-"
-            (normalize (inc (.getUTCMonth obj)) 2)  "-"
-            (normalize (.getUTCDate obj) 2)         "T"
-            (normalize (.getUTCHours obj) 2)        ":"
-            (normalize (.getUTCMinutes obj) 2)      ":"
-            (normalize (.getUTCSeconds obj) 2)      "."
-            (normalize (.getUTCMilliseconds obj) 3) "-"
-            "00:00\""))
+          (write-all-array writer
+            (array
+              "#inst \""
+              (normalize (.getUTCFullYear obj) 4)     "-"
+              (normalize (inc (.getUTCMonth obj)) 2)  "-"
+              (normalize (.getUTCDate obj) 2)         "T"
+              (normalize (.getUTCHours obj) 2)        ":"
+              (normalize (.getUTCMinutes obj) 2)      ":"
+              (normalize (.getUTCSeconds obj) 2)      "."
+              (normalize (.getUTCMilliseconds obj) 3) "-"
+              "00:00\"")))
 
-        (regexp? obj) (write-all writer "#\"" (.-source obj) "\"")
+        (regexp? obj) (write-all-array writer (array "#\"" (.-source obj) "\""))
 
-        (js-symbol? obj) (write-all writer "#object[" (.toString obj) "]" )
+        (js-symbol? obj) (write-all-array writer (array "#object[" (.toString obj) "]"))
 
         :else
         (if (some-> obj .-constructor .-cljs$lang$ctorStr)
-          (write-all writer
-            "#object[" (.replace (.. obj -constructor -cljs$lang$ctorStr)
-                         (js/RegExp. "/" "g") ".") "]")
+          (write-all-array writer
+            (array "#object[" (.replace (.. obj -constructor -cljs$lang$ctorStr)
+                                (js/RegExp. "/" "g") ".") "]"))
           (let [name (some-> obj .-constructor .-name)
                 name (if (or (nil? name) (gstring/isEmpty name))
                        "Object"
                        name)]
             (if (nil? (. obj -constructor))
-              (write-all writer "#object[" name "]")
-              (write-all writer "#object[" name " " (str obj) "]"))))))))
+              (write-all-array writer (array "#object[" name "]"))
+              (write-all-array writer (array "#object[" name " " (.toString obj) "]")))))))))
 
 (defn- pr-writer
   "Prefer this to pr-seq, because it makes the printing function
@@ -10744,7 +10757,7 @@ reduces them without incurring seq initialization"
               (recur new-ns entries (assoc lm (strip-ns k) v)))))
         [ns lm]))))
 
-(defn print-prefix-map [prefix m print-one writer opts]
+(defn print-prefix-map [^string prefix m print-one writer opts]
   (pr-sequential-writer
     writer
     (fn [e w opts]
@@ -10752,7 +10765,7 @@ reduces them without incurring seq initialization"
           (-write w \space)
           (print-one (val e) w opts)))
     (str prefix "{") ", " "}"
-    opts (seq m)))
+    opts (-seq m)))
 
 (defn print-map [m print-one writer opts]
   (let [[ns lift-map] (when (map? m)
