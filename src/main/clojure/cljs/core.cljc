@@ -854,12 +854,12 @@
   ([x]
    (if (typed-expr? &env x '#{string})
      x
-     (string-expr (core/list 'js* "cljs.core.str.cljs$core$IFn$_invoke$arity$1(~{})" x))))
+     (string-expr (core/list 'js* "cljs.core.str(~{})" x))))
   ([x & ys]
    (core/let [interpolate (core/fn [x]
                             (if (typed-expr? &env x '#{string clj-nil})
                               "~{}"
-                              "cljs.core.str.cljs$core$IFn$_invoke$arity$1(~{})"))
+                              "cljs.core.str(~{})"))
               strs        (core/->> (core/list* x ys)
                             (map interpolate)
                             (interpose ",")

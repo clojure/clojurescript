@@ -3050,16 +3050,27 @@ reduces them without incurring seq initialization"
 (defn str
   "With no args, returns the empty string. With one arg x, returns
   x.toString().  (str nil) returns the empty string. With more than
-  one arg, returns the concatenation of the str values of the args."
-  ([] "")
-  ([x] (if (nil? x)
-         ""
-         (.join #js [x] "")))
-  ([x & ys]
-    (loop [sb (StringBuffer. (str x)) more ys]
-      (if more
-        (recur (. sb  (append (str (first more)))) (next more))
-        (.toString sb)))))
+  one arg, returns the concatenation of the str values of the args.
+  @param x
+  @param {...*} var_args"
+  [x var-args]
+  (cond
+    ;; works whether x is undefined or null (cljs nil)
+    (nil? x) ""
+    ;; if we have no more parameters, return
+    (undefined? var-args) (.join #js [x] "")
+    ;; var arg case without relying on CLJS fn machinery which creates
+    ;; a circularity via IndexedSeq
+    :else
+    (let [sb   (StringBuffer.)
+          args (js-arguments)
+          len  (alength args)]
+      (loop [i 1]
+        (if (< i len)
+          (do
+            (.append sb (cljs.core/str (aget args i)))
+            (recur (inc i)))
+          (.toString sb))))))
 
 (defn subs
   "Returns the substring of s beginning at start inclusive, and ending
