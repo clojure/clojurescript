@@ -10535,7 +10535,7 @@ reduces them without incurring seq initialization"
                 (reify
                   IMapEntry
                   (-key [_]
-                    (cond-> k (some? (.match k #"[A-Za-z_\*\+\?!\-'][\w\*\+\?!\-']*")) keyword))
+                    (cond-> k (some? (.match k #"^[A-Za-z_\*\+\?!\-'][\w\*\+\?!\-']*$")) keyword))
                   (-val [_]
                     (unchecked-get obj k)))))
             pr-writer writer opts))
