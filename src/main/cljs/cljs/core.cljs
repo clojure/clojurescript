@@ -10529,8 +10529,8 @@ reduces them without incurring seq initialization"
         (do
           (-write writer "#js ")
           (print-map
-            (map (fn [k]
-                   (MapEntry. (cond-> k (some? (re-matches #"[A-Za-z_\*\+\?!\-'][\w\*\+\?!\-']*" k)) keyword) (unchecked-get obj k) nil))
+            (.map (fn [k]
+                    (MapEntry. (cond-> k (some? (re-matches #"[A-Za-z_\*\+\?!\-'][\w\*\+\?!\-']*" k)) keyword) (unchecked-get obj k) nil))
               (js-keys obj))
             pr-writer writer opts))
 
