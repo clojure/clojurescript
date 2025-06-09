@@ -10532,7 +10532,12 @@ reduces them without incurring seq initialization"
             (.map
               (js-keys obj)
               (fn [k]
-                (MapEntry. (cond-> k (some? (re-matches #"[A-Za-z_\*\+\?!\-'][\w\*\+\?!\-']*" k)) keyword) (unchecked-get obj k) nil)))
+                (reify
+                  IMapEntry
+                  (-key [_]
+                    (cond-> k (some? (.match k #"[A-Za-z_\*\+\?!\-'][\w\*\+\?!\-']*")) keyword))
+                  (-val [_]
+                    (unchecked-get obj k)))))
             pr-writer writer opts))
 
         (array? obj)
