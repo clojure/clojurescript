@@ -267,6 +267,31 @@
   "Returns true if x is not nil, false otherwise."
   [x] (not (nil? x)))
 
+(defn- pr-opts-fnl [opts]
+  (if-not (nil? opts)
+    (:flush-on-newline opts)
+    *flush-on-newline*))
+
+(defn- pr-opts-readably [opts]
+  (if-not (nil? opts)
+    (:readably opts)
+    *print-readably*))
+
+(defn- pr-opts-meta [opts]
+  (if-not (nil? opts)
+    (:meta opts)
+    *print-meta*))
+
+(defn- pr-opts-dup [opts]
+  (if-not (nil? opts)
+    (:dup opts)
+    *print-dup*))
+
+(defn- pr-opts-len [opts]
+  (if-not (nil? opts)
+    (:print-length opts)
+    *print-length*))
+
 (defn object?
   "Returns true if x's constructor is Object"
   [x]
@@ -907,7 +932,7 @@
   [^not-native obj]
   (let [sb (StringBuffer.)
         writer (StringBufferWriter. sb)]
-    (-pr-writer obj writer (pr-opts))
+    (-pr-writer obj writer nil)
     (-flush writer)
     (.toString sb)))
 
@@ -10441,13 +10466,13 @@ reduces them without incurring seq initialization"
       (-write writer "#")
       (do
         (-write writer begin)
-        (if (zero? (:print-length opts))
+        (if (zero? (pr-opts-len opts))
           (when (seq coll)
             (-write writer (or (:more-marker opts) "...")))
           (do
             (when (seq coll)
               (print-one (first coll) writer opts))
-            (loop [coll (next coll) n (dec (:print-length opts))]
+            (loop [coll (next coll) n (dec (pr-opts-len opts))]
               (if (and coll (or (nil? n) (not (zero? n))))
                 (do
                   (-write writer sep)
@@ -10491,7 +10516,7 @@ reduces them without incurring seq initialization"
 (declare print-map)
 
 (defn print-meta? [opts obj]
-  (and (boolean (get opts :meta))
+  (and (boolean (pr-opts-meta opts))
        (implements? IMeta obj)
        (not (nil? (meta obj)))))
 
@@ -10544,7 +10569,7 @@ reduces them without incurring seq initialization"
         (pr-sequential-writer writer pr-writer "#js [" " " "]" opts obj)
 
         (string? obj)
-        (if (:readably opts)
+        (if (pr-opts-readably opts)
           (-write writer (quote-string obj))
           (-write writer obj))
 
@@ -10643,18 +10668,18 @@ reduces them without incurring seq initialization"
   ([] (newline nil))
   ([opts]
    (string-print "\n")
-   (when (get opts :flush-on-newline)
+   (when (pr-opts-fnl opts)
      (flush))))
 
 (defn pr-str
   "pr to a string, returning it. Fundamental entrypoint to IPrintWithWriter."
   [& objs]
-  (pr-str-with-opts objs (pr-opts)))
+  (pr-str-with-opts objs nil))
 
 (defn prn-str
   "Same as pr-str followed by (newline)"
   [& objs]
-  (prn-str-with-opts objs (pr-opts)))
+  (prn-str-with-opts objs nil))
 
 (defn pr
   "Prints the object(s) using string-print.  Prints the
@@ -10662,38 +10687,42 @@ reduces them without incurring seq initialization"
   By default, pr and prn print in a way that objects can be
   read by the reader"
   [& objs]
-  (pr-with-opts objs (pr-opts)))
+  (pr-with-opts objs nil))
 
 (def ^{:doc
   "Prints the object(s) using string-print.
   print and println produce output for human consumption."}
   print
   (fn cljs-core-print [& objs]
-    (pr-with-opts objs (assoc (pr-opts) :readably false))))
+    (binding [*print-readably* false]
+      (pr-with-opts objs nil))))
 
 (defn print-str
   "print to a string, returning it"
   [& objs]
-  (pr-str-with-opts objs (assoc (pr-opts) :readably false)))
+  (binding [*print-readably* false]
+    (pr-str-with-opts objs nil)))
 
 (defn println
   "Same as print followed by (newline)"
   [& objs]
-  (pr-with-opts objs (assoc (pr-opts) :readably false))
+  (binding [*print-readably* false]
+    (pr-with-opts objs nil))
   (when *print-newline*
-    (newline (pr-opts))))
+    (newline nil)))
 
 (defn println-str
   "println to a string, returning it"
   [& objs]
-  (prn-str-with-opts objs (assoc (pr-opts) :readably false)))
+  (binding [*print-readably* false]
+    (prn-str-with-opts objs nil)))
 
 (defn prn
   "Same as pr followed by (newline)."
   [& objs]
-  (pr-with-opts objs (pr-opts))
+  (pr-with-opts objs nil)
   (when *print-newline*
-    (newline (pr-opts))))
+    (newline nil)))
 
 (defn- strip-ns
   [named]
