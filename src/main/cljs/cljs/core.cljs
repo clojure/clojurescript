@@ -1679,9 +1679,9 @@ reduces them without incurring seq initialization"
         (aget arr i)
         not-found)))
 
-  ;ISequential
-  ;IEquiv
-  ;(-equiv [coll other] (equiv-sequential coll other))
+  ISequential
+  IEquiv
+  (-equiv [coll other] (equiv-sequential coll other))
 
   IIterable
   (-iterator [coll]
