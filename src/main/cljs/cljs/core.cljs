@@ -332,7 +332,7 @@
 (defn type->str [ty]
   (if-let [s (.-cljs$lang$ctorStr ty)]
     s
-    (str ty)))
+    (str_ ty)))
 
 ;; INTERNAL - do not use, only for Node.js
 (defn load-file [file]
@@ -1150,7 +1150,7 @@
          :else (throw (new js/Error "no conversion to symbol"))))
   ([ns name]
    (let [sym-str (if-not (nil? ns)
-                   (str ns "/" name)
+                   (str_ ns "/" name)
                    name)]
      (Symbol. ns name sym-str nil nil))))
 
@@ -1159,7 +1159,7 @@
   (isMacro [_]
     (. (val) -cljs$lang$macro))
   (toString [_]
-    (str "#'" sym))
+    (str_ "#'" sym))
   IDeref
   (-deref [_] (val))
   IMeta
@@ -1274,7 +1274,7 @@
       (native-satisfies? ISeqable coll)
       (-seq coll)
 
-      :else (throw (js/Error. (str coll " is not ISeqable"))))))
+      :else (throw (js/Error. (str_ coll " is not ISeqable"))))))
 
 (defn first
   "Returns the first item in the collection. Calls seq on its
@@ -1423,7 +1423,7 @@
   (-compare [this other]
     (if (instance? js/Date other)
       (garray/defaultCompare (.valueOf this) (.valueOf other))
-      (throw (js/Error. (str "Cannot compare " this " to " other))))))
+      (throw (js/Error. (str_ "Cannot compare " this " to " other))))))
 
 (defprotocol Inst
   (inst-ms* [inst]))
@@ -1942,7 +1942,7 @@ reduces them without incurring seq initialization"
       (-nth coll n)
 
       :else
-      (throw (js/Error. (str "nth not supported on this type "
+      (throw (js/Error. (str_ "nth not supported on this type "
                           (type->str (type coll)))))))
   ([coll n not-found]
     (cond
@@ -1975,7 +1975,7 @@ reduces them without incurring seq initialization"
       (-nth coll n not-found)
 
       :else
-      (throw (js/Error. (str "nth not supported on this type "
+      (throw (js/Error. (str_ "nth not supported on this type "
                           (type->str (type coll))))))))
 
 (defn nthrest
@@ -2470,7 +2470,7 @@ reduces them without incurring seq initialization"
 
    (number? x) (if (number? y)
                  (garray/defaultCompare x y)
-                 (throw (js/Error. (str "Cannot compare " x " to " y))))
+                 (throw (js/Error. (str_ "Cannot compare " x " to " y))))
 
    (satisfies? IComparable x)
    (-compare x y)
@@ -2479,7 +2479,7 @@ reduces them without incurring seq initialization"
    (if (and (or (string? x) (array? x) (true? x) (false? x))
             (identical? (type x) (type y)))
      (garray/defaultCompare x y)
-     (throw (js/Error. (str "Cannot compare " x " to " y))))))
+     (throw (js/Error. (str_ "Cannot compare " x " to " y))))))
 
 (defn ^:private compare-indexed
   "Compare indexed collection."
@@ -3047,10 +3047,8 @@ reduces them without incurring seq initialization"
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;; basics ;;;;;;;;;;;;;;;;;;
 
-(defn str
-  "With no args, returns the empty string. With one arg x, returns
-  x.toString().  (str nil) returns the empty string. With more than
-  one arg, returns the concatenation of the str values of the args.
+(defn- str_
+  "Implementation detail. Internal str without circularity on IndexedSeq.
   @param x
   @param {...*} var_args"
   [x var-args]
@@ -3068,9 +3066,23 @@ reduces them without incurring seq initialization"
       (loop [i 1]
         (if (< i len)
           (do
-            (.append sb (cljs.core/str (aget args i)))
+            (.append sb (cljs.core/str_ (aget args i)))
             (recur (inc i)))
           (.toString sb))))))
+
+(defn str
+  "With no args, returns the empty string. With one arg x, returns
+  x.toString().  (str nil) returns the empty string. With more than
+  one arg, returns the concatenation of the str values of the args."
+  ([] "")
+  ([x] (if (nil? x)
+         ""
+         (.join #js [x] "")))
+  ([x & ys]
+   (loop [sb (StringBuffer. (str x)) more ys]
+     (if more
+       (recur (. sb  (append (str (first more)))) (next more))
+       (.toString sb)))))
 
 (defn subs
   "Returns the substring of s beginning at start inclusive, and ending
@@ -3405,7 +3417,7 @@ reduces them without incurring seq initialization"
 
 (deftype Keyword [ns name fqn ^:mutable _hash]
   Object
-  (toString [_] (str ":" fqn))
+  (toString [_] (str_ ":" fqn))
   (equiv [this other]
     (-equiv this other))
 
@@ -3429,7 +3441,7 @@ reduces them without incurring seq initialization"
   (-namespace [_] ns)
 
   IPrintWithWriter
-  (-pr-writer [o writer _] (-write writer (str ":" fqn))))
+  (-pr-writer [o writer _] (-write writer (str_ ":" fqn))))
 
 (defn keyword?
   "Return true if x is a Keyword"
@@ -3459,7 +3471,7 @@ reduces them without incurring seq initialization"
   [x]
   (if (implements? INamed x)
     (-namespace x)
-    (throw (js/Error. (str "Doesn't support namespace: " x)))))
+    (throw (js/Error. (str_ "Doesn't support namespace: " x)))))
 
 (defn ident?
   "Return true if x is a symbol or keyword"
@@ -3511,7 +3523,7 @@ reduces them without incurring seq initialization"
                 (keyword? name) (cljs.core/name name)
                 (symbol? name) (cljs.core/name name)
                 :else name)]
-     (Keyword. ns name (str (when ns (str ns "/")) name) nil))))
+     (Keyword. ns name (str_ (when ns (str_ ns "/")) name) nil))))
 
 (deftype LazySeq [meta ^:mutable fn ^:mutable s ^:mutable __hash]
   Object
@@ -4173,7 +4185,7 @@ reduces them without incurring seq initialization"
     (string? coll) (string-iter coll)
     (array? coll) (array-iter coll)
     (seqable? coll) (seq-iter coll)
-    :else (throw (js/Error. (str "Cannot create iterator from " coll)))))
+    :else (throw (js/Error. (str_ "Cannot create iterator from " coll)))))
 
 (deftype Many [vals]
   Object
@@ -4185,7 +4197,7 @@ reduces them without incurring seq initialization"
   (isEmpty [this]
     (zero? (.-length vals)))
   (toString [this]
-    (str "Many: " vals)))
+    (str_ "Many: " vals)))
 
 (def ^:private NONE #js {})
 
@@ -4199,21 +4211,21 @@ reduces them without incurring seq initialization"
       (Many. #js [val o])))
   (remove [this]
     (if (identical? val NONE)
-      (throw (js/Error. (str "Removing object from empty buffer")))
+      (throw (js/Error. (str_ "Removing object from empty buffer")))
       (let [ret val]
         (set! val NONE)
         ret)))
   (isEmpty [this]
     (identical? val NONE))
   (toString [this]
-    (str "Single: " val)))
+    (str_ "Single: " val)))
 
 (deftype Empty []
   Object
   (add [this o]
     (Single. o))
   (remove [this]
-    (throw (js/Error. (str "Removing object from empty buffer"))))
+    (throw (js/Error. (str_ "Removing object from empty buffer"))))
   (isEmpty [this]
     true)
   (toString [this]
@@ -4360,8 +4372,8 @@ reduces them without incurring seq initialization"
 (defn even?
   "Returns true if n is even, throws an exception if n is not an integer"
    [n] (if (integer? n)
-        (zero? (bit-and n 1))
-        (throw (js/Error. (str "Argument must be an integer: " n)))))
+         (zero? (bit-and n 1))
+         (throw (js/Error. (str_ "Argument must be an integer: " n)))))
 
 (defn odd?
   "Returns true if n is odd, throws an exception if n is not an integer"
@@ -5535,7 +5547,7 @@ reduces them without incurring seq initialization"
             ret))))))
 
 (defn- vector-index-out-of-bounds [i cnt]
-  (throw (js/Error. (str "No item " i " in vector of length " cnt))))
+  (throw (js/Error. (str_ "No item " i " in vector of length " cnt))))
 
 (defn- first-array-for-longvec [pv]
   ;; invariants: (count pv) > 32.
@@ -5764,14 +5776,14 @@ reduces them without incurring seq initialization"
   IVector
   (-assoc-n [coll n val]
     (cond
-       (and (<= 0 n) (< n cnt))
-       (if (<= (tail-off coll) n)
+      (and (<= 0 n) (< n cnt))
+      (if (<= (tail-off coll) n)
          (let [new-tail (aclone tail)]
            (aset new-tail (bit-and n 0x01f) val)
            (PersistentVector. meta cnt shift root new-tail nil))
          (PersistentVector. meta cnt shift (do-assoc coll shift root n val) tail nil))
-       (== n cnt) (-conj coll val)
-       :else (throw (js/Error. (str "Index " n " out of bounds  [0," cnt "]")))))
+      (== n cnt) (-conj coll val)
+      :else (throw (js/Error. (str_ "Index " n " out of bounds  [0," cnt "]")))))
 
   IReduce
   (-reduce [v f]
@@ -6090,7 +6102,7 @@ reduces them without incurring seq initialization"
   (-assoc-n [coll n val]
     (let [v-pos (+ start n)]
       (if (or (neg? n) (<= (inc end) v-pos))
-        (throw (js/Error. (str "Index " n " out of bounds [0," (-count coll) "]")))
+        (throw (js/Error. (str_ "Index " n " out of bounds [0," (-count coll) "]")))
         (build-subvec meta (assoc v v-pos val) start (max end (inc v-pos)) nil))))
 
   IReduce
@@ -6278,7 +6290,7 @@ reduces them without incurring seq initialization"
         :else
         (throw
          (js/Error.
-          (str "Index " n " out of bounds for TransientVector of length" cnt))))
+          (str_ "Index " n " out of bounds for TransientVector of length" cnt))))
       (throw (js/Error. "assoc! after persistent!"))))
 
   (-pop! [tcoll]
@@ -7185,7 +7197,7 @@ reduces them without incurring seq initialization"
                 idx (array-index-of ret k)]
             (if (== idx -1)
               (doto ret (.push k) (.push v))
-              (throw (js/Error. (str "Duplicate key: " k)))))
+              (throw (js/Error. (str_ "Duplicate key: " k)))))
           (recur (+ i 2))))
       (let [cnt (/ (alength arr) 2)]
         (PersistentArrayMap. nil cnt arr nil)))))
@@ -8254,7 +8266,7 @@ reduces them without incurring seq initialization"
       (loop [i 0 ^not-native out (transient (.-EMPTY PersistentHashMap))]
         (if (< i len)
           (if (<= (alength vs) i)
-            (throw (js/Error. (str "No value supplied for key: " (aget ks i))))
+            (throw (js/Error. (str_ "No value supplied for key: " (aget ks i))))
             (recur (inc i) (-assoc! out (aget ks i) (aget vs i))))
           (persistent! out))))))
 
@@ -8266,7 +8278,7 @@ reduces them without incurring seq initialization"
         (when (< i len)
           (-assoc! ret (aget arr i) (aget arr (inc i)))
           (if (not= (-count ret) (inc (/ i 2)))
-            (throw (js/Error. (str "Duplicate key: " (aget arr i))))
+            (throw (js/Error. (str_ "Duplicate key: " (aget arr i))))
             (recur (+ i 2)))))
       (-persistent! ret))))
 
@@ -9129,7 +9141,7 @@ reduces them without incurring seq initialization"
     (if in
       (let [in' (next in)]
         (if (nil? in')
-          (throw (js/Error. (str "No value supplied for key: " (first in))))
+          (throw (js/Error. (str_ "No value supplied for key: " (first in))))
           (recur (next in') (assoc! out (first in) (first in')) )))
       (persistent! out))))
 
@@ -9141,7 +9153,7 @@ reduces them without incurring seq initialization"
               (.-arr keyvals)
               (into-array keyvals))]
     (if (odd? (alength arr))
-      (throw (js/Error. (str "No value supplied for key: " (last arr))))
+      (throw (js/Error. (str_ "No value supplied for key: " (last arr))))
       (.createAsIfByAssoc PersistentArrayMap arr))))
 
 (defn seq-to-map-for-destructuring
@@ -9504,7 +9516,7 @@ reduces them without incurring seq initialization"
           (dotimes [i len]
             (-conj! t (aget items i))
             (when-not (= (count t) (inc i))
-              (throw (js/Error. (str "Duplicate key: " (aget items i))))))
+              (throw (js/Error. (str_ "Duplicate key: " (aget items i))))))
           (-persistent! t))))
 
 (set! (.-createAsIfByAssoc PersistentHashSet)
@@ -9753,7 +9765,7 @@ reduces them without incurring seq initialization"
     (-name x)
     (if (string? x)
       x
-      (throw (js/Error. (str "Doesn't support name: " x))))))
+      (throw (js/Error. (str_ "Doesn't support name: " x))))))
 
 (defn zipmap
   "Returns a map with the keys mapped to the corresponding vals."
@@ -10494,7 +10506,7 @@ reduces them without incurring seq initialization"
 
 (defn ^:private quote-string
   [s]
-  (str \"
+  (str_ \"
        (.replace s (js/RegExp "[\\\\\"\b\f\n\r\t]" "g")
          (fn [match] (unchecked-get char-escapes match)))
        \"))
@@ -10526,7 +10538,7 @@ reduces them without incurring seq initialization"
         (-pr-writer obj writer opts)
 
         (or (true? obj) (false? obj))
-        (-write writer (str obj))
+        (-write writer (str_ obj))
 
         (number? obj)
         (-write writer
@@ -10534,7 +10546,7 @@ reduces them without incurring seq initialization"
             ^boolean (js/isNaN obj) "##NaN"
             (identical? obj js/Number.POSITIVE_INFINITY) "##Inf"
             (identical? obj js/Number.NEGATIVE_INFINITY) "##-Inf"
-            :else (str obj)))
+            :else (str_ obj)))
 
         (object? obj)
         (do
@@ -10560,15 +10572,15 @@ reduces them without incurring seq initialization"
                      name)]
           (write-all writer "#object[" name
             (if *print-fn-bodies*
-              (str " \"" (str obj) "\"")
+              (str_ " \"" (str_ obj) "\"")
               "")
             "]"))
 
         (instance? js/Date obj)
         (let [normalize (fn [n len]
-                          (loop [ns (str n)]
+                          (loop [ns (str_ n)]
                             (if (< (count ns) len)
-                              (recur (str "0" ns))
+                              (recur (str_ "0" ns))
                               ns)))]
           (write-all writer
             "#inst \""
@@ -10596,7 +10608,7 @@ reduces them without incurring seq initialization"
                        name)]
             (if (nil? (. obj -constructor))
               (write-all writer "#object[" name "]")
-              (write-all writer "#object[" name " " (str obj) "]"))))))))
+              (write-all writer "#object[" name " " (str_ obj) "]"))))))))
 
 (defn- pr-writer
   "Prefer this to pr-seq, because it makes the printing function
@@ -10626,7 +10638,7 @@ reduces them without incurring seq initialization"
   [objs opts]
   (if (empty? objs)
     ""
-    (str (pr-sb-with-opts objs opts))))
+    (str_ (pr-sb-with-opts objs opts))))
 
 (defn prn-str-with-opts
   "Same as pr-str-with-opts followed by (newline)"
@@ -10635,7 +10647,7 @@ reduces them without incurring seq initialization"
     "\n"
     (let [sb (pr-sb-with-opts objs opts)]
       (.append sb \newline)
-      (str sb))))
+      (str_ sb))))
 
 (defn- pr-with-opts
   "Prints a sequence of objects using string-print, observing all
@@ -10729,14 +10741,14 @@ reduces them without incurring seq initialization"
       (do (print-one (key e) w opts)
           (-write w \space)
           (print-one (val e) w opts)))
-    (str prefix "{") ", " "}"
+    (str_ prefix "{") ", " "}"
     opts (seq m)))
 
 (defn print-map [m print-one writer opts]
   (let [[ns lift-map] (when (map? m)
                         (lift-ns m))]
     (if ns
-      (print-prefix-map (str "#:" ns) lift-map print-one writer opts)
+      (print-prefix-map (str_ "#:" ns) lift-map print-one writer opts)
       (print-prefix-map nil m print-one writer opts))))
 
 (extend-protocol IPrintWithWriter
@@ -10869,43 +10881,43 @@ reduces them without incurring seq initialization"
   (-compare [x y]
     (if (symbol? y)
       (compare-symbols x y)
-      (throw (js/Error. (str "Cannot compare " x " to " y)))))
+      (throw (js/Error. (str_ "Cannot compare " x " to " y)))))
 
   Keyword
   (-compare [x y]
     (if (keyword? y)
       (compare-keywords x y)
-      (throw (js/Error. (str "Cannot compare " x " to " y)))))
+      (throw (js/Error. (str_ "Cannot compare " x " to " y)))))
 
   Subvec
   (-compare [x y]
     (if (vector? y)
       (compare-indexed x y)
-      (throw (js/Error. (str "Cannot compare " x " to " y)))))
+      (throw (js/Error. (str_ "Cannot compare " x " to " y)))))
 
   PersistentVector
   (-compare [x y]
     (if (vector? y)
       (compare-indexed x y)
-      (throw (js/Error. (str "Cannot compare " x " to " y)))))
+      (throw (js/Error. (str_ "Cannot compare " x " to " y)))))
 
   MapEntry
   (-compare [x y]
     (if (vector? y)
       (compare-indexed x y)
-      (throw (js/Error. (str "Cannot compare " x " to " y)))))
+      (throw (js/Error. (str_ "Cannot compare " x " to " y)))))
 
   BlackNode
   (-compare [x y]
     (if (vector? y)
       (compare-indexed x y)
-      (throw (js/Error. (str "Cannot compare " x " to " y)))))
+      (throw (js/Error. (str_ "Cannot compare " x " to " y)))))
 
   RedNode
   (-compare [x y]
     (if (vector? y)
       (compare-indexed x y)
-      (throw (js/Error. (str "Cannot compare " x " to " y))))))
+      (throw (js/Error. (str_ "Cannot compare " x " to " y))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Reference Types ;;;;;;;;;;;;;;;;
 
@@ -10966,7 +10978,7 @@ reduces them without incurring seq initialization"
   ([prefix-string]
      (when (nil? gensym_counter)
        (set! gensym_counter (atom 0)))
-     (symbol (str prefix-string (swap! gensym_counter inc)))))
+     (symbol (str_ prefix-string (swap! gensym_counter inc)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Delay ;;;;;;;;;;;;;;;;;;;;
 
@@ -11196,7 +11208,7 @@ reduces them without incurring seq initialization"
                         (nil? x) nil
                         (satisfies? IEncodeJS x) (-clj->js x)
                         (keyword? x) (keyword-fn x)
-                        (symbol? x) (str x)
+                        (symbol? x) (str_ x)
                         (map? x) (let [m (js-obj)]
                                    (doseq [[k v] x]
                                      (gobject/set m (keyfn k) (thisfn v)))
@@ -11220,7 +11232,7 @@ reduces them without incurring seq initialization"
   ([x] (js->clj x :keywordize-keys false))
   ([x & opts]
     (let [{:keys [keywordize-keys]} opts
-          keyfn (if keywordize-keys keyword str)
+          keyfn (if keywordize-keys keyword str_)
           f (fn thisfn [x]
               (cond
                 (satisfies? IEncodeClojure x)
@@ -11395,9 +11407,9 @@ reduces them without incurring seq initialization"
      (or
       (when-not (contains? (tp tag) parent)
         (when (contains? (ta tag) parent)
-          (throw (js/Error. (str tag "already has" parent "as ancestor"))))
+          (throw (js/Error. (str_ tag "already has" parent "as ancestor"))))
         (when (contains? (ta parent) tag)
-          (throw (js/Error. (str "Cyclic derivation:" parent "has" tag "as ancestor"))))
+          (throw (js/Error. (str_ "Cyclic derivation:" parent "has" tag "as ancestor"))))
         {:parents (assoc (:parents h) tag (conj (get tp tag #{}) parent))
          :ancestors (tf (:ancestors h) tag td parent ta)
          :descendants (tf (:descendants h) parent ta tag td)})
@@ -11460,7 +11472,7 @@ reduces them without incurring seq initialization"
                                            be)]
                                  (when-not (dominates (first be2) k prefer-table @hierarchy)
                                    (throw (js/Error.
-                                            (str "Multiple methods in multimethod '" name
+                                            (str_ "Multiple methods in multimethod '" name
                                               "' match dispatch value: " dispatch-val " -> " k
                                               " and " (first be2) ", and neither is preferred"))))
                                  be2)
@@ -11491,7 +11503,7 @@ reduces them without incurring seq initialization"
   (-dispatch-fn [mf]))
 
 (defn- throw-no-method-error [name dispatch-val]
-  (throw (js/Error. (str "No method in multimethod '" name "' for dispatch value: " dispatch-val))))
+  (throw (js/Error. (str_ "No method in multimethod '" name "' for dispatch value: " dispatch-val))))
 
 (deftype MultiFn [name dispatch-fn default-dispatch-val hierarchy
                   method-table prefer-table method-cache cached-hierarchy]
@@ -11657,7 +11669,7 @@ reduces them without incurring seq initialization"
 
   (-prefer-method [mf dispatch-val-x dispatch-val-y]
     (when (prefers* dispatch-val-y dispatch-val-x  prefer-table)
-      (throw (js/Error. (str "Preference conflict in multimethod '" name "': " dispatch-val-y
+      (throw (js/Error. (str_ "Preference conflict in multimethod '" name "': " dispatch-val-y
                    " is already preferred to " dispatch-val-x))))
     (swap! prefer-table
            (fn [old]
@@ -11732,7 +11744,7 @@ reduces them without incurring seq initialization"
 
   IPrintWithWriter
   (-pr-writer [_ writer _]
-    (-write writer (str "#uuid \"" uuid "\"")))
+    (-write writer (str_ "#uuid \"" uuid "\"")))
 
   IHash
   (-hash [this]
@@ -11744,7 +11756,7 @@ reduces them without incurring seq initialization"
   (-compare [this other]
     (if (instance? UUID other)
       (garray/defaultCompare uuid (.-uuid other))
-      (throw (js/Error. (str "Cannot compare " this " to " other))))))
+      (throw (js/Error. (str_ "Cannot compare " this " to " other))))))
 
 (defn uuid
   "Returns a UUID consistent with the string s."
@@ -11758,14 +11770,14 @@ reduces them without incurring seq initialization"
   (letfn [(^string quad-hex []
             (let [unpadded-hex ^string (.toString (rand-int 65536) 16)]
               (case (count unpadded-hex)
-                1 (str "000" unpadded-hex)
-                2 (str "00" unpadded-hex)
-                3 (str "0" unpadded-hex)
+                1 (str_ "000" unpadded-hex)
+                2 (str_ "00" unpadded-hex)
+                3 (str_ "0" unpadded-hex)
                 unpadded-hex)))]
     (let [ver-tripple-hex ^string (.toString (bit-or 0x4000 (bit-and 0x0fff (rand-int 65536))) 16)
           res-tripple-hex ^string (.toString (bit-or 0x8000 (bit-and 0x3fff (rand-int 65536))) 16)]
       (uuid
-        (str (quad-hex) (quad-hex) "-" (quad-hex) "-"
+        (str_ (quad-hex) (quad-hex) "-" (quad-hex) "-"
              ver-tripple-hex "-" res-tripple-hex "-"
              (quad-hex) (quad-hex) (quad-hex))))))
 
@@ -11939,7 +11951,7 @@ reduces them without incurring seq initialization"
 
   IPrintWithWriter
   (-pr-writer [o writer opts]
-    (-write writer (str "#" tag " "))
+    (-write writer (str_ "#" tag " "))
     (pr-writer form writer opts)))
 
 (defn tagged-literal?
@@ -11992,11 +12004,11 @@ reduces them without incurring seq initialization"
           (if (seq ks)
             (recur
               (next ks)
-              (str
+              (str_
                 (cond-> ret
-                  (not (identical? ret "")) (str "|"))
+                  (not (identical? ret "")) (str_ "|"))
                 (first ks)))
-            (str ret "|\\$"))))))
+            (str_ ret "|\\$"))))))
   DEMUNGE_PATTERN)
 
 (defn- ^string munge-str [name]
@@ -12012,10 +12024,10 @@ reduces them without incurring seq initialization"
     (.toString sb)))
 
 (defn munge [name]
-  (let [name' (munge-str (str name))
+  (let [name' (munge-str (str_ name))
         name' (cond
                 (identical? name' "..") "_DOT__DOT_"
-                (js-reserved? name') (str name' "$")
+                (js-reserved? name') (str_ name' "$")
                 :else name')]
     (if (symbol? name)
       (symbol name')
@@ -12030,17 +12042,17 @@ reduces them without incurring seq initialization"
       (if-let [match (.exec r munged-name)]
         (let [[x] match]
           (recur
-            (str ret
+            (str_ ret
               (.substring munged-name last-match-end
                 (- (. r -lastIndex) (. x -length)))
               (if (identical? x "$") "/" (gobject/get DEMUNGE_MAP x)))
             (. r -lastIndex)))
-        (str ret
+        (str_ ret
           (.substring munged-name last-match-end (.-length munged-name)))))))
 
 (defn demunge [name]
-  ((if (symbol? name) symbol str)
-    (let [name' (str name)]
+  ((if (symbol? name) symbol str_)
+    (let [name' (str_ name)]
       (if (identical? name' "_DOT__DOT_")
         ".."
         (demunge-str name')))))
@@ -12119,14 +12131,14 @@ reduces them without incurring seq initialization"
 (deftype Namespace [obj name]
   Object
   (findInternedVar [this sym]
-    (let [k (munge (str sym))]
+    (let [k (munge (str_ sym))]
       (when ^boolean (gobject/containsKey obj k)
-        (let [var-sym (symbol (str name) (str sym))
+        (let [var-sym (symbol (str_ name) (str_ sym))
               var-meta {:ns this}]
           (Var. (ns-lookup obj k) var-sym var-meta)))))
   (getName [_] name)
   (toString [_]
-    (str name))
+    (str_ name))
   IEquiv
   (-equiv [_ other]
     (if (instance? Namespace other)
@@ -12151,10 +12163,10 @@ reduces them without incurring seq initialization"
 (defn find-ns-obj
   "Bootstrap only."
   [ns]
-  (let [munged-ns (munge (str ns))
+  (let [munged-ns (munge (str_ ns))
         segs (.split munged-ns ".")]
     (case *target*
-      "nodejs"  (if ^boolean js/COMPILED
+      "nodejs" (if ^boolean js/COMPILED
                   ; Under simple optimizations on nodejs, namespaces will be in module
                   ; rather than global scope and must be accessed by a direct call to eval.
                   ; The first segment may refer to an undefined variable, so its evaluation
@@ -12169,7 +12181,7 @@ reduces them without incurring seq initialization"
                     (next segs))
                   (find-ns-obj* goog/global segs))
       ("default" "webworker") (find-ns-obj* goog/global segs)
-      (throw (js/Error. (str "find-ns-obj not supported for target " *target*))))))
+      (throw (js/Error. (str_ "find-ns-obj not supported for target " *target*))))))
 
 (defn ns-interns*
   "Returns a map of the intern mappings for the namespace.
@@ -12181,7 +12193,7 @@ reduces them without incurring seq initialization"
               (let [var-sym (symbol (demunge k))]
                 (assoc ret
                   var-sym (Var. #(gobject/get ns-obj k)
-                            (symbol (str sym) (str var-sym)) {:ns ns}))))]
+                            (symbol (str_ sym) (str_ var-sym)) {:ns ns}))))]
       (reduce step {} (js-keys ns-obj)))))
 
 (defn create-ns
@@ -12212,9 +12224,9 @@ reduces them without incurring seq initialization"
   [ns]
   (when (nil? NS_CACHE)
     (set! NS_CACHE (atom {})))
-  (let [ns-str (str ns)
+  (let [ns-str (str_ ns)
         ns (if (not ^boolean (gstring/contains ns-str "$macros"))
-             (symbol (str ns-str "$macros"))
+             (symbol (str_ ns-str "$macros"))
              ns)
         the-ns (get @NS_CACHE ns)]
     (if-not (nil? the-ns)
@@ -12245,7 +12257,7 @@ reduces them without incurring seq initialization"
 (defn ^:private parsing-err
   "Construct message for parsing for non-string parsing error"
   [val]
-  (str "Expected string, got: " (if (nil? val) "nil" (goog/typeOf val))))
+  (str_ "Expected string, got: " (if (nil? val) "nil" (goog/typeOf val))))
 
 (defn ^number parse-long
   "Parse string of decimal digits with optional leading -/+ and return an
