@@ -10624,7 +10624,7 @@ reduces them without incurring seq initialization"
    to a StringBuffer."
   [obj writer opts]
   (if-let [alt-impl (:alt-impl opts)]
-    (alt-impl obj writer (assoc opts :fallback-impl pr-writer-impl))
+    (alt-impl obj writer (-assoc opts :fallback-impl pr-writer-impl))
     (pr-writer-impl obj writer opts)))
 
 (defn pr-seq-writer [objs writer opts]
