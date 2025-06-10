@@ -2059,7 +2059,7 @@
 
 (deftest test-str_
   (is (= "" (apply cljs.core/str_ nil)))
-  (is (= "" (apply cljs.core./str_ [])))
+  (is (= "" (apply cljs.core/str_ [])))
   (is (= "1" (apply cljs.core/str_ 1 [])))
   (is (= "12" (apply cljs.core/str_ 1 [2])))
   (is (= "1two:threefour#{:five}[:six]#{:seven}{:eight :nine}"
