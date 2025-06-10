@@ -10524,7 +10524,9 @@ reduces them without incurring seq initialization"
   (reify
     IMapEntry
     (-key [_] k)
-    (-val [_] v)))
+    (-val [_] v)
+    ISeqable
+    (-seq [_] (IndexedSeq. #js [k v] 0 nil))))
 
 (defn- pr-writer-impl
   [obj writer opts]
