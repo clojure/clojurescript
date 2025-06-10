@@ -10520,6 +10520,12 @@ reduces them without incurring seq initialization"
        (implements? IMeta obj)
        (not (nil? (meta obj)))))
 
+(defn- pr-map-entry [k v]
+  (reify
+    IMapEntry
+    (-key [_] k)
+    (-val [_] v)))
+
 (defn- pr-writer-impl
   [obj writer opts]
   (cond
@@ -10557,12 +10563,9 @@ reduces them without incurring seq initialization"
             (.map
               (js-keys obj)
               (fn [k]
-                (reify
-                  IMapEntry
-                  (-key [_]
-                    (cond-> k (some? (.match k #"^[A-Za-z_\*\+\?!\-'][\w\*\+\?!\-']*$")) keyword))
-                  (-val [_]
-                    (unchecked-get obj k)))))
+                (pr-map-entry
+                  (cond-> k (some? (.match k #"^[A-Za-z_\*\+\?!\-'][\w\*\+\?!\-']*$")) keyword)
+                  (unchecked-get obj k))))
             pr-writer writer opts))
 
         (array? obj)
@@ -10731,20 +10734,22 @@ reduces them without incurring seq initialization"
     (keyword nil (name named))))
 
 (defn- lift-ns
-  "Returns [lifted-ns lifted-map] or nil if m can't be lifted."
+  "Returns #js [lifted-ns lifted-map] or nil if m can't be lifted."
   [m]
   (when *print-namespace-maps*
-    (loop [ns nil
-           [[k v :as entry] & entries] (seq m)
-           lm (empty m)]
-      (if entry
-        (when (or (keyword? k) (symbol? k))
-          (if ns
-            (when (= ns (namespace k))
-              (recur ns entries (assoc lm (strip-ns k) v)))
-            (when-let [new-ns (namespace k)]
-              (recur new-ns entries (assoc lm (strip-ns k) v)))))
-        [ns lm]))))
+    (let [lm #js []]
+      (loop [ns nil
+             [[k v :as entry] & entries] (seq m)]
+        (if entry
+          (when (or (keyword? k) (symbol? k))
+            (if ns
+              (when (= ns (namespace k))
+                (.push lm (pr-map-entry (strip-ns k) v))
+                (recur ns entries))
+              (when-let [new-ns (namespace k)]
+                (.push lm (pr-map-entry (strip-ns k) v))
+                (recur new-ns entries))))
+          #js [ns lm])))))
 
 (defn print-prefix-map [prefix m print-one writer opts]
   (pr-sequential-writer
@@ -10757,10 +10762,11 @@ reduces them without incurring seq initialization"
     opts (seq m)))
 
 (defn print-map [m print-one writer opts]
-  (let [[ns lift-map] (when (map? m)
-                        (lift-ns m))]
+  (let [ns&lift-map (when (map? m)
+                      (lift-ns m))
+        ns (some-> ns&lift-map (aget 0))]
     (if ns
-      (print-prefix-map (str "#:" ns) lift-map print-one writer opts)
+      (print-prefix-map (str "#:" ns) (aget ns&lift-map 1) print-one writer opts)
       (print-prefix-map nil m print-one writer opts))))
 
 (extend-protocol IPrintWithWriter
