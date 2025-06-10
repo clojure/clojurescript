@@ -3088,7 +3088,7 @@ reduces them without incurring seq initialization"
     (let [sb   (StringBuffer.)
           args (js-arguments)
           len  (alength args)]
-      (loop [i 1]
+      (loop [i 0]
         (if (< i len)
           (do
             (.append sb (cljs.core/str_ (aget args i)))

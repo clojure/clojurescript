@@ -2056,3 +2056,12 @@
            [1 2 {:a 1, :b 2, :c 3}]))
     (is (= (test-keys :d 4 {:a 1, :b 2, :c 3})
            [1 2 {:d 4, :a 1, :b 2, :c 3}]))))
+
+(deftest test-str_
+  (is (= "" (apply cljs.core/str_ nil)))
+  (is (= "" (apply cljs.core./str_ [])))
+  (is (= "1" (apply cljs.core/str_ 1 [])))
+  (is (= "12" (apply cljs.core/str_ 1 [2])))
+  (is (= "1two:threefour#{:five}[:six]#{:seven}{:eight :nine}"
+         (apply cljs.core/str_ 1 ["two" :three 'four #{:five} [:six] #{:seven} {:eight :nine}])))
+  (is (= "1234" (apply cljs.core/str_ 1 2 [3 4]))))
