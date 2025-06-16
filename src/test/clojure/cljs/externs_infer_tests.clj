@@ -23,6 +23,15 @@
    "goog.isArrayLike;" "Java.type;" "Object.out;" "Object.out.println;"
    "Object.error;" "Object.error.println;"])
 
+(deftest test-resolve-extern
+  (let [externs
+        (externs/externs-map
+          (closure/load-externs
+            {:externs                 ["src/test/externs/test.js"]
+             :use-only-custom-externs true}))]
+    (is (some? (ana/resolve-extern '[baz] externs)))
+    (is (nil? (ana/resolve-extern '[Foo gozMethod] externs)))))
+
 (deftest test-has-extern?-basic
   (let [externs (externs/externs-map
                   (closure/load-externs
@@ -34,6 +43,25 @@
     (is (false? (ana/has-extern? '[Foo gozMethod] externs)))
     (is (true? (ana/has-extern? '[baz] externs)))
     (is (false? (ana/has-extern? '[Baz] externs)))))
+
+(deftest test-resolve-extern
+  (let [externs (externs/externs-map)]
+    (is (= '[Number]
+            (-> (ana/resolve-extern '[Number] externs) :resolved)))
+    (is (= '[Number prototype valueOf]
+            (-> (ana/resolve-extern '[Number valueOf] externs) :resolved)))))
+
+(comment
+
+  (def externs (externs/externs-map))
+
+  ;; succeeds
+  (ana/resolve-extern '[console] externs)
+
+  ;; this one fails
+  (ana/resolve-extern '[console log] externs)
+
+  )
 
 (deftest test-has-extern?-defaults
   (let [externs (externs/externs-map)]
@@ -158,9 +186,9 @@
                :warnings ws})]
     (is (= (unsplit-lines ["Foo.Boo.prototype.wozz;"]) res))
     (is (= 1 (count @ws)))
-    (is (string/starts-with?
-          (first @ws)
-          "Cannot resolve property wozz for inferred type js/Foo.Boo"))))
+    (is (some-> @ws first
+          (string/starts-with?
+            "Cannot resolve property wozz for inferred type js/Foo.Boo")))))
 
 (deftest test-type-hint-infer-unknown-property-in-chain
   (let [ws  (atom [])
@@ -172,9 +200,9 @@
                :warnings ws})]
     (is (= (unsplit-lines ["Foo.Boo.prototype.wozz;"]) res))
     (is (= 1 (count @ws)))
-    (is (string/starts-with?
-          (first @ws)
-          "Cannot resolve property wozz for inferred type js/Foo.Boo"))))
+    (is (some-> @ws first
+          (string/starts-with?
+            "Cannot resolve property wozz for inferred type js/Foo.Boo")))))
 
 (deftest test-type-hint-infer-unknown-method
   (let [ws  (atom [])
@@ -185,9 +213,15 @@
                :warnings ws})]
     (is (= (unsplit-lines ["Foo.prototype.gozMethod;"]) res))
     (is (= 1 (count @ws)))
-    (is (string/starts-with?
-          (first @ws)
-          "Cannot resolve property gozMethod for inferred type js/Foo"))))
+    (is (some-> @ws first
+          (string/starts-with?
+            "Cannot resolve property gozMethod for inferred type js/Foo")))))
+
+(comment
+
+  (clojure.test/test-vars [#'test-type-hint-infer-unknown-method])
+
+  )
 
 (deftest test-infer-unknown-method-from-externs
   (let [ws  (atom [])
@@ -197,9 +231,9 @@
                :warnings ws})]
     (is (= (unsplit-lines ["Foo.prototype.gozMethod;"]) res))
     (is (= 1 (count @ws)))
-    (is (string/starts-with?
-          (first @ws)
-          "Cannot resolve property gozMethod for inferred type js/Foo"))))
+    (is (some-> @ws first
+          (string/starts-with?
+            "Cannot resolve property gozMethod for inferred type js/Foo")))))
 
 (deftest test-infer-js-require
   (let [ws  (atom [])
@@ -211,9 +245,9 @@
                :warnings ws})]
     (is (= (unsplit-lines ["var require;" "Object.Component;"]) res))
     (is (= 1 (count @ws)))
-    (is (string/starts-with?
-          (first @ws)
-          "Adding extern to Object for property Component"))))
+    (is (some-> @ws first
+          (string/starts-with?
+            "Adding extern to Object for property Component")))))
 
 (deftest test-set-warn-on-infer
   (let [ws  (atom [])
@@ -227,7 +261,9 @@
                :warn false
                :with-core? true})]
     (is (= 1 (count @ws)))
-    (is (string/starts-with? (first @ws) "Cannot infer target type"))))
+    (is (some-> @ws first
+          (string/starts-with?
+            "Cannot infer target type")))))
 
 (deftest test-cljs-1970-infer-with-cljs-literals
   (let [ws  (atom [])
