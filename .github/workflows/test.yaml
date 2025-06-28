@@ -62,7 +62,7 @@ jobs:
     # Runtime Tests
   runtime-windows-test:
     name: Runtime Windows Tests
-    runs-on: windows-2019
+    runs-on: windows-2022
     steps:
       - uses: actions/checkout@v2
 
@@ -215,7 +215,7 @@ jobs:
   # Compiler Windows Tests
   compiler-windows-test:
     name: Compiler Windows Tests
-    runs-on: windows-2019
+    runs-on: windows-2022
     steps:
       - uses: actions/checkout@v2
 
