@@ -17,6 +17,8 @@ POM_TEMPLATE="pom.template.xml"
 POM_FILE="pom.xml"
 CLJS_SCRIPT_MVN_OPTS=${CLJS_SCRIPT_MVN_OPTS:-""}
 
+export MAVEN_OPTS="${MAVEN_OPTS} --add-opens java.base/java.util=ALL-UNNAMED"
+
 # The command `git describe --match v0.0` will return a string like
 #
 # v0.0-856-g329708b
@@ -64,8 +66,7 @@ mv $AOT_CACHE_FILE src/main/cljs/cljs/core.cljs.cache.aot.edn
 
 # For Hudson server
 if [ "$HUDSON" = "true" ]; then
-    mvn -B -ntp --fail-at-end -Psonatype-oss-release $CLJS_SCRIPT_MVN_OPTS \
-        clean deploy nexus-staging:release
+    mvn -B -ntp --fail-at-end -DskipStaging=true -Psign $CLJS_SCRIPT_MVN_OPTS clean deploy
 
     echo "Creating tag $TAG"
     git tag -f "$TAG"

@@ -3,7 +3,7 @@
     <groupId>org.clojure</groupId>
     <artifactId>clojurescript</artifactId>
     <!-- Version number will be replaced by script/build -->
-    <version>1.10.843</version>
+    <version>1.12.41</version>
     <packaging>jar</packaging>
     <name>ClojureScript</name>
 
@@ -25,32 +25,22 @@
         <dependency>
             <groupId>org.clojure</groupId>
             <artifactId>clojure</artifactId>
-            <version>1.8.0</version>
+            <version>1.10.0</version>
         </dependency>
         <dependency>
             <groupId>com.google.javascript</groupId>
-            <artifactId>closure-compiler-unshaded</artifactId>
-            <version>v20210202</version>
+            <artifactId>closure-compiler</artifactId>
+            <version>v20250402</version>
         </dependency>
         <dependency>
             <groupId>org.clojure</groupId>
             <artifactId>google-closure-library</artifactId>
-            <version>0.0-20201211-3e6c510d</version>
-        </dependency>
-        <dependency>
-            <groupId>org.clojure</groupId>
-            <artifactId>data.json</artifactId>
-            <version>0.2.6</version>
-        </dependency>
-        <dependency>
-            <groupId>org.clojure</groupId>
-            <artifactId>tools.reader</artifactId>
-            <version>1.3.3</version>
+            <version>0.0-20250515-f04e4c0e</version>
         </dependency>
         <dependency>
             <groupId>com.cognitect</groupId>
-            <artifactId>transit-clj</artifactId>
-            <version>0.8.309</version>
+            <artifactId>transit-java</artifactId>
+            <version>1.0.362</version>
             <exclusions>
                 <exclusion>
                     <groupId>org.clojure</groupId>
@@ -60,8 +50,13 @@
         </dependency>
         <dependency>
             <groupId>org.clojure</groupId>
+            <artifactId>tools.reader</artifactId>
+            <version>1.3.6</version>
+        </dependency>
+        <dependency>
+            <groupId>org.clojure</groupId>
             <artifactId>test.check</artifactId>
-            <version>0.10.0-alpha3</version>
+            <version>1.1.1</version>
             <scope>test</scope>
             <exclusions>
                 <exclusion>
@@ -208,12 +203,6 @@
         <url>https://github.com/clojure/clojurescript</url>
     </scm>
 
-    <parent>
-        <groupId>org.clojure</groupId>
-        <artifactId>pom.contrib</artifactId>
-        <version>1.1.0</version>
-    </parent>
-
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <clojure.source.dir>src/main/clojure</clojure.source.dir>
@@ -223,13 +212,39 @@
         <directlinking>true</directlinking>
     </properties>
 
+    <distributionManagement>
+      <repository>
+        <id>central</id>
+        <url>https://central.sonatype.com</url>
+      </repository>
+      <snapshotRepository>
+        <id>central-snapshot</id>
+        <url>https://central.sonatype.com/repository/maven-snapshots/</url>
+      </snapshotRepository>
+    </distributionManagement>
+
     <build>
         <plugins>
+            <plugin>
+              <groupId>org.apache.maven.plugins</groupId>
+              <artifactId>maven-source-plugin</artifactId>
+              <version>3.3.1</version>
+              <executions>
+                <execution>
+                  <id>attach-sources</id>
+                  <phase>package</phase>
+                  <goals>
+                    <goal>jar</goal>
+                  </goals>
+                </execution>
+              </executions>
+            </plugin>
+
             <plugin>
                 <!-- Add Clojure sources to the project's source directories -->
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>build-helper-maven-plugin</artifactId>
-                <version>1.5</version>
+                <version>3.0.0</version>
                 <executions>
                     <execution>
                         <id>add-clojure-source-dirs</id>
@@ -261,7 +276,7 @@
             <plugin>
                 <groupId>com.theoryinpractise</groupId>
                 <artifactId>clojure-maven-plugin</artifactId>
-                <version>1.7.1</version>
+                <version>1.8.3</version>
                 <configuration>
                     <temporaryOutputDirectory>false</temporaryOutputDirectory>
                 </configuration>
@@ -273,34 +288,9 @@
                             <goal>compile</goal>
                         </goals>
                         <configuration>
-                            <compileDeclaredNamespaceOnly>true</compileDeclaredNamespaceOnly>
+                            <cleanAOTNamespaces>true</cleanAOTNamespaces>
                             <namespaces>
-                                <namespace>cljs.util</namespace>
-                                <namespace>cljs.env</namespace>
-                                <namespace>cljs.js-deps</namespace>
-                                <namespace>cljs.core</namespace>
-                                <namespace>cljs.source-map.base64</namespace>
-                                <namespace>cljs.source-map.base64-vlq</namespace>
-                                <namespace>cljs.source-map</namespace>
-                                <namespace>cljs.analyzer</namespace>
-                                <namespace>cljs.analyzer.utils</namespace>
-                                <namespace>cljs.compiler</namespace>
-                                <namespace>cljs.closure</namespace>
-                                <namespace>cljs.tagged-literals</namespace>
-                                <namespace>cljs.test</namespace>
-                                <namespace>cljs.analyzer.api</namespace>
-                                <namespace>cljs.build.api</namespace>
-                                <namespace>cljs.compiler.api</namespace>
-                                <namespace>cljs.spec.alpha</namespace>
-                                <namespace>cljs.spec.test.alpha</namespace>
-                                <namespace>cljs.spec.gen.alpha</namespace>
-                                <namespace>cljs.repl</namespace>
-                                <namespace>cljs.repl.browser</namespace>
-                                <namespace>cljs.repl.node</namespace>
-                                <namespace>cljs.repl.reflect</namespace>
-                                <namespace>cljs.repl.server</namespace>
-                                <namespace>cljs.main</namespace>
-                                <namespace>cljs.cli</namespace>
+                                <namespace>!cljs.vendor.bridge</namespace>
                             </namespaces>
                         </configuration>
                     </execution>
@@ -308,7 +298,7 @@
             </plugin>
             <plugin>
                 <artifactId>maven-jar-plugin</artifactId>
-                <version>2.4</version>
+                <version>3.4.2</version>
                 <configuration>
                     <archive>
                         <manifest>
@@ -336,11 +326,24 @@
                             </includes>
                         </configuration>
                     </execution>
+                    <execution>
+                      <id>javadoc-jar</id>
+                      <phase>package</phase>
+                      <goals>
+                        <goal>jar</goal>
+                      </goals>
+                      <configuration>
+                        <excludes>
+                          <exclude>**</exclude>
+                        </excludes>
+                        <classifier>javadoc</classifier>
+                      </configuration>
+                    </execution>
                 </executions>
             </plugin>
             <plugin>
                 <artifactId>maven-assembly-plugin</artifactId>
-                <version>2.4</version>
+                <version>3.7.1</version>
                 <executions>
                     <execution>
                         <id>aot-jar</id>
@@ -371,21 +374,74 @@
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.1</version>
+                <artifactId>maven-gpg-plugin</artifactId>
+                <version>3.1.0</version>
                 <configuration>
-                    <source>1.8</source>
-                    <target>1.8</target>
+                  <gpgArguments>
+                    <arg>--pinentry-mode</arg>
+                    <arg>loopback</arg>
+                  </gpgArguments>
                 </configuration>
             </plugin>
-	    <plugin>
+            <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-release-plugin</artifactId>
-                <version>2.5.3</version>
-		<configuration>
-                    <tagNameFormat>r@{project.version}</tagNameFormat>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.8.1</version>
+                <configuration>
+                    <source>21</source>
+                    <target>21</target>
                 </configuration>
             </plugin>
+
+            <plugin>
+              <!-- do not push pre-deployment SCM changes to upstream repo
+                   with maven release plugin; if the release/deploy fails,
+                   we're stuck with manually fixing up version numbers, git
+                   history, etc -->
+              <groupId>org.apache.maven.plugins</groupId>
+              <artifactId>maven-release-plugin</artifactId>
+              <version>2.5.3</version>
+              <configuration>
+              </configuration>
+            </plugin>
+
+            <!-- deploy artifacts to sonatype -->
+            <plugin>
+              <groupId>org.sonatype.central</groupId>
+              <artifactId>central-publishing-maven-plugin</artifactId>
+              <version>0.7.0</version>
+              <extensions>true</extensions>
+              <configuration>
+                <publishingServerId>central</publishingServerId>
+                <autoPublish>true</autoPublish>
+              </configuration>
+            </plugin>
+
         </plugins>
     </build>
+
+    <profiles>
+        <profile>
+          <id>sign</id>
+          <build>
+            <plugins>
+              <!-- sign artifacts for deployment -->
+              <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-gpg-plugin</artifactId>
+                <version>1.5</version>
+                <executions>
+                  <execution>
+                    <id>sign-artifacts</id>
+                    <phase>verify</phase>
+                    <goals>
+                      <goal>sign</goal>
+                    </goals>
+                  </execution>
+                </executions>
+              </plugin>
+            </plugins>
+          </build>
+        </profile>
+    </profiles>
 </project>

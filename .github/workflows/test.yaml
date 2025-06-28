@@ -12,7 +12,7 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '11'
+          java-version: '21'
 
       - uses: DeLaGuardo/setup-clojure@3.1
         with:
@@ -62,14 +62,14 @@ jobs:
     # Runtime Tests
   runtime-windows-test:
     name: Runtime Windows Tests
-    runs-on: windows-2019
+    runs-on: windows-2022
     steps:
       - uses: actions/checkout@v2
 
       - uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '11'
+          java-version: '21'
 
       - uses: DeLaGuardo/setup-clojure@3.5
         with:
@@ -95,7 +95,7 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '11'
+          java-version: '21'
 
       - uses: DeLaGuardo/setup-clojure@3.1
         with:
@@ -139,7 +139,7 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '11'
+          java-version: '21'
 
       - uses: DeLaGuardo/setup-clojure@3.1
         with:
@@ -183,7 +183,7 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '11'
+          java-version: '21'
 
       - uses: DeLaGuardo/setup-clojure@3.1
         with:
@@ -215,14 +215,14 @@ jobs:
   # Compiler Windows Tests
   compiler-windows-test:
     name: Compiler Windows Tests
-    runs-on: windows-2019
+    runs-on: windows-2022
     steps:
       - uses: actions/checkout@v2
 
       - uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '11'
+          java-version: '21'
 
       - uses: DeLaGuardo/setup-clojure@3.5
         with:
@@ -244,7 +244,7 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '11'
+          java-version: '21'
 
       - uses: DeLaGuardo/setup-clojure@3.1
         with:

@@ -1,6 +1,6 @@
 (defproject org.clojure/clojurescript "0.0-SNAPSHOT"
   :description "ClojureScript compiler and core runtime library"
-  :parent [org.clojure/pom.contrib "0.1.2"]
+  :parent [org.clojure/pom.contrib "1.3.0"]
   :url "https://github.com/clojure/clojurescript"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
@@ -14,8 +14,8 @@
                  [org.clojure/tools.reader "1.3.6"]
                  [org.clojure/test.check "1.1.1" :scope "test"]
                  [com.cognitect/transit-java "1.0.362"]
-                 [org.clojure/google-closure-library "0.0-20230227-c7c0a541"]
-                 [com.google.javascript/closure-compiler-unshaded "v20240317"]]
+                 [org.clojure/google-closure-library "0.0-20250515-f04e4c0e"]
+                 [com.google.javascript/closure-compiler "v20250402"]]
   :profiles {:1.6 {:dependencies [[org.clojure/clojure "1.6.0"]]}
              :uberjar {:aot :all :main cljs.main}
              :closure-snapshot {:dependencies [[com.google.javascript/closure-compiler-unshaded "1.0-SNAPSHOT"]]}}

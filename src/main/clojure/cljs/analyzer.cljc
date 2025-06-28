@@ -1583,6 +1583,7 @@
         :throw    impl/IGNORE_SYM
         :let      (infer-tag env (:body ast))
         :loop     (infer-tag env (:body ast))
+        :try      (infer-tag env (:body ast))
         :do       (infer-tag env (:ret ast))
         :fn-method (infer-tag env (:body ast))
         :def      (infer-tag env (:init ast))

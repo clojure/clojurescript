@@ -1,3 +1,27 @@
+## 1.12.42
+
+### Changes
+* Update Google Closure Compiler dependency to v20250402
+* Depend on Clojure fork of Google Closure Library, 0.0-20250515-f04e4c0e
+  - restores goog.dom.query
+  - restores goog.isString and other simple fns to goog.base that were unnecessarily removed
+  - restore debug loader as default
+  - remove unused Closure directive `unusedPrivateMembers`
+* CLJS-3290: implement IHash for js Symbol (#225)
+* Updated vendorized tools.reader to 1.4.2
+* CLJS-3419: JS Map & Set should return true for seqable?
+* CLJS-3421: Throw when calling ana-api/ns-publics on non-existing ns
+
+### Fixes
+* CLJS-3242: trailing keys bug
+* CLJS-2292: refer-clojure rename should also exclude
+* CLJS-3418: Some Closure libraries are not lowered
+* CLJS-3413: Macros not loaded w/ single segment namespace loaded via `:preloads`
+* CLJS-3411: cljs.core/test behavior does not match docstring (#226)
+* CLJS-3320: Compiler warning on trying to use `js` as an ns
+* remove unnecessary key-check for HashCollisionNode
+* CLJS-3429: Handle More Complex Closure Type Annotations
+
 ## 1.11.132
 
 ### Fixes

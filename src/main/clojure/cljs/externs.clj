@@ -12,7 +12,7 @@
             [clojure.java.io :as io]
             [clojure.string :as string])
   (:import [com.google.javascript.jscomp
-            CompilerOptions CompilerOptions$Environment SourceFile JsAst CommandLineRunner]
+            CompilerOptions CompilerOptions$Environment SourceFile CompilerInput CommandLineRunner]
            [com.google.javascript.jscomp.parsing Config$JsDocParsing]
            [com.google.javascript.rhino
             Node Token JSTypeExpression JSDocInfo$Visibility]
@@ -238,7 +238,7 @@
               (com.google.javascript.jscomp.Compiler/setLoggingLevel Level/WARNING)
               compiler)
             (.init (list source-file) '() compiler-options))
-          js-ast (JsAst. source-file)
+          js-ast (CompilerInput. source-file)
           ^Node root (.getAstRoot js-ast closure-compiler)
           ;; TODO: switch to getFirstChild + getNext in the loop
           nodes (.children root)]
