@@ -53,7 +53,9 @@
     (is (= '[Console]
             (-> (ana/resolve-extern '[console] externs) :resolved)))
     (is (= '[Console prototype log]
-            (-> (ana/resolve-extern '[console log] externs) :resolved)))))
+            (-> (ana/resolve-extern '[console log] externs) :resolved)))
+    (is (= '[undefined]
+            (-> (ana/resolve-extern '[undefined] externs) :resolved)))))
 
 (comment
   (clojure.test/test-vars [#'test-resolve-extern])
@@ -62,6 +64,7 @@
   ;; succeeds
   (ana/resolve-extern '[console] externs)
   (ana/resolve-extern '[console log] externs)
+  (ana/resolve-extern '[undefined] externs)
 
   )
 

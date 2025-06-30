@@ -1067,10 +1067,10 @@
                        (assoc :info nil)))))
 
              (or
-               ;; If the tag isn't Function, try to resolve it
-               ;; similar to the super case above
+               ;; If the tag isn't Function or undefined,
+               ;; try to resolve it similar to the super case above
                (let [tag (:tag info')]
-                 (when (and tag (not= 'Function tag))
+                 (when (and tag (not (contains? '#{Function undefined} tag)))
                    (resolve-extern (into [tag] (next pre)) externs top
                      (-> ret
                        (assoc :resolved [])
