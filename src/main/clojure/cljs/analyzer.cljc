@@ -1045,7 +1045,7 @@
          :else
          (let [[x' externs'] me
                info' (meta x')]
-           (if (and (= 'Function (:tag info')) (:ctor info'))
+           (if (and (:ctor info') (= 'Function (:tag info')))
              (or
                ;; then check for "static" property
                (resolve-extern (next pre) externs' top
@@ -1063,12 +1063,24 @@
                  (when-let [super (:super info')]
                    (resolve-extern (into [super] (next pre)) externs top
                      (-> ret
-                       (update :resolved conj x)
+                       (assoc :resolved [])
                        (assoc :info nil)))))
-             (recur (next pre) externs' top
-               (-> ret
-                 (update :resolved conj x)
-                 (assoc :info info'))))))))))
+
+             (or
+               ;; If the tag isn't Function, try to resolve it
+               ;; similar to the super case above
+               (let [tag (:tag info')]
+                 (when (and tag (not= 'Function tag))
+                   (resolve-extern (into [tag] (next pre)) externs top
+                     (-> ret
+                       (assoc :resolved [])
+                       (assoc :info nil)))))
+
+               ;; assume static property
+               (recur (next pre) externs' top
+                 (-> ret
+                   (update :resolved conj x)
+                   (assoc :info info')))))))))))
 
 (defn has-extern?*
   [pre externs]

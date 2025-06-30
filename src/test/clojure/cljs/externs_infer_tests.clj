@@ -49,16 +49,18 @@
     (is (= '[Number]
             (-> (ana/resolve-extern '[Number] externs) :resolved)))
     (is (= '[Number prototype valueOf]
-            (-> (ana/resolve-extern '[Number valueOf] externs) :resolved)))))
+            (-> (ana/resolve-extern '[Number valueOf] externs) :resolved)))
+    (is (= '[Console]
+            (-> (ana/resolve-extern '[console] externs) :resolved)))
+    (is (= '[Console prototype log]
+            (-> (ana/resolve-extern '[console log] externs) :resolved)))))
 
 (comment
+  (clojure.test/test-vars [#'test-resolve-extern])
 
   (def externs (externs/externs-map))
-
   ;; succeeds
   (ana/resolve-extern '[console] externs)
-
-  ;; this one fails
   (ana/resolve-extern '[console log] externs)
 
   )
