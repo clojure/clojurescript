@@ -82,8 +82,15 @@
                     {:externs ["src/test/externs/test.js"]}))]
     (is (= 'js/Console (ana/js-tag '[console] :tag externs)))
     (is (= 'js/Function (ana/js-tag '[console log] :tag externs)))
+    (is (= 'js/undefined (ana/js-tag '[console log] :ret-tag externs)))
     (is (= 'js/Boolean (ana/js-tag '[Number isNaN] :ret-tag externs)))
     (is (= 'js/Foo (ana/js-tag '[baz] :ret-tag externs)))))
+
+(comment
+
+  (clojure.test/test-vars [#'test-js-tag])
+
+  )
 
 (defn infer-test-helper
   [{:keys [forms externs warnings warn js-dependency-index node-module-index with-core? opts]}]

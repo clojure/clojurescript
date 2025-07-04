@@ -1033,7 +1033,7 @@
   "Given a foreign js property list, return a resolved js property list and the
   extern var info"
   ([pre externs]
-   (resolve-extern pre externs externs {:resolved [] :info nil}))
+   (resolve-extern pre externs externs {:resolved []}))
   ([pre externs top ret]
    (cond
      (empty? pre) ret
@@ -1044,27 +1044,31 @@
          (not me) nil
          :else
          (let [[x' externs'] me
-               info' (meta x')]
+               info' (meta x')
+               ret (cond-> ret
+                     ;; we only care about var info for the last property
+                     ;; also if we already added it, don't override it
+                     ;; because we're now resolving type information
+                     ;; not instance information anymore
+                     ;; i.e. [console] -> [Console] but :tag is Console _not_ Function vs.
+                     ;; [console log] -> [Console prototype log] where :tag is Function
+                     (and (empty? (next pre))
+                          (not (contains? ret :info)))
+                     (assoc :info info'))]
            (if (and (:ctor info') (= 'Function (:tag info')))
              (or
                ;; then check for "static" property
                (resolve-extern (next pre) externs' top
-                 (-> ret
-                   (update :resolved conj x)
-                   (assoc :info info')))
+                 (update ret :resolved conj x))
 
-                 ;; first look for a property on the prototype
-                 (resolve-extern (into '[prototype] (next pre)) externs' top
-                   (-> ret
-                     (update :resolved conj x)
-                     (assoc :info nil)))
+               ;; first look for a property on the prototype
+               (resolve-extern (into '[prototype] (next pre)) externs' top
+                 (update ret :resolved conj x))
 
-                 ;; finally check the super class if there is one
-                 (when-let [super (:super info')]
-                   (resolve-extern (into [super] (next pre)) externs top
-                     (-> ret
-                       (assoc :resolved [])
-                       (assoc :info nil)))))
+               ;; finally check the super class if there is one
+               (when-let [super (:super info')]
+                 (resolve-extern (into [super] (next pre)) externs top
+                   (assoc ret :resolved []))))
 
              (or
                ;; If the tag isn't Function or undefined,
@@ -1072,15 +1076,11 @@
                (let [tag (:tag info')]
                  (when (and tag (not (contains? '#{Function undefined} tag)))
                    (resolve-extern (into [tag] (next pre)) externs top
-                     (-> ret
-                       (assoc :resolved [])
-                       (assoc :info nil)))))
+                     (assoc ret :resolved []))))
 
                ;; assume static property
                (recur (next pre) externs' top
-                 (-> ret
-                   (update :resolved conj x)
-                   (assoc :info info')))))))))))
+                 (update ret :resolved conj x))))))))))
 
 (defn has-extern?*
   [pre externs]
@@ -1101,12 +1101,8 @@
   ([pre tag-type externs]
    (js-tag pre tag-type externs externs))
   ([pre tag-type externs top]
-   (when-let [[p externs' :as me] (find externs (first pre))]
-     (let [tag (-> p meta tag-type)]
-       (if (= (count pre) 1)
-         (when tag (symbol "js" (str (alias->type tag tag))))
-         (or (js-tag (next pre) tag-type externs' top)
-             (js-tag (into '[prototype] (next pre)) tag-type (get top tag) top)))))))
+   (when-let [tag (get-in (resolve-extern pre externs) [:info tag-type])]
+     (symbol "js" (str (alias->type tag tag))))))
 
 (defn dotted-symbol? [sym]
   (let [s (str sym)]
