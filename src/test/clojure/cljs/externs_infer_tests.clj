@@ -65,6 +65,8 @@
   (ana/resolve-extern '[console] externs)
   (ana/resolve-extern '[console log] externs)
   (ana/resolve-extern '[undefined] externs)
+  (ana/resolve-extern '[Number isNaN] externs)
+  (ana/resolve-extern '[document] externs)
 
   )
 

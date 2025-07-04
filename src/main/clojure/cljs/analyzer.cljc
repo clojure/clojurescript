@@ -1091,10 +1091,6 @@
    (has-extern? pre (get-externs)))
   ([pre externs]
    (or (has-extern?* pre externs)
-       (when (= 1 (count pre))
-         (let [x (first pre)]
-           (or (get-in externs (conj '[Window prototype] x))
-               (get-in externs (conj '[Number] x)))))
        (-> (last pre) str (string/starts-with? "cljs$")))))
 
 (defn js-tag
