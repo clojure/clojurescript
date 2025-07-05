@@ -2627,12 +2627,12 @@
      :children [:expr]}))
 
 (def js-prim-ctor->tag
-  '{js/Object object
-    js/String string
-    js/Array array
-    js/Number number
+  '{js/Object   object
+    js/String   string
+    js/Array    array
+    js/Number   number
     js/Function function
-    js/Boolean boolean})
+    js/Boolean  boolean})
 
 (defn prim-ctor?
   "Test whether a tag is a constructor for a JS primitive"
@@ -3585,6 +3585,16 @@
                  (list* '. dot-form) " with classification "
                  (classify-dot-form dot-form))))))
 
+;; this only for a smaller set of types that we want to infer
+;; we don't generally want to consider function for example, these
+;; specific cases are ones we either try to optimize or validate
+(def ^{:private true}
+  tag->js-prim-ctor
+  '{string   js/String
+    array    js/Array
+    number   js/Number
+    boolean  js/Boolean})
+
 (defn analyze-dot [env target field member+ form]
   (let [v [target field member+]
         {:keys [dot-action target method field args]} (build-dot-form v)
@@ -3592,7 +3602,8 @@
         targetexpr (analyze enve target)
         form-meta  (meta form)
         target-tag (as-> (:tag targetexpr) $
-                     (or (some-> $ meta :ctor lift-tag-to-js) $))
+                     (or (some-> $ meta :ctor lift-tag-to-js)
+                         (tag->js-prim-ctor $ $)))
         prop       (or field method)
         tag        (or (:tag form-meta)
                        (and (js-tag? target-tag)

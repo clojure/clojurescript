@@ -168,6 +168,11 @@
         (-> (binding [ana/*cljs-ns* ana/*cljs-ns*]
               (env/with-compiler-env (env/default-compiler-env)
                 (analyze (ana/empty-env) '(.generateKey js/crypto.subtle))))
+          :tag)))
+  (is (= 'js/String
+        (-> (binding [ana/*cljs-ns* ana/*cljs-ns*]
+              (env/with-compiler-env (env/default-compiler-env)
+                (analyze (ana/empty-env) '(.toUpperCase "foo"))))
           :tag))))
 
 (deftest test-externs-infer
