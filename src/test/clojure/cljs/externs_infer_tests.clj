@@ -87,6 +87,7 @@
   (ana/resolve-extern '[console] externs)
   (ana/resolve-extern '[console log] externs)
   (ana/resolve-extern '[undefined] externs)
+  (ana/resolve-extern '[Number] externs)
   (ana/resolve-extern '[Number isNaN] externs)
   (ana/resolve-extern '[document] externs)
 
@@ -145,6 +146,18 @@
                   (reduce util/map-merge {}
                     (map (comp :externs second)
                       (get @test-cenv ::ana/namespaces))))))))))))
+
+(deftest test-externs-type-infer
+  (is (= 'js/Boolean
+        (-> (binding [ana/*cljs-ns* ana/*cljs-ns*]
+              (env/with-compiler-env (env/default-compiler-env)
+                (analyze (ana/empty-env) '(.isNaN js/Number 1))))
+          :tag)))
+  (is (= 'js/Boolean
+        (-> (binding [ana/*cljs-ns* ana/*cljs-ns*]
+              (env/with-compiler-env (env/default-compiler-env)
+                (analyze (ana/empty-env) '(js/Number.isNaN 1))))
+          :tag))))
 
 (deftest test-externs-infer
   (is (= 'js/Foo

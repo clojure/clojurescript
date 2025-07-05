@@ -1110,6 +1110,9 @@
    (or (has-extern?* pre externs)
        (-> (last pre) str (string/starts-with? "cljs$")))))
 
+(defn lift-tag-to-js [tag]
+  (symbol "js" (str (alias->type tag tag))))
+
 (defn js-tag
   ([pre]
    (js-tag pre :tag))
@@ -1119,7 +1122,7 @@
    (js-tag pre tag-type externs externs))
   ([pre tag-type externs top]
    (when-let [tag (get-in (resolve-extern pre externs) [:info tag-type])]
-     (symbol "js" (str (alias->type tag tag))))))
+     (lift-tag-to-js tag))))
 
 (defn dotted-symbol? [sym]
   (let [s (str sym)]
@@ -1310,8 +1313,9 @@
                (assoc shadowed-by-local :op :local))
 
            :else
-           (let [pre (->> (string/split (name sym) #"\.") (map symbol) vec)]
-             (when (and (not (has-extern? pre))
+           (let [pre (->> (string/split (name sym) #"\.") (map symbol) vec)
+                 res (resolve-extern (->> (string/split (name sym) #"\.") (map symbol) vec))]
+             (when (and (not res)
                         ;; ignore exists? usage
                         (not (-> sym meta ::no-resolve)))
                (swap! env/*compiler* update-in
@@ -1320,10 +1324,12 @@
                {:name sym
                 :op :js-var
                 :ns   'js
-                :tag  (with-meta (or (js-tag pre) (:tag (meta sym)) 'js) {:prefix pre})}
+                :tag  (with-meta (or (js-tag pre) (:tag (meta sym)) 'js)
+                        {:prefix pre
+                         :ctor   (-> res :info :ctor)})}
                (when-let [ret-tag (js-tag pre :ret-tag)]
                  {:js-fn-var true
-                  :ret-tag ret-tag})))))
+                  :ret-tag   ret-tag})))))
        (let [s  (str sym)
              lb (handle-symbol-local sym (get locals sym))
              current-ns (-> env :ns :name)]
@@ -3585,7 +3591,8 @@
         enve       (assoc env :context :expr)
         targetexpr (analyze enve target)
         form-meta  (meta form)
-        target-tag (:tag targetexpr)
+        target-tag (as-> (:tag targetexpr) $
+                     (or (some-> $ meta :ctor lift-tag-to-js) $))
         prop       (or field method)
         tag        (or (:tag form-meta)
                        (and (js-tag? target-tag)
