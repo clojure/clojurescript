@@ -23,6 +23,26 @@
    "goog.isArrayLike;" "Java.type;" "Object.out;" "Object.out.println;"
    "Object.error;" "Object.error.println;"])
 
+(deftest test-normalize-js-tag
+  (is (= 'js (ana/normalize-js-tag 'js)))
+  (is (= '[Foo] (-> 'js/Foo ana/normalize-js-tag meta :prefix)))
+  (is (true? (-> 'js/Foo ana/normalize-js-tag meta :prefix last meta :ctor)))
+  (is (= '[Foo Bar] (-> 'js/Foo.Bar ana/normalize-js-tag meta :prefix)))
+  (is (true? (-> 'js/Foo.Bar ana/normalize-js-tag meta :prefix last meta :ctor))))
+
+(deftest test-normalize-unresolved-prefix
+  (let [pre (-> (ana/normalize-js-tag 'js/Foo) meta :prefix (conj 'bar))]
+    (is (= '[Foo prototype bar] (ana/normalize-unresolved-prefix pre))))
+  (let [pre '[Foo bar]]
+    (is (= '[Foo bar] (ana/normalize-unresolved-prefix pre)))))
+
+(comment
+
+  (test/test-vars [#'test-normalize-js-tag])
+  (test/test-vars [#'test-normalize-unresolved-prefix])
+
+  )
+
 (deftest test-resolve-extern
   (let [externs
         (externs/externs-map
@@ -232,6 +252,15 @@
             "Cannot resolve property gozMethod for inferred type js/Foo")))))
 
 (comment
+
+  (require '[clojure.java.io :as io]
+           '[cljs.closure :as cc])
+
+  (def externs
+    (-> (cc/js-source-file nil (io/file "src/test/externs/test.js"))
+      externs/parse-externs externs/index-externs))
+
+  (ana/resolve-extern '[Foo gozMethod] externs)
 
   (clojure.test/test-vars [#'test-type-hint-infer-unknown-method])
 

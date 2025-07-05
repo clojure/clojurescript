@@ -980,9 +980,10 @@
 (defn normalize-js-tag [x]
   ;; if not 'js, assume constructor
   (if-not (= 'js x)
-    (with-meta 'js
-      {:prefix (conj (->> (string/split (name x) #"\.")
-                       (map symbol) vec))})
+    (let [props  (->> (string/split (name x) #"\.") (map symbol))
+          [xs y] ((juxt butlast last) props)]
+      (with-meta 'js
+        {:prefix (vec (concat xs [(with-meta y {:ctor true})]))}))
     x))
 
 (defn ->type-set
@@ -1081,6 +1082,16 @@
                ;; assume static property
                (recur (next pre) externs' top
                  (update ret :resolved conj x))))))))))
+
+(defn normalize-unresolved-prefix
+  [pre]
+  (cond-> pre
+    (< 1 (count pre))
+    (cond->
+      (-> pre pop peek meta :ctor)
+      (-> pop
+        (conj 'prototype)
+        (conj (peek pre))))))
 
 (defn has-extern?*
   [pre externs]
@@ -3600,7 +3611,8 @@
       (let [pre (-> tag meta :prefix)]
         (when-not (has-extern? pre)
           (swap! env/*compiler* update-in
-            (into [::namespaces (-> env :ns :name) :externs] pre) merge {}))))
+            (into [::namespaces (-> env :ns :name) :externs]
+              (normalize-unresolved-prefix pre)) merge {}))))
     (case dot-action
       ::access (let [children [:target]]
                  {:op :host-field
