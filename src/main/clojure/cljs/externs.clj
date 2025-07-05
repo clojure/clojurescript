@@ -61,12 +61,23 @@
   (and (= type :string-lit)
        (= "undefined" value)))
 
+(defn add-prefix
+  "Externs inference uses :prefix meta to both resolve externs as well as generate
+  missing externs information. Google Closure Compiler default externs includes
+  nested types like webCrypto.Crypto. Add prefix information to the returned symbol to
+  simplify resolution later."
+  [type-str]
+  (with-meta (symbol type-str)
+    {:prefix (->> (string/split (name type-str) #"\.")
+               (map symbol) vec)}))
+
 (defn simplify-texpr
   [texpr]
   (case (:type texpr)
-    :string-lit    (some-> (:value texpr) symbol)
-    (:star :qmark) 'any
-    :bang          (simplify-texpr (-> texpr :children first))
+    :string-lit    (some-> (:value texpr) add-prefix)
+    :star          'any
+    ;; TODO: qmark should probably be #{nil T}
+    (:qmark :bang) (simplify-texpr (-> texpr :children first))
     :pipe          (let [[x y] (:children texpr)]
                      (if (undefined? y)
                        (simplify-texpr x)
