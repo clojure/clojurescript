@@ -157,6 +157,12 @@
         (-> (binding [ana/*cljs-ns* ana/*cljs-ns*]
               (env/with-compiler-env (env/default-compiler-env)
                 (analyze (ana/empty-env) '(js/Number.isNaN 1))))
+          :tag)))
+  (is (= 'js/Boolean
+        (-> (binding [ana/*cljs-ns* ana/*cljs-ns*]
+              (env/with-compiler-env (env/default-compiler-env)
+                (analyze (ana/empty-env) '(let [x js/Number]
+                                            (.isNaN x 1)))))
           :tag))))
 
 (deftest test-externs-infer
