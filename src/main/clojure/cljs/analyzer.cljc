@@ -1033,6 +1033,8 @@
 (defn resolve-extern
   "Given a foreign js property list, return a resolved js property list and the
   extern var info"
+  ([pre]
+   (resolve-extern pre (get-externs)))
   ([pre externs]
    (resolve-extern pre externs externs {:resolved []}))
   ([pre externs top ret]
