@@ -163,6 +163,11 @@
               (env/with-compiler-env (env/default-compiler-env)
                 (analyze (ana/empty-env) '(let [x js/Number]
                                             (.isNaN x 1)))))
+          :tag)))
+  (is (= 'js/Promise
+        (-> (binding [ana/*cljs-ns* ana/*cljs-ns*]
+              (env/with-compiler-env (env/default-compiler-env)
+                (analyze (ana/empty-env) '(.generateKey js/crypto.subtle))))
           :tag))))
 
 (deftest test-externs-infer
