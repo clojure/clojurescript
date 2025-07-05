@@ -1056,7 +1056,8 @@
                      (and (empty? (next pre))
                           (not (contains? ret :info)))
                      (assoc :info info'))]
-           (if (and (:ctor info') (= 'Function (:tag info')))
+           ;; handle actual occurrences of types, i.e. `Console`
+           (if (and (or (:ctor info') (:iface info')) (= 'Function (:tag info')))
              (or
                ;; then check for "static" property
                (resolve-extern (next pre) externs' top
@@ -1072,11 +1073,14 @@
                    (assoc ret :resolved []))))
 
              (or
-               ;; If the tag isn't Function or undefined,
-               ;; try to resolve it similar to the super case above
+               ;; If the tag of the property isn't Function or undefined,
+               ;; try to resolve it similar to the super case above,
+               ;; this handles singleton cases like `console`
                (let [tag (:tag info')]
                  (when (and tag (not (contains? '#{Function undefined} tag)))
-                   (resolve-extern (into [tag] (next pre)) externs top
+                   ;; check prefix first, during cljs.externs parsing we always generate prefixes
+                   ;; for tags because of types like webCrypto.Crypto
+                   (resolve-extern (into (or (-> tag meta :prefix) [tag]) (next pre)) externs top
                      (assoc ret :resolved []))))
 
                ;; assume static property

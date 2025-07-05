@@ -75,7 +75,9 @@
     (is (= '[Console prototype log]
             (-> (ana/resolve-extern '[console log] externs) :resolved)))
     (is (= '[undefined]
-            (-> (ana/resolve-extern '[undefined] externs) :resolved)))))
+            (-> (ana/resolve-extern '[undefined] externs) :resolved)))
+    (is (= '[webCrypto Crypto prototype subtle]
+            (-> (ana/resolve-extern '[crypto subtle] externs) :resolved)))))
 
 (comment
   (clojure.test/test-vars [#'test-resolve-extern])
