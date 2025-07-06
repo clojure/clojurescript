@@ -1214,9 +1214,11 @@
 
 (defmethod resolve* :goog-module
   [env sym full-ns current-ns]
-  {:name (symbol (str current-ns) (str (munge-goog-module-lib full-ns) "." (name sym)))
-   :ns current-ns
-   :op :var})
+  (let [sym-ast (gets @env/*compiler* ::namespaces full-ns :defs (symbol (name sym)))]
+    (merge sym-ast
+      {:name (symbol (str current-ns) (str (munge-goog-module-lib full-ns) "." (name sym)))
+       :ns   current-ns
+       :op   :var})))
 
 (defmethod resolve* :global
   [env sym full-ns current-ns]
@@ -3946,7 +3948,10 @@
                       {:op :host-field
                        :env (:env expr)
                        :form (list '. prefix field)
-                       :target (desugar-dotted-expr (-> expr
+                       ;; goog.module vars get converted to the form of
+                       ;; current.ns/goog$module.theDef, we need to dissoc
+                       ;; actual extern var info so we get something well-formed
+                       :target (desugar-dotted-expr (-> (dissoc expr :info)
                                                         (assoc :name prefix
                                                                :form prefix)
                                                         (dissoc :tag)
@@ -3954,6 +3959,9 @@
                                                         (assoc-in [:env :context] :expr)))
                        :field field
                        :tag (:tag expr)
+                       ;; in the case of goog.module var if there is :info,
+                       ;; we need to adopt it now as this is where :ret-tag info lives
+                       :info (:info expr)
                        :children [:target]})
                     expr)
     ;:var
