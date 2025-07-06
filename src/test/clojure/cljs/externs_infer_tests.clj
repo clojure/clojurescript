@@ -23,6 +23,35 @@
    "goog.isArrayLike;" "Java.type;" "Object.out;" "Object.out.println;"
    "Object.error;" "Object.error.println;"])
 
+(deftest test-normalize-js-tag
+  (is (= 'js (ana/normalize-js-tag 'js)))
+  (is (= '[Foo] (-> 'js/Foo ana/normalize-js-tag meta :prefix)))
+  (is (true? (-> 'js/Foo ana/normalize-js-tag meta :prefix last meta :ctor)))
+  (is (= '[Foo Bar] (-> 'js/Foo.Bar ana/normalize-js-tag meta :prefix)))
+  (is (true? (-> 'js/Foo.Bar ana/normalize-js-tag meta :prefix last meta :ctor))))
+
+(deftest test-normalize-unresolved-prefix
+  (let [pre (-> (ana/normalize-js-tag 'js/Foo) meta :prefix (conj 'bar))]
+    (is (= '[Foo prototype bar] (ana/normalize-unresolved-prefix pre))))
+  (let [pre '[Foo bar]]
+    (is (= '[Foo bar] (ana/normalize-unresolved-prefix pre)))))
+
+(comment
+
+  (test/test-vars [#'test-normalize-js-tag])
+  (test/test-vars [#'test-normalize-unresolved-prefix])
+
+  )
+
+(deftest test-resolve-extern
+  (let [externs
+        (externs/externs-map
+          (closure/load-externs
+            {:externs                 ["src/test/externs/test.js"]
+             :use-only-custom-externs true}))]
+    (is (some? (ana/resolve-extern '[baz] externs)))
+    (is (nil? (ana/resolve-extern '[Foo gozMethod] externs)))))
+
 (deftest test-has-extern?-basic
   (let [externs (externs/externs-map
                   (closure/load-externs
@@ -34,6 +63,35 @@
     (is (false? (ana/has-extern? '[Foo gozMethod] externs)))
     (is (true? (ana/has-extern? '[baz] externs)))
     (is (false? (ana/has-extern? '[Baz] externs)))))
+
+(deftest test-resolve-extern
+  (let [externs (externs/externs-map)]
+    (is (= '[Number]
+            (-> (ana/resolve-extern '[Number] externs) :resolved)))
+    (is (= '[Number prototype valueOf]
+            (-> (ana/resolve-extern '[Number valueOf] externs) :resolved)))
+    (is (= '[Console]
+            (-> (ana/resolve-extern '[console] externs) :resolved)))
+    (is (= '[Console prototype log]
+            (-> (ana/resolve-extern '[console log] externs) :resolved)))
+    (is (= '[undefined]
+            (-> (ana/resolve-extern '[undefined] externs) :resolved)))
+    (is (= '[webCrypto Crypto prototype subtle]
+            (-> (ana/resolve-extern '[crypto subtle] externs) :resolved)))))
+
+(comment
+  (clojure.test/test-vars [#'test-resolve-extern])
+
+  (def externs (externs/externs-map))
+  ;; succeeds
+  (ana/resolve-extern '[console] externs)
+  (ana/resolve-extern '[console log] externs)
+  (ana/resolve-extern '[undefined] externs)
+  (ana/resolve-extern '[Number] externs)
+  (ana/resolve-extern '[Number isNaN] externs)
+  (ana/resolve-extern '[document] externs)
+
+  )
 
 (deftest test-has-extern?-defaults
   (let [externs (externs/externs-map)]
@@ -47,8 +105,15 @@
                     {:externs ["src/test/externs/test.js"]}))]
     (is (= 'js/Console (ana/js-tag '[console] :tag externs)))
     (is (= 'js/Function (ana/js-tag '[console log] :tag externs)))
-    (is (= 'js/Boolean (ana/js-tag '[Number isNaN] :ret-tag externs)))
+    (is (= 'js/undefined (ana/js-tag '[console log] :ret-tag externs)))
+    (is (= 'boolean (ana/js-tag '[Number isNaN] :ret-tag externs)))
     (is (= 'js/Foo (ana/js-tag '[baz] :ret-tag externs)))))
+
+(comment
+
+  (clojure.test/test-vars [#'test-js-tag])
+
+  )
 
 (defn infer-test-helper
   [{:keys [forms externs warnings warn js-dependency-index node-module-index with-core? opts]}]
@@ -81,6 +146,54 @@
                   (reduce util/map-merge {}
                     (map (comp :externs second)
                       (get @test-cenv ::ana/namespaces))))))))))))
+
+(deftest test-externs-type-infer
+  (is (= 'boolean
+        (-> (binding [ana/*cljs-ns* ana/*cljs-ns*]
+              (env/with-compiler-env (env/default-compiler-env)
+                (analyze (ana/empty-env) '(.isNaN js/Number 1))))
+          :tag)))
+  (is (= 'boolean
+        (-> (binding [ana/*cljs-ns* ana/*cljs-ns*]
+              (env/with-compiler-env (env/default-compiler-env)
+                (analyze (ana/empty-env) '(js/Number.isNaN 1))))
+          :tag)))
+  (is (= 'boolean
+        (-> (binding [ana/*cljs-ns* ana/*cljs-ns*]
+              (env/with-compiler-env (env/default-compiler-env)
+                (analyze (ana/empty-env) '(let [x js/Number]
+                                            (.isNaN x 1)))))
+          :tag)))
+  (is (= 'boolean
+        (-> (binding [ana/*cljs-ns* ana/*cljs-ns*]
+             (env/with-compiler-env (env/default-compiler-env)
+               (analyze (ana/empty-env) '(js/isNaN 1))))
+          :tag)))
+  (is (= 'js/Promise
+        (-> (binding [ana/*cljs-ns* ana/*cljs-ns*]
+              (env/with-compiler-env (env/default-compiler-env)
+                (analyze (ana/empty-env) '(.generateKey js/crypto.subtle))))
+          :tag)))
+  (is (= 'string
+        (-> (binding [ana/*cljs-ns* ana/*cljs-ns*]
+              (env/with-compiler-env (env/default-compiler-env)
+                (analyze (ana/empty-env) '(.toUpperCase "foo"))))
+          :tag)))
+  (is (= 'boolean
+        (-> (binding [ana/*cljs-ns* ana/*cljs-ns*]
+              (env/with-compiler-env (env/default-compiler-env)
+                (analyze (ana/empty-env) '(.isArray js/Array (array)))))
+          :tag)))
+  (is (= 'boolean
+        (-> (binding [ana/*cljs-ns* ana/*cljs-ns*]
+              (env/with-compiler-env (env/default-compiler-env)
+                (analyze (ana/empty-env) '(.isSafeInteger js/Number 1))))
+          :tag)))
+  (is (= 'boolean
+        (-> (binding [ana/*cljs-ns* ana/*cljs-ns*]
+              (env/with-compiler-env (env/default-compiler-env)
+                (analyze (ana/empty-env) '(js/isFinite 1))))
+          :tag))))
 
 (deftest test-externs-infer
   (is (= 'js/Foo
@@ -158,9 +271,9 @@
                :warnings ws})]
     (is (= (unsplit-lines ["Foo.Boo.prototype.wozz;"]) res))
     (is (= 1 (count @ws)))
-    (is (string/starts-with?
-          (first @ws)
-          "Cannot resolve property wozz for inferred type js/Foo.Boo"))))
+    (is (some-> @ws first
+          (string/starts-with?
+            "Cannot resolve property wozz for inferred type js/Foo.Boo")))))
 
 (deftest test-type-hint-infer-unknown-property-in-chain
   (let [ws  (atom [])
@@ -172,9 +285,9 @@
                :warnings ws})]
     (is (= (unsplit-lines ["Foo.Boo.prototype.wozz;"]) res))
     (is (= 1 (count @ws)))
-    (is (string/starts-with?
-          (first @ws)
-          "Cannot resolve property wozz for inferred type js/Foo.Boo"))))
+    (is (some-> @ws first
+          (string/starts-with?
+            "Cannot resolve property wozz for inferred type js/Foo.Boo")))))
 
 (deftest test-type-hint-infer-unknown-method
   (let [ws  (atom [])
@@ -185,9 +298,24 @@
                :warnings ws})]
     (is (= (unsplit-lines ["Foo.prototype.gozMethod;"]) res))
     (is (= 1 (count @ws)))
-    (is (string/starts-with?
-          (first @ws)
-          "Cannot resolve property gozMethod for inferred type js/Foo"))))
+    (is (some-> @ws first
+          (string/starts-with?
+            "Cannot resolve property gozMethod for inferred type js/Foo")))))
+
+(comment
+
+  (require '[clojure.java.io :as io]
+           '[cljs.closure :as cc])
+
+  (def externs
+    (-> (cc/js-source-file nil (io/file "src/test/externs/test.js"))
+      externs/parse-externs externs/index-externs))
+
+  (ana/resolve-extern '[Foo gozMethod] externs)
+
+  (clojure.test/test-vars [#'test-type-hint-infer-unknown-method])
+
+  )
 
 (deftest test-infer-unknown-method-from-externs
   (let [ws  (atom [])
@@ -197,9 +325,9 @@
                :warnings ws})]
     (is (= (unsplit-lines ["Foo.prototype.gozMethod;"]) res))
     (is (= 1 (count @ws)))
-    (is (string/starts-with?
-          (first @ws)
-          "Cannot resolve property gozMethod for inferred type js/Foo"))))
+    (is (some-> @ws first
+          (string/starts-with?
+            "Cannot resolve property gozMethod for inferred type js/Foo")))))
 
 (deftest test-infer-js-require
   (let [ws  (atom [])
@@ -211,9 +339,9 @@
                :warnings ws})]
     (is (= (unsplit-lines ["var require;" "Object.Component;"]) res))
     (is (= 1 (count @ws)))
-    (is (string/starts-with?
-          (first @ws)
-          "Adding extern to Object for property Component"))))
+    (is (some-> @ws first
+          (string/starts-with?
+            "Adding extern to Object for property Component")))))
 
 (deftest test-set-warn-on-infer
   (let [ws  (atom [])
@@ -227,7 +355,9 @@
                :warn false
                :with-core? true})]
     (is (= 1 (count @ws)))
-    (is (string/starts-with? (first @ws) "Cannot infer target type"))))
+    (is (some-> @ws first
+          (string/starts-with?
+            "Cannot infer target type")))))
 
 (deftest test-cljs-1970-infer-with-cljs-literals
   (let [ws  (atom [])

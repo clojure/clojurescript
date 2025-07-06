@@ -641,7 +641,8 @@
 
 (defn safe-test? [env e]
   (let [tag (ana/infer-tag env e)]
-    (or (#{'boolean 'seq} tag) (truthy-constant? e))))
+    (or ('#{boolean seq} (ana/js-prim-ctor->tag tag tag))
+        (truthy-constant? e))))
 
 (defmethod emit* :if
   [{:keys [test then else env unchecked]}]

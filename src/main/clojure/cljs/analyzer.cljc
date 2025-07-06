@@ -980,10 +980,10 @@
 (defn normalize-js-tag [x]
   ;; if not 'js, assume constructor
   (if-not (= 'js x)
-    (with-meta 'js
-      {:prefix (conj (->> (string/split (name x) #"\.")
-                       (map symbol) vec)
-                 'prototype)})
+    (let [props  (->> (string/split (name x) #"\.") (map symbol))
+          [xs y] ((juxt butlast last) props)]
+      (with-meta 'js
+        {:prefix (vec (concat xs [(with-meta y {:ctor true})]))}))
     x))
 
 (defn ->type-set
@@ -1030,45 +1030,88 @@
     boolean  Boolean
     symbol   Symbol})
 
-(defn has-extern?*
+(defn resolve-extern
+  "Given a foreign js property list, return a resolved js property list and the
+  extern var info"
+  ([pre]
+   (resolve-extern pre (get-externs)))
   ([pre externs]
-   (let [pre (if-some [me (find
-                            (get-in externs '[Window prototype])
-                            (first pre))]
-               (if-some [tag (-> me first meta :tag)]
-                 (into [tag 'prototype] (next pre))
-                 pre)
-               pre)]
-     (has-extern?* pre externs externs)))
-  ([pre externs top]
+   (resolve-extern pre externs externs {:resolved []}))
+  ([pre externs top ret]
    (cond
-     (empty? pre) true
+     (empty? pre) ret
      :else
      (let [x  (first pre)
            me (find externs x)]
        (cond
-         (not me) false
+         (not me) nil
          :else
          (let [[x' externs'] me
-               xmeta (meta x')]
-           (if (and (= 'Function (:tag xmeta)) (:ctor xmeta))
-             (or (has-extern?* (into '[prototype] (next pre)) externs' top)
-                 (has-extern?* (next pre) externs' top)
-                 ;; check base type if it exists
-                 (when-let [super (:super xmeta)]
-                   (has-extern?* (into [super] (next pre)) externs top)))
-             (recur (next pre) externs' top))))))))
+               info' (meta x')
+               ret (cond-> ret
+                     ;; we only care about var info for the last property
+                     ;; also if we already added it, don't override it
+                     ;; because we're now resolving type information
+                     ;; not instance information anymore
+                     ;; i.e. [console] -> [Console] but :tag is Console _not_ Function vs.
+                     ;; [console log] -> [Console prototype log] where :tag is Function
+                     (and (empty? (next pre))
+                          (not (contains? ret :info)))
+                     (assoc :info info'))]
+           ;; handle actual occurrences of types, i.e. `Console`
+           (if (and (or (:ctor info') (:iface info')) (= 'Function (:tag info')))
+             (or
+               ;; then check for "static" property
+               (resolve-extern (next pre) externs' top
+                 (update ret :resolved conj x))
+
+               ;; first look for a property on the prototype
+               (resolve-extern (into '[prototype] (next pre)) externs' top
+                 (update ret :resolved conj x))
+
+               ;; finally check the super class if there is one
+               (when-let [super (:super info')]
+                 (resolve-extern (into [super] (next pre)) externs top
+                   (assoc ret :resolved []))))
+
+             (or
+               ;; If the tag of the property isn't Function or undefined,
+               ;; try to resolve it similar to the super case above,
+               ;; this handles singleton cases like `console`
+               (let [tag (:tag info')]
+                 (when (and tag (not (contains? '#{Function undefined} tag)))
+                   ;; check prefix first, during cljs.externs parsing we always generate prefixes
+                   ;; for tags because of types like webCrypto.Crypto
+                   (resolve-extern (into (or (-> tag meta :prefix) [tag]) (next pre)) externs top
+                     (assoc ret :resolved []))))
+
+               ;; assume static property
+               (recur (next pre) externs' top
+                 (update ret :resolved conj x))))))))))
+
+(defn normalize-unresolved-prefix
+  [pre]
+  (cond-> pre
+    (< 1 (count pre))
+    (cond->
+      (-> pre pop peek meta :ctor)
+      (-> pop
+        (conj 'prototype)
+        (conj (peek pre))))))
+
+(defn has-extern?*
+  [pre externs]
+  (boolean (resolve-extern pre externs)))
 
 (defn has-extern?
   ([pre]
    (has-extern? pre (get-externs)))
   ([pre externs]
    (or (has-extern?* pre externs)
-       (when (= 1 (count pre))
-         (let [x (first pre)]
-           (or (get-in externs (conj '[Window prototype] x))
-               (get-in externs (conj '[Number] x)))))
        (-> (last pre) str (string/starts-with? "cljs$")))))
+
+(defn lift-tag-to-js [tag]
+  (symbol "js" (str (alias->type tag tag))))
 
 (defn js-tag
   ([pre]
@@ -1078,12 +1121,13 @@
   ([pre tag-type externs]
    (js-tag pre tag-type externs externs))
   ([pre tag-type externs top]
-   (when-let [[p externs' :as me] (find externs (first pre))]
-     (let [tag (-> p meta tag-type)]
-       (if (= (count pre) 1)
-         (when tag (symbol "js" (str (alias->type tag tag))))
-         (or (js-tag (next pre) tag-type externs' top)
-             (js-tag (into '[prototype] (next pre)) tag-type (get top tag) top)))))))
+   (when-let [tag (get-in (resolve-extern pre externs) [:info tag-type])]
+     (case tag
+       ;; don't lift these, analyze-dot will raise them for analysis
+       ;; representing these types as js/Foo is a hassle as it widens the
+       ;; return types unnecessarily i.e. #{boolean js/Boolean}
+       (boolean number string) tag
+       (lift-tag-to-js tag)))))
 
 (defn dotted-symbol? [sym]
   (let [s (str sym)]
@@ -1274,8 +1318,9 @@
                (assoc shadowed-by-local :op :local))
 
            :else
-           (let [pre (->> (string/split (name sym) #"\.") (map symbol) vec)]
-             (when (and (not (has-extern? pre))
+           (let [pre (->> (string/split (name sym) #"\.") (map symbol) vec)
+                 res (resolve-extern (->> (string/split (name sym) #"\.") (map symbol) vec))]
+             (when (and (not res)
                         ;; ignore exists? usage
                         (not (-> sym meta ::no-resolve)))
                (swap! env/*compiler* update-in
@@ -1284,10 +1329,12 @@
                {:name sym
                 :op :js-var
                 :ns   'js
-                :tag  (with-meta (or (js-tag pre) (:tag (meta sym)) 'js) {:prefix pre})}
+                :tag  (with-meta (or (js-tag pre) (:tag (meta sym)) 'js)
+                        {:prefix pre
+                         :ctor   (-> res :info :ctor)})}
                (when-let [ret-tag (js-tag pre :ret-tag)]
                  {:js-fn-var true
-                  :ret-tag ret-tag})))))
+                  :ret-tag   ret-tag})))))
        (let [s  (str sym)
              lb (handle-symbol-local sym (get locals sym))
              current-ns (-> env :ns :name)]
@@ -2585,12 +2632,12 @@
      :children [:expr]}))
 
 (def js-prim-ctor->tag
-  '{js/Object object
-    js/String string
-    js/Array array
-    js/Number number
+  '{js/Object   object
+    js/String   string
+    js/Array    array
+    js/Number   number
     js/Function function
-    js/Boolean boolean})
+    js/Boolean  boolean})
 
 (defn prim-ctor?
   "Test whether a tag is a constructor for a JS primitive"
@@ -3543,13 +3590,25 @@
                  (list* '. dot-form) " with classification "
                  (classify-dot-form dot-form))))))
 
+;; this only for a smaller set of types that we want to infer
+;; we don't generally want to consider function for example, these
+;; specific cases are ones we either try to optimize or validate
+(def ^{:private true}
+  tag->js-prim-ctor
+  '{string   js/String
+    array    js/Array
+    number   js/Number
+    boolean  js/Boolean})
+
 (defn analyze-dot [env target field member+ form]
   (let [v [target field member+]
         {:keys [dot-action target method field args]} (build-dot-form v)
         enve       (assoc env :context :expr)
         targetexpr (analyze enve target)
         form-meta  (meta form)
-        target-tag (:tag targetexpr)
+        target-tag (as-> (:tag targetexpr) $
+                     (or (some-> $ meta :ctor lift-tag-to-js)
+                         (tag->js-prim-ctor $ $)))
         prop       (or field method)
         tag        (or (:tag form-meta)
                        (and (js-tag? target-tag)
@@ -3581,7 +3640,8 @@
       (let [pre (-> tag meta :prefix)]
         (when-not (has-extern? pre)
           (swap! env/*compiler* update-in
-            (into [::namespaces (-> env :ns :name) :externs] pre) merge {}))))
+            (into [::namespaces (-> env :ns :name) :externs]
+              (normalize-unresolved-prefix pre)) merge {}))))
     (case dot-action
       ::access (let [children [:target]]
                  {:op :host-field
