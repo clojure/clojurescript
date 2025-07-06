@@ -183,6 +183,16 @@
         (-> (binding [ana/*cljs-ns* ana/*cljs-ns*]
               (env/with-compiler-env (env/default-compiler-env)
                 (analyze (ana/empty-env) '(.isArray js/Array (array)))))
+          :tag)))
+  (is (= 'boolean
+        (-> (binding [ana/*cljs-ns* ana/*cljs-ns*]
+              (env/with-compiler-env (env/default-compiler-env)
+                (analyze (ana/empty-env) '(.isSafeInteger js/Number 1))))
+          :tag)))
+  (is (= 'boolean
+        (-> (binding [ana/*cljs-ns* ana/*cljs-ns*]
+              (env/with-compiler-env (env/default-compiler-env)
+                (analyze (ana/empty-env) '(js/isFinite 1))))
           :tag))))
 
 (deftest test-externs-infer

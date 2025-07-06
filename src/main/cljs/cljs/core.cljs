@@ -1055,8 +1055,8 @@
     (bit-xor (-hash o) 0)
 
     (number? o)
-    (if ^boolean (js/isFinite o)
-      (if-not ^boolean (.isSafeInteger js/Number o)
+    (if (js/isFinite o)
+      (if-not (.isSafeInteger js/Number o)
         (hash-double o)
         (js-mod (Math/floor o) 2147483647))
       (case o
