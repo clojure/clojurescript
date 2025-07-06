@@ -313,6 +313,13 @@
   ;      'clj))
   )
 
+(deftest lib-inference-extern-call
+  (testing "Test return type inference for core fns whose
+  internal implementation uses standard JS APIs"
+    (is (= 'boolean
+          (env/with-compiler-env test-cenv
+            (:tag (analyze test-env '(array? (array)))))))))
+
 (deftest test-always-true-if
   (is (= (env/with-compiler-env test-cenv
            (:tag (analyze test-env '(if 1 2 "foo"))))

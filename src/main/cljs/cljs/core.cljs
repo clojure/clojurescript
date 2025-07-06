@@ -243,7 +243,7 @@
   [x]
   (coercive-= x nil))
 
-(defn ^boolean array?
+(defn array?
   "Returns true if x is a JavaScript array."
   [x]
   (if (identical? *target* "nodejs")

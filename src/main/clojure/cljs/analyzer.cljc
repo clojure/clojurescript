@@ -1122,7 +1122,12 @@
    (js-tag pre tag-type externs externs))
   ([pre tag-type externs top]
    (when-let [tag (get-in (resolve-extern pre externs) [:info tag-type])]
-     (lift-tag-to-js tag))))
+     (case tag
+       ;; don't lift these, analyze-dot will raise them for analysis
+       ;; representing these types as js/Foo is a hassle as it widens the
+       ;; return types unnecessarily i.e. #{boolean js/Boolean}
+       (boolean number string) tag
+       (lift-tag-to-js tag)))))
 
 (defn dotted-symbol? [sym]
   (let [s (str sym)]

@@ -106,7 +106,7 @@
     (is (= 'js/Console (ana/js-tag '[console] :tag externs)))
     (is (= 'js/Function (ana/js-tag '[console log] :tag externs)))
     (is (= 'js/undefined (ana/js-tag '[console log] :ret-tag externs)))
-    (is (= 'js/Boolean (ana/js-tag '[Number isNaN] :ret-tag externs)))
+    (is (= 'boolean (ana/js-tag '[Number isNaN] :ret-tag externs)))
     (is (= 'js/Foo (ana/js-tag '[baz] :ret-tag externs)))))
 
 (comment
@@ -148,23 +148,23 @@
                       (get @test-cenv ::ana/namespaces))))))))))))
 
 (deftest test-externs-type-infer
-  (is (= 'js/Boolean
+  (is (= 'boolean
         (-> (binding [ana/*cljs-ns* ana/*cljs-ns*]
               (env/with-compiler-env (env/default-compiler-env)
                 (analyze (ana/empty-env) '(.isNaN js/Number 1))))
           :tag)))
-  (is (= 'js/Boolean
+  (is (= 'boolean
         (-> (binding [ana/*cljs-ns* ana/*cljs-ns*]
               (env/with-compiler-env (env/default-compiler-env)
                 (analyze (ana/empty-env) '(js/Number.isNaN 1))))
           :tag)))
-  (is (= 'js/Boolean
+  (is (= 'boolean
         (-> (binding [ana/*cljs-ns* ana/*cljs-ns*]
               (env/with-compiler-env (env/default-compiler-env)
                 (analyze (ana/empty-env) '(let [x js/Number]
                                             (.isNaN x 1)))))
           :tag)))
-  (is (= 'js/Boolean
+  (is (= 'boolean
         (-> (binding [ana/*cljs-ns* ana/*cljs-ns*]
              (env/with-compiler-env (env/default-compiler-env)
                (analyze (ana/empty-env) '(js/isNaN 1))))
@@ -174,12 +174,12 @@
               (env/with-compiler-env (env/default-compiler-env)
                 (analyze (ana/empty-env) '(.generateKey js/crypto.subtle))))
           :tag)))
-  (is (= 'js/String
+  (is (= 'string
         (-> (binding [ana/*cljs-ns* ana/*cljs-ns*]
               (env/with-compiler-env (env/default-compiler-env)
                 (analyze (ana/empty-env) '(.toUpperCase "foo"))))
           :tag)))
-  (is (= 'js/Boolean
+  (is (= 'boolean
         (-> (binding [ana/*cljs-ns* ana/*cljs-ns*]
               (env/with-compiler-env (env/default-compiler-env)
                 (analyze (ana/empty-env) '(.isArray js/Array (array)))))
