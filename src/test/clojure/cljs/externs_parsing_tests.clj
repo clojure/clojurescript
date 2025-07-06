@@ -37,6 +37,12 @@
     (is (= 'any (get-in ns [:defs 'get :ret-tag])))
     (is (= 'array (get-in ns [:defs 'getKeys :ret-tag])))))
 
+(comment
+  ;; works
+  (get-in (externs/analyze-goog-file "goog/object/object.js")
+    [:defs 'containsKey :ret-tag])
+  )
+
 (deftest test-parse-super
   (let [info (->
                (filter

@@ -243,7 +243,7 @@
   [x]
   (coercive-= x nil))
 
-(defn ^boolean array?
+(defn array?
   "Returns true if x is a JavaScript array."
   [x]
   (if (identical? *target* "nodejs")
@@ -444,7 +444,7 @@
 
 (declare apply)
 
-(defn ^array make-array
+(defn make-array
   "Construct a JavaScript array of the specified dimensions. Accepts ignored
   type argument for compatibility with Clojure. Note that there is no efficient
   way to allocate multi-dimensional arrays in JavaScript; as such, this function
@@ -1055,8 +1055,8 @@
     (bit-xor (-hash o) 0)
 
     (number? o)
-    (if ^boolean (js/isFinite o)
-      (if-not ^boolean (.isSafeInteger js/Number o)
+    (if (js/isFinite o)
+      (if-not (.isSafeInteger js/Number o)
         (hash-double o)
         (js-mod (Math/floor o) 2147483647))
       (case o
@@ -2355,7 +2355,7 @@ reduces them without incurring seq initialization"
   "Returns true if n is a JavaScript number with no decimal part."
   [n]
   (and (number? n)
-       (not ^boolean (js/isNaN n))
+       (not (js/isNaN n))
        (not (identical? n js/Infinity))
        (== (js/parseFloat n) (js/parseInt n 10))))
 
@@ -2432,7 +2432,7 @@ reduces them without incurring seq initialization"
   (or (identical? x js/Number.POSITIVE_INFINITY)
       (identical? x js/Number.NEGATIVE_INFINITY)))
 
-(defn contains?
+(defn ^boolean contains?
   "Returns true if key is present in the given collection, otherwise
   returns false.  Note that for numerically indexed collections like
   vectors and arrays, this tests if the numeric key is within the
@@ -2462,12 +2462,12 @@ reduces them without incurring seq initialization"
             (contains? coll k))
       (MapEntry. k (get coll k) nil))))
 
-(defn ^boolean distinct?
+(defn distinct?
   "Returns true if no two of the arguments are ="
   ([x] true)
   ([x y] (not (= x y)))
   ([x y & more]
-     (if (not (= x y))
+   (if (not (= x y))
      (loop [s #{x y} xs more]
        (let [x (first xs)
              etc (next xs)]
@@ -8351,6 +8351,7 @@ reduces them without incurring seq initialization"
           (if (identical? node root)
             nil
             (set! root node))
+          ;; FIXME: can we figure out something better here?
           (if ^boolean (.-val added-leaf?)
             (set! count (inc count)))
           tcoll))
@@ -8372,6 +8373,7 @@ reduces them without incurring seq initialization"
             (if (identical? node root)
               nil
               (set! root node))
+            ;; FIXME: can we figure out something better here?
             (if ^boolean (.-val removed-leaf?)
               (set! count (dec count)))
             tcoll)))
@@ -10562,6 +10564,7 @@ reduces them without incurring seq initialization"
         (pr-writer (meta obj) writer opts)
         (-write writer " "))
       (cond
+        ;; FIXME: can we figure out something better here?
         ;; handle CLJS ctors
         ^boolean (.-cljs$lang$type obj)
         (.cljs$lang$ctorPrWriter obj obj writer opts)
@@ -10576,7 +10579,7 @@ reduces them without incurring seq initialization"
         (number? obj)
         (-write writer
           (cond
-            ^boolean (js/isNaN obj) "##NaN"
+            (js/isNaN obj) "##NaN"
             (identical? obj js/Number.POSITIVE_INFINITY) "##Inf"
             (identical? obj js/Number.NEGATIVE_INFINITY) "##-Inf"
             :else (str_ obj)))
@@ -11942,7 +11945,7 @@ reduces them without incurring seq initialization"
   (fn [x y]
     (cond (pred x y) -1 (pred y x) 1 :else 0)))
 
-(defn ^boolean special-symbol?
+(defn special-symbol?
   "Returns true if x names a special form"
   [x]
   (contains?
@@ -12175,6 +12178,8 @@ reduces them without incurring seq initialization"
   Object
   (findInternedVar [this sym]
     (let [k (munge (str_ sym))]
+      ;; FIXME: this shouldn't need ^boolean due to GCL library analysis,
+      ;; but not currently working
       (when ^boolean (gobject/containsKey obj k)
         (let [var-sym (symbol (str_ name) (str_ sym))
               var-meta {:ns this}]
@@ -12268,7 +12273,7 @@ reduces them without incurring seq initialization"
   (when (nil? NS_CACHE)
     (set! NS_CACHE (atom {})))
   (let [ns-str (str_ ns)
-        ns (if (not ^boolean (gstring/contains ns-str "$macros"))
+        ns (if (not (gstring/contains ns-str "$macros"))
              (symbol (str_ ns-str "$macros"))
              ns)
         the-ns (get @NS_CACHE ns)]
@@ -12292,7 +12297,7 @@ reduces them without incurring seq initialization"
   [x]
   (instance? goog.Uri x))
 
-(defn ^boolean NaN?
+(defn NaN?
   "Returns true if num is NaN, else false"
   [val]
   (js/isNaN val))
@@ -12321,6 +12326,7 @@ reduces them without incurring seq initialization"
   [s]
   (if (string? s)
     (cond
+      ;; FIXME: another cases worth thinking about
       ^boolean (re-matches #"[\x00-\x20]*[+-]?NaN[\x00-\x20]*" s) ##NaN
       ^boolean (re-matches
                 #"[\x00-\x20]*[+-]?(Infinity|((\d+\.?\d*|\.\d+)([eE][+-]?\d+)?)[dDfF]?)[\x00-\x20]*"
