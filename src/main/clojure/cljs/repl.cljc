@@ -1447,6 +1447,11 @@ itself (not its value) is returned. The reader macro #'x expands to (var x)."}})
               (keyword? name)
               `(cljs.repl/print-doc {:spec ~name :doc (cljs.spec.alpha/describe ~name)})
 
+              (= "js" (namespace name))
+              `(cljs.repl/print-doc
+                 (quote ~(merge (select-keys (ana-api/resolve-extern name) [:doc :arglists])
+                           {:name name})))
+
               (ana-api/find-ns name)
               `(cljs.repl/print-doc
                  (quote ~(select-keys (ana-api/find-ns name) [:name :doc])))
