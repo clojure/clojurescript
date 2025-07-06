@@ -977,10 +977,13 @@
        (or (= 'js x)
            (= "js" (namespace x)))))
 
+(defn ->pre [x]
+  (->> (string/split (name x) #"\.") (map symbol)))
+
 (defn normalize-js-tag [x]
   ;; if not 'js, assume constructor
   (if-not (= 'js x)
-    (let [props  (->> (string/split (name x) #"\.") (map symbol))
+    (let [props  (->pre x)
           [xs y] ((juxt butlast last) props)]
       (with-meta 'js
         {:prefix (vec (concat xs [(with-meta y {:ctor true})]))}))

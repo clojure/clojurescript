@@ -218,6 +218,15 @@
   ([state]
    (keys (get @state ::ana/namespaces))))
 
+(defn resolve-extern
+  "Given a symbol attempt to look it up in the provided externs"
+  ([sym]
+   (resolve-extern env/*compiler* sym))
+  ([state sym]
+   (let [pre (ana/->pre sym)]
+     (env/with-compiler-env state
+       (:info (ana/resolve-extern pre))))))
+
 (defn find-ns
   "Given a namespace return the corresponding namespace analysis map. Analagous
   to clojure.core/find-ns."
