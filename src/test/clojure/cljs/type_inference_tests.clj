@@ -318,7 +318,10 @@
   internal implementation uses standard JS APIs"
     (is (= 'boolean
           (env/with-compiler-env test-cenv
-            (:tag (analyze test-env '(array? (array)))))))))
+            (:tag (analyze test-env '(array? (array)))))))
+    (is (= 'array
+          (env/with-compiler-env test-cenv
+            (:tag (analyze test-env '(make-array js/String. 10))))))))
 
 (deftest test-always-true-if
   (is (= (env/with-compiler-env test-cenv
