@@ -307,6 +307,13 @@
   (is (= (env/with-compiler-env test-cenv
            (:tag (analyze test-env '(dissoc {:foo :bar} :foo))))
         '#{clj clj-nil}))
+  (is (= (env/with-compiler-env test-cenv
+           (:tag (analyze test-env '(distinct? 1))))
+        'boolean))
+  ;; TODO: we can't infer isa?, we get 'any which is a bit surprising
+  ;(is (= (env/with-compiler-env test-cenv
+  ;         (:tag (analyze test-env '(isa? ::foo :bar))))
+  ;      'boolean))
   ;; has changed, why does this return #{clj any} ?
   ;(is (= (env/with-compiler-env test-cenv
   ;         (:tag (analyze test-env '(assoc nil :foo :bar))))

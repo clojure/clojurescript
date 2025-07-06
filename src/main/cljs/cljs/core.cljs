@@ -2355,7 +2355,7 @@ reduces them without incurring seq initialization"
   "Returns true if n is a JavaScript number with no decimal part."
   [n]
   (and (number? n)
-       (not ^boolean (js/isNaN n))
+       (not (js/isNaN n))
        (not (identical? n js/Infinity))
        (== (js/parseFloat n) (js/parseInt n 10))))
 
@@ -2462,12 +2462,12 @@ reduces them without incurring seq initialization"
             (contains? coll k))
       (MapEntry. k (get coll k) nil))))
 
-(defn ^boolean distinct?
+(defn distinct?
   "Returns true if no two of the arguments are ="
   ([x] true)
   ([x y] (not (= x y)))
   ([x y & more]
-     (if (not (= x y))
+   (if (not (= x y))
      (loop [s #{x y} xs more]
        (let [x (first xs)
              etc (next xs)]
@@ -8351,6 +8351,7 @@ reduces them without incurring seq initialization"
           (if (identical? node root)
             nil
             (set! root node))
+          ;; FIXME: can we figure out something better here?
           (if ^boolean (.-val added-leaf?)
             (set! count (inc count)))
           tcoll))
@@ -8372,6 +8373,7 @@ reduces them without incurring seq initialization"
             (if (identical? node root)
               nil
               (set! root node))
+            ;; FIXME: can we figure out something better here?
             (if ^boolean (.-val removed-leaf?)
               (set! count (dec count)))
             tcoll)))
@@ -10562,6 +10564,7 @@ reduces them without incurring seq initialization"
         (pr-writer (meta obj) writer opts)
         (-write writer " "))
       (cond
+        ;; FIXME: can we figure out something better here?
         ;; handle CLJS ctors
         ^boolean (.-cljs$lang$type obj)
         (.cljs$lang$ctorPrWriter obj obj writer opts)
@@ -10576,7 +10579,7 @@ reduces them without incurring seq initialization"
         (number? obj)
         (-write writer
           (cond
-            ^boolean (js/isNaN obj) "##NaN"
+            (js/isNaN obj) "##NaN"
             (identical? obj js/Number.POSITIVE_INFINITY) "##Inf"
             (identical? obj js/Number.NEGATIVE_INFINITY) "##-Inf"
             :else (str_ obj)))
