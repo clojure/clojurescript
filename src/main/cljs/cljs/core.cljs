@@ -12273,7 +12273,7 @@ reduces them without incurring seq initialization"
   (when (nil? NS_CACHE)
     (set! NS_CACHE (atom {})))
   (let [ns-str (str_ ns)
-        ns (if (not ^boolean (gstring/contains ns-str "$macros"))
+        ns (if (not (gstring/contains ns-str "$macros"))
              (symbol (str_ ns-str "$macros"))
              ns)
         the-ns (get @NS_CACHE ns)]
@@ -12297,7 +12297,7 @@ reduces them without incurring seq initialization"
   [x]
   (instance? goog.Uri x))
 
-(defn ^boolean NaN?
+(defn NaN?
   "Returns true if num is NaN, else false"
   [val]
   (js/isNaN val))
@@ -12326,6 +12326,7 @@ reduces them without incurring seq initialization"
   [s]
   (if (string? s)
     (cond
+      ;; FIXME: another cases worth thinking about
       ^boolean (re-matches #"[\x00-\x20]*[+-]?NaN[\x00-\x20]*" s) ##NaN
       ^boolean (re-matches
                 #"[\x00-\x20]*[+-]?(Infinity|((\d+\.?\d*|\.\d+)([eE][+-]?\d+)?)[dDfF]?)[\x00-\x20]*"

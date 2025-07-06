@@ -382,6 +382,15 @@
                    '[(if (.isNaN js/Number 1) true false)]))]
       (is (nil? (re-find #"truth_" code))))))
 
+(deftest test-goog-lib-infer-boolean
+  (testing "Can infer goog.string/contains returns boolean"
+    (let [code (env/with-compiler-env (env/default-compiler-env)
+                 (compile-form-seq
+                   '[(ns test.foo
+                       (:require [goog.string :as gstring]))
+                     (if (gstring/contain "foobar" "foo") true false)]))]
+      (is (nil? (re-find #"truth_" code))))))
+
 ;; CLJS-1225
 
 (comment

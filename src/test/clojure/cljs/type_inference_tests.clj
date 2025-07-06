@@ -395,10 +395,17 @@
                  (Html5History.)]
                {} true))))))
 
-;; FIXME: infers any instead of boolean, nothing wrong w/ the externs parsing
-;; but this definitely does not work at the moment
-#_(deftest test-goog-infer
+(deftest test-goog-infer
   (is (= 'boolean
+        (:tag (env/with-compiler-env (env/default-compiler-env)
+                (ana/analyze-form-seq
+                  '[(ns test.foo
+                      (:require [goog.string :as gstring]))
+                    (gstring/contains "foobar" "foo")]
+                  {} true)))))
+  ;; FIXME: infers any instead of boolean, nothing wrong w/ the externs parsing
+  ;; but this definitely does not work at the moment
+  #_(is (= 'boolean
         (:tag
           (env/with-compiler-env (env/default-compiler-env)
             (ana/analyze-form-seq
@@ -406,3 +413,4 @@
                   (:require [goog.object :as gobject]))
                 (gobject/containsKey (js-object) "foo")]
               {} true))))))
+
