@@ -388,7 +388,7 @@
                  (compile-form-seq
                    '[(ns test.foo
                        (:require [goog.string :as gstring]))
-                     (if (gstring/contain "foobar" "foo") true false)]))]
+                     (if (gstring/contains "foobar" "foo") true false)]))]
       (is (nil? (re-find #"truth_" code))))))
 
 ;; CLJS-1225
