@@ -74,7 +74,7 @@
 (defn simplify-texpr
   [texpr]
   (case (:type texpr)
-    :string-lit    (some-> (:value texpr) add-prefix)
+    :string-lit    (-> texpr :value add-prefix)
     :star          'any
     ;; TODO: qmark should probably be #{nil T}
     (:qmark :bang) (simplify-texpr (-> texpr :children first))
