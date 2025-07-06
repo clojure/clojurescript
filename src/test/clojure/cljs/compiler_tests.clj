@@ -376,7 +376,7 @@
       (is (re-find #"window__\$1" code)))))
 
 (deftest test-externs-infer-is-nan
-  (testing "Let binding which use JS global names should get shadowed"
+  (testing "Not calls to truth_ if (.isNaN js/Number ...) is used as a test"
     (let [code (env/with-compiler-env (env/default-compiler-env)
                  (compile-form-seq
                    '[(if (.isNaN js/Number 1) true false)]))]
