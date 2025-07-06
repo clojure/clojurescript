@@ -2432,7 +2432,7 @@ reduces them without incurring seq initialization"
   (or (identical? x js/Number.POSITIVE_INFINITY)
       (identical? x js/Number.NEGATIVE_INFINITY)))
 
-(defn contains?
+(defn ^boolean contains?
   "Returns true if key is present in the given collection, otherwise
   returns false.  Note that for numerically indexed collections like
   vectors and arrays, this tests if the numeric key is within the
@@ -11945,7 +11945,7 @@ reduces them without incurring seq initialization"
   (fn [x y]
     (cond (pred x y) -1 (pred y x) 1 :else 0)))
 
-(defn ^boolean special-symbol?
+(defn special-symbol?
   "Returns true if x names a special form"
   [x]
   (contains?

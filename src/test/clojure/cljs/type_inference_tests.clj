@@ -310,6 +310,9 @@
   (is (= (env/with-compiler-env test-cenv
            (:tag (analyze test-env '(distinct? 1))))
         'boolean))
+  (is (= (env/with-compiler-env test-cenv
+           (:tag (analyze test-env '(special-symbol? 'foo))))
+        'boolean))
   ;; TODO: we can't infer isa?, we get 'any which is a bit surprising
   ;(is (= (env/with-compiler-env test-cenv
   ;         (:tag (analyze test-env '(isa? ::foo :bar))))
