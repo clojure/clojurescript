@@ -178,6 +178,11 @@
         (-> (binding [ana/*cljs-ns* ana/*cljs-ns*]
               (env/with-compiler-env (env/default-compiler-env)
                 (analyze (ana/empty-env) '(.toUpperCase "foo"))))
+          :tag)))
+  (is (= 'js/Boolean
+        (-> (binding [ana/*cljs-ns* ana/*cljs-ns*]
+              (env/with-compiler-env (env/default-compiler-env)
+                (analyze (ana/empty-env) '(.isArray js/Array (array)))))
           :tag))))
 
 (deftest test-externs-infer
