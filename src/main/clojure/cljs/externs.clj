@@ -88,14 +88,13 @@
   (some-> (.getRoot texpr) parse-texpr simplify-texpr))
 
 (defn params->method-params [xs]
-  (letfn [(not-opt? [x]
-            (not (string/starts-with? (name x) "opt_")))]
-    (let [required (into [] (take-while not-opt? xs))
-          opts (drop-while not-opt? xs)]
-      (loop [ret [required] opts opts]
-        (if-let [opt (first opts)]
-          (recur (conj ret (conj (last ret) opt)) (drop 1 opts))
-          (seq ret))))))
+  (let [not-opt? (complement :optional?)
+        required (into [] (map :name (take-while not-opt? xs)))
+        opts     (map :name (drop-while not-opt? xs))]
+    (loop [ret [required] opts opts]
+      (if-let [opt (first opts)]
+        (recur (conj ret (conj (last ret) opt)) (drop 1 opts))
+        (seq ret)))))
 
 (defn generic? [t]
   (let [s (name t)]
@@ -136,15 +135,15 @@
               (if (or (.hasReturnType info)
                       (as-> (.getParameterCount info) c
                         (and c (pos? c))))
-                (let [arglist  (into [] (map symbol (.getParameterNames info)))
+                (let [arglist  (get-params info)
                       arglists (params->method-params arglist)]
                   {:tag             'Function
                    :js-fn-var       true
                    :ret-tag         (or (some-> (.getReturnType info)
                                           get-tag gtype->cljs-type)
                                         'clj-nil)
-                   :variadic?       (boolean (some '#{var_args} arglist))
-                   :max-fixed-arity (count (take-while #(not= 'var_args %) arglist))
+                   :variadic?       (boolean (some :var-args? arglist))
+                   :max-fixed-arity (count (take-while (complement :var-args?) arglist))
                    :method-params   arglists
                    :arglists        arglists}))))
           {:file *source-file*
