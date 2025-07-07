@@ -391,6 +391,16 @@
                      (if (gstring/contains "foobar" "foo") true false)]))]
       (is (nil? (re-find #"truth_" code))))))
 
+(deftest test-goog-module-infer-cljs-3438
+  (testing "goog.object/containKey requires correct handling of vars from
+  goog.module namespace"
+    (let [code (env/with-compiler-env (env/default-compiler-env)
+                 (compile-form-seq
+                   '[(ns test.foo
+                       (:require [goog.object :as gobject]))
+                     (if (gobject/containsKey nil nil) true false)]))]
+      (is (nil? (re-find #"truth_" code))))))
+
 ;; CLJS-1225
 
 (comment
