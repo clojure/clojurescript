@@ -1218,7 +1218,8 @@
     (merge sym-ast
       {:name (symbol (str current-ns) (str (munge-goog-module-lib full-ns) "." (name sym)))
        :ns   current-ns
-       :op   :var})))
+       :op   :var
+       :unaliased-name (symbol (str full-ns) (name sym))})))
 
 (defmethod resolve* :global
   [env sym full-ns current-ns]
@@ -3889,15 +3890,15 @@
         bind-args? (and HO-invoke?
                         (not (all-values? args)))]
     (when ^boolean fn-var?
-      (let [{^boolean variadic :variadic? :keys [max-fixed-arity method-params name ns macro]} (:info fexpr)]
-        ;; don't warn about invalid arity when when compiling a macros namespace
+      (let [{^boolean variadic :variadic? :keys [max-fixed-arity method-params name unaliased-name ns macro]} (:info fexpr)]
+        ;; don't warn about invalid arity when compiling a macros namespace
         ;; that requires itself, as that code is not meant to be executed in the
         ;; `$macros` ns - António Monteiro
         (when (and #?(:cljs (not (and (gstring/endsWith (str cur-ns) "$macros")
                                       (symbol-identical? cur-ns ns)
                                       (true? macro))))
                    (invalid-arity? argc method-params variadic max-fixed-arity))
-          (warning :fn-arity env {:name name :argc argc}))))
+          (warning :fn-arity env {:name (or unaliased-name name) :argc argc}))))
     (when (and kw? (not (or (== 1 argc) (== 2 argc))))
       (warning :fn-arity env {:name (first form) :argc argc}))
     (let [deprecated? (-> fexpr :info :deprecated)
