@@ -13,9 +13,9 @@
             [clojure.string :as string])
   (:import [com.google.javascript.jscomp
             CompilerOptions CompilerOptions$Environment SourceFile CompilerInput CommandLineRunner]
-           [com.google.javascript.jscomp.parsing Config$JsDocParsing]
+           [com.google.javascript.jscomp.parsing Config$JsDocParsing JsDocInfoParser$ExtendedTypeInfo]
            [com.google.javascript.rhino
-            Node Token JSTypeExpression JSDocInfo$Visibility]
+            Node Token JSTypeExpression JSDocInfo JSDocInfo$Visibility]
            [java.util.logging Level]
            [java.net URL]))
 
@@ -107,6 +107,18 @@
       (generic? t) 'any
       (= t 'Array) 'array
       :else t)))
+
+(defn get-params
+  "Return param information in JSDoc appearance order. GCL is relatively
+  civilized, so this isn't really a problem."
+  [^JSDocInfo info]
+  (map
+    (fn [n]
+      (let [t (.getParameterType info n)]
+        {:name      (symbol n)
+         :optional? (.isOptionalArg t)
+         :var-args? (.isVarArgs t)}))
+    (.getParameterNames info)))
 
 (defn get-var-info [^Node node]
   (when node
