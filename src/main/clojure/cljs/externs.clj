@@ -13,7 +13,7 @@
             [clojure.string :as string])
   (:import [com.google.javascript.jscomp
             CompilerOptions CompilerOptions$Environment SourceFile CompilerInput CommandLineRunner]
-           [com.google.javascript.jscomp.parsing Config$JsDocParsing JsDocInfoParser$ExtendedTypeInfo]
+           [com.google.javascript.jscomp.parsing Config$JsDocParsing]
            [com.google.javascript.rhino
             Node Token JSTypeExpression JSDocInfo JSDocInfo$Visibility]
            [java.util.logging Level]
