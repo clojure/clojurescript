@@ -12178,8 +12178,6 @@ reduces them without incurring seq initialization"
   Object
   (findInternedVar [this sym]
     (let [k (munge (str_ sym))]
-      ;; FIXME: this shouldn't need ^boolean due to GCL library analysis,
-      ;; but not currently working
       (when (gobject/containsKey obj k)
         (let [var-sym (symbol (str_ name) (str_ sym))
               var-meta {:ns this}]
