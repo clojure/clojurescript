@@ -1533,3 +1533,20 @@
             (ana/gen-constant-id '+)))
   (is (not= (ana/gen-constant-id 'foo.bar)
             (ana/gen-constant-id 'foo$bar))))
+
+;; -----------------------------------------------------------------------------
+;; :refer-global / :require-global ns parsing tests
+
+#_(deftest test-refer-global
+  (binding [ana/*cljs-ns* ana/*cljs-ns*]
+    (let [parsed-ns (env/with-compiler-env test-cenv
+                      (analyze test-env
+                        '(ns foo.core
+                           (:refer-global [Date] :rename {Date MyDate}))))]
+      )))
+
+(comment
+
+  (clojure.test/test-vars [#'test-refer-global])
+
+  )

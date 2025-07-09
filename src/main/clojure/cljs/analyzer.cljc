@@ -3039,6 +3039,24 @@
               ret
               (recur fs ret true)))))
 
+;; this case is like :refer-clojure it cannot be used as a spec parser
+(defn parse-global-refer-spec
+  [env spec]
+  (let [{referred :refer-global
+         renamed  :rename} (apply hash-map (concat [:refer-global] [spec]))
+        referred-without-renamed (remove (set (keys renamed)) referred)]
+    ;; TODO: refer validation, this can be lifted easily into common helper from parse-require-spec
+    ;; TODO: rename validation, harder to lift
+    {:use    (zipmap referred-without-renamed (repeat 'js))
+     :rename (into {}
+               (map (fn [[orig new-name]]
+                      [new-name (symbol "js" (str orig))]))
+               renamed)}))
+
+#_(defn parse-global-require-spec
+  [env deps aliases spec]
+  )
+
 (defn parse-require-spec [env macros? deps aliases spec]
   (if (or (symbol? spec) (string? spec))
     (recur env macros? deps aliases [spec])
@@ -3292,6 +3310,10 @@
                    (select-keys new deep-merge-keys))))
     new))
 
+(def ns-spec-cases
+  #{:use :use-macros :require :require-macros
+    :import :refer-global :require-global})
+
 (defmethod parse 'ns
   [_ env [_ name & args :as form] _ opts]
   (when-not *allow-ns*
@@ -3335,7 +3357,10 @@
                                           (partial use->require env))
                         :use-macros     (comp (partial parse-require-spec env true deps aliases)
                                           (partial use->require env))
-                        :import         (partial parse-import-spec env deps)}
+                        :import         (partial parse-import-spec env deps)
+                        ;:refer-global   (partial parse-global-refer-spec env)
+                        ;:require-global #(parse-global-require-spec env deps aliases %)
+                        }
           valid-forms  (atom #{:use :use-macros :require :require-macros :import})
           reload       (atom {:use nil :require nil :use-macros nil :require-macros nil})
           reloads      (atom {})
