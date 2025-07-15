@@ -3039,19 +3039,26 @@
               ret
               (recur fs ret true)))))
 
-;; this case is like :refer-clojure it cannot be used as a spec parser
 (defn parse-global-refer-spec
-  [env spec]
-  (let [{referred :refer-global
-         renamed  :rename} (apply hash-map (concat [:refer-global] [spec]))
-        referred-without-renamed (remove (set (keys renamed)) referred)]
-    ;; TODO: refer validation, this can be lifted easily into common helper from parse-require-spec
-    ;; TODO: rename validation, harder to lift
-    {:use    (zipmap referred-without-renamed (repeat 'js))
-     :rename (into {}
-               (map (fn [[orig new-name]]
-                      [new-name (symbol "js" (str orig))]))
-               renamed)}))
+  [env args]
+  (let [xs (filter #(-> % first (= :refer-global)) args)]
+    (if-not (= 1 (count xs))
+      (throw (error env "Only one :refer-global form is allowed per namespace definition"))
+      (let [[_ refers & {:keys [rename] :as renames-only}] (first xs)
+            err-str "Only [:refer-global (names)] and optionally `:rename {from to}` specs supported"]
+        (when-not (and (vector? refers) (every? symbol refers))
+          (throw (error env err-str)))
+        (when-not (or (empty? renames-only)
+                      (and (= 1 (count renames-only))
+                           (contains? renames-only :rename)
+                           (map? rename)
+                           (every? symbol (mapcat identity rename))))
+          (throw (error env (str err-str (pr-str renames-only)))))
+        {:use    (zipmap refers (repeat 'js))
+         :rename (into {}
+                   (map (fn [[orig new-name]]
+                          [new-name (symbol "js" (str orig))]))
+                   rename)}))))
 
 #_(defn parse-global-require-spec
   [env deps aliases spec]

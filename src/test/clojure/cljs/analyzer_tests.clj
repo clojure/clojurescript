@@ -387,6 +387,13 @@
             :renames  {map clj-map}}))
     (is (set? (:excludes parsed)))))
 
+(deftest test-parse-global-refer
+  (let [parsed (ana/parse-global-refer-spec {}
+                '((:refer-global [Date] :rename {Symbol JSSymbol})))]
+    (is (= parsed
+           '{:use {Date js}
+             :rename {JSSymbol js/Symbol}}))))
+
 (deftest test-cljs-1785-js-shadowed-by-local
   (let [ws (atom [])]
     (ana/with-warning-handlers [(collecting-warning-handler ws)]
