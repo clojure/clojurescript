@@ -554,6 +554,12 @@
         (analyze test-env
           '(map #(require '[clojure.set :as set]) [1 2]))))))
 
+(deftest test-analyze-refer-global
+  (testing "refer-global macro expr return expected AST"
+    (let [test-env (ana/empty-env)]
+      (is (= (-> (analyze test-env '(refer-global :only '[Date])) :uses vals set)
+            '#{js})))))
+
 (deftest test-gen-user-ns
   ;; note: can't use `with-redefs` because direct-linking is enabled
   (let [s   "src/cljs/foo.cljs"

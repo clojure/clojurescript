@@ -2821,12 +2821,14 @@
                             (error-message :undeclared-ns {:ns-sym dep :js-provide (name dep)}))))))))))))
 
 (defn missing-use? [lib sym cenv]
-  (let [js-lib (get-in cenv [:js-dependency-index (name lib)])]
-    (and (= (get-in cenv [::namespaces lib :defs sym] ::not-found) ::not-found)
-         (not (= (get js-lib :group) :goog))
-         (not (get js-lib :closure-lib))
-         (not (node-module-dep? lib))
-         (not (dep-has-global-exports? lib)))))
+  ;; ignore globals referred via :refer-global
+  (when-not (= 'js lib)
+    (let [js-lib (get-in cenv [:js-dependency-index (name lib)])]
+      (and (= (get-in cenv [::namespaces lib :defs sym] ::not-found) ::not-found)
+        (not (= (get js-lib :group) :goog))
+        (not (get js-lib :closure-lib))
+        (not (node-module-dep? lib))
+        (not (dep-has-global-exports? lib))))))
 
 (defn missing-rename? [sym cenv]
   (let [lib (symbol (namespace sym))
