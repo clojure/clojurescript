@@ -2821,12 +2821,14 @@
                             (error-message :undeclared-ns {:ns-sym dep :js-provide (name dep)}))))))))))))
 
 (defn missing-use? [lib sym cenv]
-  (let [js-lib (get-in cenv [:js-dependency-index (name lib)])]
-    (and (= (get-in cenv [::namespaces lib :defs sym] ::not-found) ::not-found)
-         (not (= (get js-lib :group) :goog))
-         (not (get js-lib :closure-lib))
-         (not (node-module-dep? lib))
-         (not (dep-has-global-exports? lib)))))
+  ;; ignore globals referred via :refer-global
+  (when-not (= 'js lib)
+    (let [js-lib (get-in cenv [:js-dependency-index (name lib)])]
+      (and (= (get-in cenv [::namespaces lib :defs sym] ::not-found) ::not-found)
+        (not (= (get js-lib :group) :goog))
+        (not (get js-lib :closure-lib))
+        (not (node-module-dep? lib))
+        (not (dep-has-global-exports? lib))))))
 
 (defn missing-rename? [sym cenv]
   (let [lib (symbol (namespace sym))
@@ -3038,6 +3040,37 @@
       :else (if (some? (some #{:refer} ret))
               ret
               (recur fs ret true)))))
+
+(defn parse-global-refer-spec
+  [env args]
+  (let [xs  (filter #(-> % first (= :refer-global)) args)
+        cnt (count xs)]
+    (cond
+      (> cnt 1)
+      (throw (error env "Only one :refer-global form is allowed per namespace definition"))
+
+      (== cnt 1)
+      (let [[_ & {:keys [only rename] :as parsed-spec}] (first xs)
+            err-str "Only (:refer-global :only [names]) and optionally `:rename {from to}` specs supported"]
+        (when-not (or (empty? only)
+                      (and (vector? only)
+                           (every? symbol only)))
+          (throw (error env err-str)))
+        (when-not (or (empty? rename)
+                      (and (map? rename)
+                           (every? symbol (mapcat identity rename))))
+          (throw (error env (str err-str (pr-str parsed-spec)))))
+        (when-not (every? #{:only :rename} (keys parsed-spec))
+          (throw (error env (str err-str (pr-str parsed-spec)))))
+        {:use    (zipmap only (repeat 'js))
+         :rename (into {}
+                   (map (fn [[orig new-name]]
+                          [new-name (symbol "js" (str orig))]))
+                   rename)}))))
+
+#_(defn parse-global-require-spec
+  [env deps aliases spec]
+  )
 
 (defn parse-require-spec [env macros? deps aliases spec]
   (if (or (symbol? spec) (string? spec))
@@ -3292,6 +3325,10 @@
                    (select-keys new deep-merge-keys))))
     new))
 
+(def ns-spec-cases
+  #{:use :use-macros :require :require-macros
+    :import :refer-global :require-global})
+
 (defmethod parse 'ns
   [_ env [_ name & args :as form] _ opts]
   (when-not *allow-ns*
@@ -3326,6 +3363,7 @@
           core-renames (reduce (fn [m [original renamed]]
                                  (assoc m renamed (symbol "cljs.core" (str original))))
                          {} core-renames)
+          {global-uses :use global-renames :rename} (parse-global-refer-spec env args)
           deps         (atom [])
           ;; as-aliases can only be used *once* because they are about the reader
           aliases      (atom {:fns as-aliases :macros as-aliases})
@@ -3335,7 +3373,9 @@
                                           (partial use->require env))
                         :use-macros     (comp (partial parse-require-spec env true deps aliases)
                                           (partial use->require env))
-                        :import         (partial parse-import-spec env deps)}
+                        :import         (partial parse-import-spec env deps)
+                        ;:require-global #(parse-global-require-spec env deps aliases %)
+                        }
           valid-forms  (atom #{:use :use-macros :require :require-macros :import})
           reload       (atom {:use nil :require nil :use-macros nil :require-macros nil})
           reloads      (atom {})
@@ -3362,7 +3402,7 @@
               (apply merge-with merge m
                 (map (spec-parsers k)
                   (remove #{:reload :reload-all} libs))))
-            {} (remove (fn [[r]] (= r :refer-clojure)) args))
+            {} (remove (fn [[r]] (#{:refer-clojure :refer-global} r)) args))
           ;; patch `require-macros` and `use-macros` in Bootstrap for namespaces
           ;; that require their own macros
           #?@(:cljs [[require-macros use-macros]
@@ -3384,9 +3424,9 @@
              :use-macros     use-macros
              :require-macros require-macros
              :rename-macros  rename-macros
-             :uses           uses
+             :uses           (merge uses global-uses)
              :requires       requires
-             :renames        (merge renames core-renames)
+             :renames        (merge renames core-renames global-renames)
              :imports        imports}]
         (swap! env/*compiler* update-in [::namespaces name] merge ns-info)
         (merge {:op      :ns
@@ -3426,6 +3466,7 @@
         core-renames (reduce (fn [m [original renamed]]
                                (assoc m renamed (symbol "cljs.core" (str original))))
                        {} core-renames)
+        {global-uses :use global-renames :rename} (parse-global-refer-spec env args)
         deps         (atom [])
         ;; as-aliases can only be used *once* because they are about the reader
         aliases      (atom {:fns as-aliases :macros as-aliases})
@@ -3456,7 +3497,7 @@
             (apply merge-with merge m
               (map (spec-parsers k)
                 (remove #{:reload :reload-all} libs))))
-          {} (remove (fn [[r]] (= r :refer-clojure)) args))]
+          {} (remove (fn [[r]] (#{:refer-clojure :refer-global} r)) args))]
     (set! *cljs-ns* name)
     (let [require-info
           {:as-aliases     as-aliases
@@ -3465,9 +3506,9 @@
            :use-macros     use-macros
            :require-macros require-macros
            :rename-macros  rename-macros
-           :uses           uses
+           :uses           (merge uses global-uses)
            :requires       requires
-           :renames        (merge renames core-renames)
+           :renames        (merge renames core-renames global-renames)
            :imports        imports}]
       (swap! env/*compiler* update-in [::namespaces name] merge-ns-info require-info env)
       (merge {:op      :ns*
