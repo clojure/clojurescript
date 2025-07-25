@@ -3041,9 +3041,13 @@
 
 (defn parse-global-refer-spec
   [env args]
-  (let [xs (filter #(-> % first (= :refer-global)) args)]
-    (if-not (= 1 (count xs))
-      (throw (error env "Only one :refer-global form is allowed per namespace definition"))
+  (let [xs  (filter #(-> % first (= :refer-global)) args)
+        cnt (count xs)]
+    (cond
+      (> cnt 1)
+      (throw (error env (str "Only one :refer-global form is allowed per namespace definition " (count xs))))
+
+      (== cnt 1)
       (let [[_ refers & {:keys [rename] :as renames-only}] (first xs)
             err-str "Only [:refer-global (names)] and optionally `:rename {from to}` specs supported"]
         (when-not (and (vector? refers) (every? symbol refers))
@@ -3355,6 +3359,7 @@
           core-renames (reduce (fn [m [original renamed]]
                                  (assoc m renamed (symbol "cljs.core" (str original))))
                          {} core-renames)
+          {global-uses :use global-renames :rename} (parse-global-refer-spec env args)
           deps         (atom [])
           ;; as-aliases can only be used *once* because they are about the reader
           aliases      (atom {:fns as-aliases :macros as-aliases})
@@ -3416,9 +3421,9 @@
              :use-macros     use-macros
              :require-macros require-macros
              :rename-macros  rename-macros
-             :uses           uses
+             :uses           (merge uses global-uses)
              :requires       requires
-             :renames        (merge renames core-renames)
+             :renames        (merge renames core-renames global-renames)
              :imports        imports}]
         (swap! env/*compiler* update-in [::namespaces name] merge ns-info)
         (merge {:op      :ns
