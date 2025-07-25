@@ -3465,6 +3465,7 @@
         core-renames (reduce (fn [m [original renamed]]
                                (assoc m renamed (symbol "cljs.core" (str original))))
                        {} core-renames)
+        {global-uses :use global-renames :rename} (parse-global-refer-spec env args)
         deps         (atom [])
         ;; as-aliases can only be used *once* because they are about the reader
         aliases      (atom {:fns as-aliases :macros as-aliases})
@@ -3495,7 +3496,7 @@
             (apply merge-with merge m
               (map (spec-parsers k)
                 (remove #{:reload :reload-all} libs))))
-          {} (remove (fn [[r]] (= r :refer-clojure)) args))]
+          {} (remove (fn [[r]] (#{:refer-clojure :refer-global} r)) args))]
     (set! *cljs-ns* name)
     (let [require-info
           {:as-aliases     as-aliases
@@ -3504,9 +3505,9 @@
            :use-macros     use-macros
            :require-macros require-macros
            :rename-macros  rename-macros
-           :uses           uses
+           :uses           (merge uses global-uses)
            :requires       requires
-           :renames        (merge renames core-renames)
+           :renames        (merge renames core-renames global-renames)
            :imports        imports}]
       (swap! env/*compiler* update-in [::namespaces name] merge-ns-info require-info env)
       (merge {:op      :ns*
