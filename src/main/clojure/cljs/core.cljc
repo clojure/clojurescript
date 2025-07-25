@@ -12,7 +12,7 @@
                             defprotocol defrecord defstruct deftype delay destructure doseq dosync dotimes doto
                             extend-protocol extend-type fn for future gen-class gen-interface
                             if-let if-not import io! lazy-cat lazy-seq let letfn locking loop
-                            memfn ns or proxy proxy-super pvalues refer-clojure reify sync time
+                            memfn ns or proxy proxy-super pvalues reify sync time
                             when when-first when-let when-not while with-bindings with-in-str
                             with-loading-context with-local-vars with-open with-out-str with-precision with-redefs
                             satisfies? identical? true? false? number? nil? instance? symbol? keyword? string? str get
