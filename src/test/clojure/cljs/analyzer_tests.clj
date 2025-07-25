@@ -556,9 +556,11 @@
 
 (deftest test-analyze-refer-global
   (testing "refer-global macro expr return expected AST"
-    (let [test-env (ana/empty-env)]
-      (is (= (-> (analyze test-env '(refer-global :only '[Date])) :uses vals set)
-            '#{js})))))
+    (binding [ana/*cljs-ns* ana/*cljs-ns*
+              ana/*cljs-warnings* nil]
+      (let [test-env (ana/empty-env)]
+        (is (= (-> (analyze test-env '(refer-global :only '[Date])) :uses vals set)
+              '#{js}))))))
 
 (deftest test-gen-user-ns
   ;; note: can't use `with-redefs` because direct-linking is enabled
