@@ -3372,7 +3372,6 @@
                         :use-macros     (comp (partial parse-require-spec env true deps aliases)
                                           (partial use->require env))
                         :import         (partial parse-import-spec env deps)
-                        ;:refer-global   (partial parse-global-refer-spec env)
                         ;:require-global #(parse-global-require-spec env deps aliases %)
                         }
           valid-forms  (atom #{:use :use-macros :require :require-macros :import})
@@ -3401,7 +3400,7 @@
               (apply merge-with merge m
                 (map (spec-parsers k)
                   (remove #{:reload :reload-all} libs))))
-            {} (remove (fn [[r]] (= r :refer-clojure)) args))
+            {} (remove (fn [[r]] (#{:refer-clojure :refer-global} r)) args))
           ;; patch `require-macros` and `use-macros` in Bootstrap for namespaces
           ;; that require their own macros
           #?@(:cljs [[require-macros use-macros]
