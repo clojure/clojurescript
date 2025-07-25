@@ -389,7 +389,7 @@
 
 (deftest test-parse-global-refer
   (let [parsed (ana/parse-global-refer-spec {}
-                '((:refer-global [Date] :rename {Symbol JSSymbol})))]
+                '((:refer-global :only [Date] :rename {Symbol JSSymbol})))]
     (is (= parsed
            '{:use {Date js}
              :rename {JSSymbol js/Symbol}}))))

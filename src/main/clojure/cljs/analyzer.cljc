@@ -3045,20 +3045,22 @@
         cnt (count xs)]
     (cond
       (> cnt 1)
-      (throw (error env (str "Only one :refer-global form is allowed per namespace definition " (count xs))))
+      (throw (error env "Only one :refer-global form is allowed per namespace definition"))
 
       (== cnt 1)
-      (let [[_ refers & {:keys [rename] :as renames-only}] (first xs)
-            err-str "Only [:refer-global (names)] and optionally `:rename {from to}` specs supported"]
-        (when-not (and (vector? refers) (every? symbol refers))
+      (let [[_ & {:keys [only rename] :as parsed-spec}] (first xs)
+            err-str "Only (:refer-global :only [names]) and optionally `:rename {from to}` specs supported"]
+        (when-not (or (empty? only)
+                      (and (vector? only)
+                           (every? symbol only)))
           (throw (error env err-str)))
-        (when-not (or (empty? renames-only)
-                      (and (= 1 (count renames-only))
-                           (contains? renames-only :rename)
-                           (map? rename)
+        (when-not (or (empty? rename)
+                      (and (map? rename)
                            (every? symbol (mapcat identity rename))))
-          (throw (error env (str err-str (pr-str renames-only)))))
-        {:use    (zipmap refers (repeat 'js))
+          (throw (error env (str err-str (pr-str parsed-spec)))))
+        (when-not (every? #{:only :rename} (keys parsed-spec))
+          (throw (error env (str err-str (pr-str parsed-spec)))))
+        {:use    (zipmap only (repeat 'js))
          :rename (into {}
                    (map (fn [[orig new-name]]
                           [new-name (symbol "js" (str orig))]))

@@ -3116,6 +3116,13 @@
   [& args]
   `(~'ns* ~(cons :refer-clojure args)))
 
+(core/defmacro refer-global
+  "Refer global js vars. Supports renaming via :rename.
+
+  (refer-global :only '[Date Symbol] :rename '{Symbol Sym})"
+  [& args]
+  `(~'ns* ~(cons :refer-global args)))
+
 ;; INTERNAL - do not use, only for Node.js
 (core/defmacro load-file* [f]
   `(goog/nodeGlobalRequire ~f))
