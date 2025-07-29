@@ -12400,3 +12400,345 @@ reduces them without incurring seq initialization"
     (identical? "window" *global*) (set! goog/global js/window)
     (identical? "self" *global*) (set! goog/global js/self)
     (identical? "global" *global*) (set! goog/global js/global)))
+
+;; -----------------------------------------------------------------------------
+;; Original 2011 Copy-on-Write Types
+
+;;; Vector
+
+(deftype Vector [meta array]
+  IWithMeta
+  (-with-meta [coll meta] (Vector. meta array))
+
+  IMeta
+  (-meta [coll] meta)
+
+  IStack
+  (-peek [coll]
+    (let [count (.-length array)]
+      (when (> count 0)
+        (aget array (dec count)))))
+  (-pop [coll]
+    (if (> (.-length array) 0)
+      (let [new-array (aclone array)]
+        (. new-array (pop))
+        (Vector. meta new-array))
+      (throw (js/Error. "Can't pop empty vector"))))
+
+  ICollection
+  (-conj [coll o]
+    (let [new-array (aclone array)]
+      (.push new-array o)
+      (Vector. meta new-array)))
+
+  IEmptyableCollection
+  (-empty [coll] (with-meta cljs.core.Vector/EMPTY meta))
+
+  ISequential
+  IEquiv
+  (-equiv [coll other] (equiv-sequential coll other))
+
+  IHash
+  (-hash [coll] (hash-coll coll))
+
+  ISeqable
+  (-seq [coll]
+    (when (> (.-length array) 0)
+      (let [vector-seq
+             (fn vector-seq [i]
+               (lazy-seq
+                 (when (< i (.-length array))
+                   (cons (aget array i) (vector-seq (inc i))))))]
+        (vector-seq 0))))
+
+  ICounted
+  (-count [coll] (.-length array))
+
+  IIndexed
+  (-nth [coll n]
+    (if (and (<= 0 n) (< n (.-length array)))
+      (aget array n)
+      #_(throw (js/Error. (str "No item " n " in vector of length " (.-length array))))))
+  (-nth [coll n not-found]
+    (if (and (<= 0 n) (< n (.-length array)))
+      (aget array n)
+      not-found))
+
+  ILookup
+  (-lookup [coll k] (-nth coll k nil))
+  (-lookup [coll k not-found] (-nth coll k not-found))
+
+  IAssociative
+  (-assoc [coll k v]
+    (let [new-array (aclone array)]
+      (aset new-array k v)
+      (Vector. meta new-array)))
+
+  IVector
+  (-assoc-n [coll n val] (-assoc coll n val))
+
+  IReduce
+  (-reduce [v f]
+    (ci-reduce array f))
+  (-reduce [v f start]
+    (ci-reduce array f start))
+
+  IFn
+  (-invoke [coll k]
+    (-lookup coll k))
+  (-invoke [coll k not-found]
+    (-lookup coll k not-found)))
+
+(set! (. Vector -EMPTY) (Vector. nil (array)))
+
+(set! (. Vector -fromArray) (fn [xs] (Vector. nil xs)))
+
+; The keys field is an array of all keys of this map, in no particular
+; order. Any string, keyword, or symbol key is used as a property name
+; to store the value in strobj.  If a key is assoc'ed when that same
+; key already exists in strobj, the old value is overwritten. If a
+; non-string key is assoc'ed, return a HashMap object instead.
+
+(defn- obj-map-contains-key?
+  ([k strobj]
+     (obj-map-contains-key? k strobj true false))
+  ([k strobj true-val false-val]
+     (if (and (goog/isString k) (.hasOwnProperty strobj k))
+       true-val
+       false-val)))
+
+(defn- obj-map-compare-keys [a b]
+  (let [a (hash a)
+        b (hash b)]
+    (cond
+     (< a b) -1
+     (> a b) 1
+     :else 0)))
+
+(deftype ObjMap [meta keys strobj]
+  IWithMeta
+  (-with-meta [coll meta] (ObjMap. meta keys strobj))
+
+  IMeta
+  (-meta [coll] meta)
+
+  ICollection
+  (-conj [coll entry]
+    (if (vector? entry)
+      (-assoc coll (-nth entry 0) (-nth entry 1))
+      (reduce -conj
+              coll
+              entry)))
+
+  IEmptyableCollection
+  (-empty [coll] (with-meta cljs.core.ObjMap/EMPTY meta))
+
+  IEquiv
+  (-equiv [coll other] (equiv-map coll other))
+
+  IHash
+  (-hash [coll] (hash-coll coll))
+
+  ISeqable
+  (-seq [coll]
+    (when (pos? (.-length keys))
+      (map #(vector % (aget strobj %))
+           (.sort keys obj-map-compare-keys))))
+
+  ICounted
+  (-count [coll] (.-length keys))
+
+  ILookup
+  (-lookup [coll k] (-lookup coll k nil))
+  (-lookup [coll k not-found]
+    (obj-map-contains-key? k strobj (aget strobj k) not-found))
+
+  IAssociative
+  (-assoc [coll k v]
+    (if (goog/isString k)
+      (let [new-strobj (goog.object/clone strobj)
+            overwrite? (.hasOwnProperty new-strobj k)]
+        (aset new-strobj k v)
+        (if overwrite?
+          (ObjMap. meta keys new-strobj)     ; overwrite
+          (let [new-keys (aclone keys)] ; append
+            (.push new-keys k)
+            (ObjMap. meta new-keys new-strobj))))
+      ; non-string key. game over.
+      (with-meta (into (hash-map k v) (seq coll)) meta)))
+  (-contains-key? [coll k]
+    (obj-map-contains-key? k strobj))
+
+  IMap
+  (-dissoc [coll k]
+    (if (and (goog/isString k) (.hasOwnProperty strobj k))
+      (let [new-keys (aclone keys)
+            new-strobj (goog.object/clone strobj)]
+        (.splice new-keys (scan-array 1 k new-keys) 1)
+        (js-delete new-strobj k)
+        (ObjMap. meta new-keys new-strobj))
+      coll)) ; key not found, return coll unchanged
+
+  IFn
+  (-invoke [coll k]
+    (-lookup coll k))
+  (-invoke [coll k not-found]
+    (-lookup coll k not-found)))
+
+(set! (. ObjMap -EMPTY) (ObjMap. nil (array) (js-obj)))
+
+(set! (. ObjMap -fromObject) (fn [ks obj] (ObjMap. nil ks obj)))
+
+; The keys field is an array of all keys of this map, in no particular
+; order. Each key is hashed and the result used as a property name of
+; hashobj. Each values in hashobj is actually a bucket in order to handle hash
+; collisions. A bucket is an array of alternating keys (not their hashes) and
+; vals.
+(deftype HashMap [meta count hashobj]
+  IWithMeta
+  (-with-meta [coll meta] (HashMap. meta count hashobj))
+
+  IMeta
+  (-meta [coll] meta)
+
+  ICollection
+  (-conj [coll entry]
+    (if (vector? entry)
+      (-assoc coll (-nth entry 0) (-nth entry 1))
+      (reduce -conj
+              coll
+              entry)))
+
+  IEmptyableCollection
+  (-empty [coll] (with-meta cljs.core.HashMap/EMPTY meta))
+
+  IEquiv
+  (-equiv [coll other] (equiv-map coll other))
+
+  IHash
+  (-hash [coll] (hash-coll coll))
+
+  ISeqable
+  (-seq [coll]
+    (when (pos? count)
+      (let [hashes (.sort (js-keys hashobj))]
+        (mapcat #(map vec (partition 2 (aget hashobj %)))
+                hashes))))
+
+  ICounted
+  (-count [coll] count)
+
+  ILookup
+  (-lookup [coll k] (-lookup coll k nil))
+  (-lookup [coll k not-found]
+    (let [bucket (aget hashobj (hash k))
+          i (when bucket (scan-array 2 k bucket))]
+      (if i
+        (aget bucket (inc i))
+        not-found)))
+
+  IAssociative
+  (-assoc [coll k v]
+    (let [h (hash k)
+          bucket (aget hashobj h)]
+      (if bucket
+        (let [new-bucket (aclone bucket)
+              new-hashobj (goog.object/clone hashobj)]
+          (aset new-hashobj h new-bucket)
+          (if-let [i (scan-array 2 k new-bucket)]
+            (do                         ; found key, replace
+              (aset new-bucket (inc i) v)
+              (HashMap. meta count new-hashobj))
+            (do                         ; did not find key, append
+              (.push new-bucket k v)
+              (HashMap. meta (inc count) new-hashobj))))
+        (let [new-hashobj (goog.object/clone hashobj)] ; did not find bucket
+          (aset new-hashobj h (array k v))
+          (HashMap. meta (inc count) new-hashobj)))))
+  (-contains-key? [coll k]
+    (let [bucket (aget hashobj (hash k))
+          i (when bucket (scan-array 2 k bucket))]
+      (if i
+        true
+        false)))
+
+  IMap
+  (-dissoc [coll k]
+    (let [h (hash k)
+          bucket (aget hashobj h)
+          i (when bucket (scan-array 2 k bucket))]
+      (if (not i)
+        coll ; key not found, return coll unchanged
+        (let [new-hashobj (goog.object/clone hashobj)]
+          (if (> 3 (.-length bucket))
+            (js-delete new-hashobj h)
+            (let [new-bucket (aclone bucket)]
+              (.splice new-bucket i 2)
+              (aset new-hashobj h new-bucket)))
+          (HashMap. meta (dec count) new-hashobj)))))
+
+  IFn
+  (-invoke [coll k]
+    (-lookup coll k))
+  (-invoke [coll k not-found]
+    (-lookup coll k not-found)))
+
+(set! (. HashMap -EMPTY) (HashMap. nil 0 (js-obj)))
+
+(set! cljs.core.HashMap/fromArrays (fn [ks vs]
+  (let [len (.-length ks)]
+    (loop [i 0, out cljs.core.HashMap/EMPTY]
+      (if (< i len)
+        (recur (inc i) (assoc out (aget ks i) (aget vs i)))
+        out)))))
+
+(deftype Set [meta hash-map]
+  IWithMeta
+  (-with-meta [coll meta] (Set. meta hash-map))
+
+  IMeta
+  (-meta [coll] meta)
+
+  ICollection
+  (-conj [coll o]
+    (Set. meta (assoc hash-map o nil)))
+
+  IEmptyableCollection
+  (-empty [coll] (with-meta cljs.core.Set/EMPTY meta))
+
+  IEquiv
+  (-equiv [coll other]
+    (and
+     (set? other)
+     (= (count coll) (count other))
+     (every? #(contains? coll %)
+             other)))
+
+  IHash
+  (-hash [coll] (hash-coll coll))
+
+  ISeqable
+  (-seq [coll] (keys hash-map))
+
+  ICounted
+  (-count [coll] (count (seq coll)))
+
+  ILookup
+  (-lookup [coll v]
+    (-lookup coll v nil))
+  (-lookup [coll v not-found]
+    (if (-contains-key? hash-map v)
+      v
+      not-found))
+
+  ISet
+  (-disjoin [coll v]
+    (Set. meta (dissoc hash-map v)))
+
+  IFn
+  (-invoke [coll k]
+    (-lookup coll k))
+  (-invoke [coll k not-found]
+    (-lookup coll k not-found)))
+
+(set! (. Set -EMPTY) (Set. nil (hash-map)))
