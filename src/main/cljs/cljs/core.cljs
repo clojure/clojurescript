@@ -12432,7 +12432,7 @@ reduces them without incurring seq initialization"
       (Vector. meta new-array)))
 
   IEmptyableCollection
-  (-empty [coll] (with-meta cljs.core.Vector/EMPTY meta))
+  (-empty [coll] (with-meta (. Vector -EMPTY) meta))
 
   ISequential
   IEquiv
@@ -12534,7 +12534,7 @@ reduces them without incurring seq initialization"
               entry)))
 
   IEmptyableCollection
-  (-empty [coll] (with-meta cljs.core.ObjMap/EMPTY meta))
+  (-empty [coll] (with-meta (. ObjMap -EMPTY) meta))
 
   IEquiv
   (-equiv [coll other] (equiv-map coll other))
@@ -12630,7 +12630,7 @@ reduces them without incurring seq initialization"
               entry)))
 
   IEmptyableCollection
-  (-empty [coll] (with-meta cljs.core.HashMap/EMPTY meta))
+  (-empty [coll] (with-meta (. HashMap -EMPTY) meta))
 
   IEquiv
   (-equiv [coll other] (equiv-map coll other))
@@ -12709,9 +12709,9 @@ reduces them without incurring seq initialization"
 
 (set! (. HashMap -EMPTY) (HashMap. nil 0 (js-obj)))
 
-(set! cljs.core.HashMap/fromArrays (fn [ks vs]
+(set! (. HashMap -fromArrays) (fn [ks vs]
   (let [len (.-length ks)]
-    (loop [i 0, out cljs.core.HashMap/EMPTY]
+    (loop [i 0, out (. HashMap -EMPTY)]
       (if (< i len)
         (recur (inc i) (assoc out (aget ks i) (aget vs i)))
         out)))))
@@ -12728,7 +12728,7 @@ reduces them without incurring seq initialization"
     (Set. meta (assoc hash-map o nil)))
 
   IEmptyableCollection
-  (-empty [coll] (with-meta cljs.core.Set/EMPTY meta))
+  (-empty [coll] (with-meta (. Set -EMPTY) meta))
 
   IEquiv
   (-equiv [coll other]
