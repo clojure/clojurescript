@@ -12487,10 +12487,7 @@ reduces them without incurring seq initialization"
   (-invoke [coll k]
     (-lookup coll k))
   (-invoke [coll k not-found]
-    (-lookup coll k not-found))
-
-  IPrintWithWriter
-  (-pr-writer [coll writer opts] (pr-sequential-writer writer pr-writer "[" " " "]" opts coll)))
+    (-lookup coll k not-found)))
 
 (set! (. Vector -EMPTY) (Vector. nil (array)))
 
@@ -12586,28 +12583,11 @@ reduces them without incurring seq initialization"
   (-invoke [coll k]
     (-lookup coll k))
   (-invoke [coll k not-found]
-    (-lookup coll k not-found))
-
-  IPrintWithWriter
-  (-pr-writer [coll writer opts]
-    (print-map coll pr-writer writer opts)))
+    (-lookup coll k not-found)))
 
 (set! (. ObjMap -EMPTY) (ObjMap. nil (array) (js-obj)))
 
 (set! (. ObjMap -fromObject) (fn [ks obj] (ObjMap. nil ks obj)))
-
-(defn obj-map
-  "keyval => key val
-  Returns a new object map with supplied mappings."
-  [& keyvals]
-  (let [ks  (array)
-        obj (js-obj)]
-    (loop [kvs (seq keyvals)]
-      (if kvs
-        (do (.push ks (first kvs))
-            (gobject/set obj (first kvs) (second kvs))
-            (recur (nnext kvs)))
-        (.fromObject ObjMap ks obj)))))
 
 ; The keys field is an array of all keys of this map, in no particular
 ; order. Each key is hashed and the result used as a property name of
@@ -12701,11 +12681,7 @@ reduces them without incurring seq initialization"
   (-invoke [coll k]
     (-lookup coll k))
   (-invoke [coll k not-found]
-    (-lookup coll k not-found))
-
-  IPrintWithWriter
-  (-pr-writer [coll writer opts]
-    (print-map coll pr-writer writer opts)))
+    (-lookup coll k not-found)))
 
 (set! (. HashMap -EMPTY) (HashMap. nil 0 (js-obj)))
 
@@ -12763,9 +12739,6 @@ reduces them without incurring seq initialization"
   (-invoke [coll k]
     (-lookup coll k))
   (-invoke [coll k not-found]
-    (-lookup coll k not-found))
-
-  IPrintWithWriter
-  (-pr-writer [coll writer opts] (pr-sequential-writer writer pr-writer "#{" " " "}" opts coll)))
+    (-lookup coll k not-found)))
 
 (set! (. Set -EMPTY) (Set. nil (hash-map)))
