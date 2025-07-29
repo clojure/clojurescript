@@ -387,6 +387,13 @@
             :renames  {map clj-map}}))
     (is (set? (:excludes parsed)))))
 
+(deftest test-parse-global-refer
+  (let [parsed (ana/parse-global-refer-spec {}
+                '((:refer-global :only [Date] :rename {Symbol JSSymbol})))]
+    (is (= parsed
+           '{:use {Date js}
+             :rename {JSSymbol js/Symbol}}))))
+
 (deftest test-cljs-1785-js-shadowed-by-local
   (let [ws (atom [])]
     (ana/with-warning-handlers [(collecting-warning-handler ws)]
@@ -546,6 +553,14 @@
           '(fn [] (require '[clojure.set :as set])))
         (analyze test-env
           '(map #(require '[clojure.set :as set]) [1 2]))))))
+
+(deftest test-analyze-refer-global
+  (testing "refer-global macro expr return expected AST"
+    (binding [ana/*cljs-ns* ana/*cljs-ns*
+              ana/*cljs-warnings* nil]
+      (let [test-env (ana/empty-env)]
+        (is (= (-> (analyze test-env '(refer-global :only '[Date])) :uses vals set)
+              '#{js}))))))
 
 (deftest test-gen-user-ns
   ;; note: can't use `with-redefs` because direct-linking is enabled
@@ -1533,3 +1548,20 @@
             (ana/gen-constant-id '+)))
   (is (not= (ana/gen-constant-id 'foo.bar)
             (ana/gen-constant-id 'foo$bar))))
+
+;; -----------------------------------------------------------------------------
+;; :refer-global / :require-global ns parsing tests
+
+#_(deftest test-refer-global
+  (binding [ana/*cljs-ns* ana/*cljs-ns*]
+    (let [parsed-ns (env/with-compiler-env test-cenv
+                      (analyze test-env
+                        '(ns foo.core
+                           (:refer-global [Date] :rename {Date MyDate}))))]
+      )))
+
+(comment
+
+  (clojure.test/test-vars [#'test-refer-global])
+
+  )
