@@ -2820,9 +2820,13 @@
                           (error env
                             (error-message :undeclared-ns {:ns-sym dep :js-provide (name dep)}))))))))))))
 
+(defn global-ns? [x]
+  (or (= 'js x)
+      (= "js" (namespace x))))
+
 (defn missing-use? [lib sym cenv]
   ;; ignore globals referred via :refer-global
-  (when-not (= 'js lib)
+  (when-not (global-ns? lib)
     (let [js-lib (get-in cenv [:js-dependency-index (name lib)])]
       (and (= (get-in cenv [::namespaces lib :defs sym] ::not-found) ::not-found)
         (not (= (get js-lib :group) :goog))

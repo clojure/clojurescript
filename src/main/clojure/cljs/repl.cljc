@@ -251,10 +251,6 @@
      (load-sources repl-env sources opts)
      sources)))
 
-(defn global-ns? [x]
-  (or (= 'js x)
-      (= "js" (namespace x))))
-
 (defn- load-dependencies
   "Compile and load the given `requires` and return the compiled sources."
   ([repl-env requires]
@@ -262,7 +258,7 @@
   ([repl-env requires opts]
    (->> requires
      distinct
-     (remove global-ns?)
+     (remove ana/global-ns?)
      (mapcat #(load-namespace repl-env % opts))
      doall)))
 
