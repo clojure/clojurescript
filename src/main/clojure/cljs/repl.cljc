@@ -251,12 +251,20 @@
      (load-sources repl-env sources opts)
      sources)))
 
+(defn global-ns? [x]
+  (or (= 'js x)
+      (= "js" (namespace x))))
+
 (defn- load-dependencies
   "Compile and load the given `requires` and return the compiled sources."
   ([repl-env requires]
    (load-dependencies repl-env requires nil))
   ([repl-env requires opts]
-   (doall (mapcat #(load-namespace repl-env % opts) (distinct requires)))))
+   (->> requires
+     distinct
+     (remove global-ns?)
+     (mapcat #(load-namespace repl-env % opts))
+     doall)))
 
 (defn ^File js-src->cljs-src
   "Map a JavaScript output file back to the original ClojureScript source
@@ -652,7 +660,7 @@
 (defn- wrap-fn [form]
   (cond
     (and (seq? form)
-         (#{'ns 'require 'require-macros
+         (#{'ns 'require 'require-macros 'refer-global
             'use 'use-macros 'import 'refer-clojure} (first form)))
     identity
 
@@ -673,7 +681,7 @@
 (defn- init-wrap-fn [form]
   (cond
     (and (seq? form)
-      (#{'ns 'require 'require-macros
+      (#{'ns 'require 'require-macros 'refer-global
          'use 'use-macros 'import 'refer-clojure} (first form)))
     identity
 
