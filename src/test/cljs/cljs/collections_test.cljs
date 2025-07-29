@@ -21,8 +21,8 @@
     (is (= {:a :b} (get {[1 2 3] {:a :b}, 4 5} [1 2 3])))
     (is (not (= {:a :b :c nil} {:a :b :d nil})))
     (is (= {:a :b} (dissoc {:a :b :c :d} :c)))
-    (is (= (hash-map :foo 5)
-          (assoc (cljs.core.ObjMap. nil (array) (js-obj)) :foo 5))))
+    #_(is (= (hash-map :foo 5)
+           (assoc (ObjMap. nil (array) (js-obj)) :foo 5))))
   (testing "Testing assoc dissoc"
     (is (= {1 2 3 4} (assoc {} 1 2 3 4)))
     (is (= {1 2} (assoc {} 1 2)))
@@ -879,12 +879,6 @@
 
 (deftest test-461
   ;; CLJS-461: automatic map conversions
-  (loop [i 0 m (with-meta {} {:foo :bar}) result []]
-    (if (<= i (+ cljs.core.ObjMap.HASHMAP_THRESHOLD 2))
-      (recur (inc i) (assoc m (str i) i) (conj result (meta m)))
-      (let [n (inc (+ cljs.core.ObjMap.HASHMAP_THRESHOLD 2))
-            expected (repeat n {:foo :bar})]
-        (is (= result expected)))))
   (loop [i 0 m (with-meta {-1 :quux} {:foo :bar}) result []]
     (if (<= i (+ cljs.core.PersistentArrayMap.HASHMAP_THRESHOLD 2))
       (recur (inc i) (assoc m i i) (conj result (meta m)))

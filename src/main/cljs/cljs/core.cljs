@@ -9034,19 +9034,6 @@ reduces them without incurring seq initialization"
     (.createAsIfByAssoc PersistentArrayMap (to-array s))
     (if (seq s) (first s) (.-EMPTY PersistentArrayMap))))
 
-(defn obj-map
-  "keyval => key val
-  Returns a new object map with supplied mappings."
-  [& keyvals]
-  (let [ks  (array)
-        obj (js-obj)]
-    (loop [kvs (seq keyvals)]
-      (if kvs
-        (do (.push ks (first kvs))
-            (gobject/set obj (first kvs) (second kvs))
-            (recur (nnext kvs)))
-        (.fromObject ObjMap ks obj)))))
-
 (defn sorted-map
   "keyval => key val
   Returns a new sorted map with supplied mappings."
@@ -10697,10 +10684,6 @@ reduces them without incurring seq initialization"
 
   MapEntry
   (-pr-writer [coll writer opts] (pr-sequential-writer writer pr-writer "[" " " "]" opts coll))
-
-  ObjMap
-  (-pr-writer [coll writer opts]
-    (print-map coll pr-writer writer opts))
 
   KeySeq
   (-pr-writer [coll writer opts] (pr-sequential-writer writer pr-writer "(" " " ")" opts coll))
