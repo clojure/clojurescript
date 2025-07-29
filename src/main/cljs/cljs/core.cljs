@@ -6560,7 +6560,164 @@ reduces them without incurring seq initialization"
         (if (identical? k (aget array i))
           i
           (recur (+ i incr)))))))
- 
+
+; The keys field is an array of all keys of this map, in no particular
+; order. Any string, keyword, or symbol key is used as a property name
+; to store the value in strobj.  If a key is assoc'ed when that same
+; key already exists in strobj, the old value is overwritten. If a
+; non-string key is assoc'ed, return a HashMap object instead.
+
+(defn- obj-map-compare-keys [a b]
+  (let [a (hash a)
+        b (hash b)]
+    (cond
+      (< a b) -1
+      (> a b) 1
+      :else 0)))
+
+(defn- obj-map->hash-map [m k v]
+  (let [ks  (.-keys m)
+        len (alength ks)
+        so  (.-strobj m)
+        mm  (meta m)]
+    (loop [i   0
+           out (transient (.-EMPTY PersistentHashMap))]
+      (if (< i len)
+        (let [k (aget ks i)]
+          (recur (inc i) (assoc! out k (gobject/get so k))))
+        (-with-meta (persistent! (assoc! out k v)) mm)))))
+
+;;; ObjMap - DEPRECATED
+
+(defn- obj-clone [obj ks]
+  (let [new-obj (js-obj)
+        l (alength ks)]
+    (loop [i 0]
+      (when (< i l)
+        (let [k (aget ks i)]
+          (gobject/set new-obj k (gobject/get obj k))
+          (recur (inc i)))))
+    new-obj))
+
+(deftype ObjMap [meta keys strobj update-count ^:mutable __hash]
+  Object
+  (toString [coll]
+    (pr-str* coll))
+  (equiv [this other]
+    (-equiv this other))
+
+  IWithMeta
+  (-with-meta [coll new-meta]
+    (if (identical? new-meta meta)
+      coll
+      (ObjMap. new-meta keys strobj update-count __hash)))
+
+  IMeta
+  (-meta [coll] meta)
+
+  ICollection
+  (-conj [coll entry]
+    (if (vector? entry)
+      (-assoc coll (-nth entry 0) (-nth entry 1))
+      (reduce -conj
+        coll
+        entry)))
+
+  IEmptyableCollection
+  (-empty [coll] (-with-meta (.-EMPTY ObjMap) meta))
+
+  IEquiv
+  (-equiv [coll other] (equiv-map coll other))
+
+  IHash
+  (-hash [coll] (caching-hash coll hash-unordered-coll __hash))
+
+  ISeqable
+  (-seq [coll]
+    (when (pos? (alength keys))
+      (map #(vector % (unchecked-get strobj %))
+        (.sort keys obj-map-compare-keys))))
+
+  ICounted
+  (-count [coll] (alength keys))
+
+  ILookup
+  (-lookup [coll k] (-lookup coll k nil))
+  (-lookup [coll k not-found]
+    (if (and (string? k)
+          (not (nil? (scan-array 1 k keys))))
+      (unchecked-get strobj k)
+      not-found))
+
+  IAssociative
+  (-assoc [coll k v]
+    (if (string? k)
+      (if (or (> update-count (.-HASHMAP_THRESHOLD ObjMap))
+            (>= (alength keys) (.-HASHMAP_THRESHOLD ObjMap)))
+        (obj-map->hash-map coll k v)
+        (if-not (nil? (scan-array 1 k keys))
+          (let [new-strobj (obj-clone strobj keys)]
+            (gobject/set new-strobj k v)
+            (ObjMap. meta keys new-strobj (inc update-count) nil)) ; overwrite
+          (let [new-strobj (obj-clone strobj keys) ; append
+                new-keys (aclone keys)]
+            (gobject/set new-strobj k v)
+            (.push new-keys k)
+            (ObjMap. meta new-keys new-strobj (inc update-count) nil))))
+      ;; non-string key. game over.
+      (obj-map->hash-map coll k v)))
+  (-contains-key? [coll k]
+    (if (and (string? k)
+          (not (nil? (scan-array 1 k keys))))
+      true
+      false))
+
+  IFind
+  (-find [coll k]
+    (when (and (string? k)
+            (not (nil? (scan-array 1 k keys))))
+      (MapEntry. k (unchecked-get strobj k) nil)))
+
+  IKVReduce
+  (-kv-reduce [coll f init]
+    (let [len (alength keys)]
+      (loop [keys (.sort keys obj-map-compare-keys)
+             init init]
+        (if (seq keys)
+          (let [k (first keys)
+                init (f init k (unchecked-get strobj k))]
+            (if (reduced? init)
+              @init
+              (recur (rest keys) init)))
+          init))))
+
+  IMap
+  (-dissoc [coll k]
+    (if (and (string? k)
+          (not (nil? (scan-array 1 k keys))))
+      (let [new-keys (aclone keys)
+            new-strobj (obj-clone strobj keys)]
+        (.splice new-keys (scan-array 1 k new-keys) 1)
+        (js-delete new-strobj k)
+        (ObjMap. meta new-keys new-strobj (inc update-count) nil))
+      coll)) ; key not found, return coll unchanged
+
+  IFn
+  (-invoke [coll k]
+    (-lookup coll k))
+  (-invoke [coll k not-found]
+    (-lookup coll k not-found))
+
+  IEditableCollection
+  (-as-transient [coll]
+    (transient (into (hash-map) coll))))
+
+(set! (.-EMPTY ObjMap) (ObjMap. nil (array) (js-obj) 0 empty-unordered-hash))
+
+(set! (.-HASHMAP_THRESHOLD ObjMap) 8)
+
+(set! (.-fromObject ObjMap) (fn [ks obj] (ObjMap. nil ks obj 0 nil)))
+
 ;; Record Iterator
 (deftype RecordIter [^:mutable i record base-count fields ext-map-iter]
   Object
@@ -9034,6 +9191,19 @@ reduces them without incurring seq initialization"
     (.createAsIfByAssoc PersistentArrayMap (to-array s))
     (if (seq s) (first s) (.-EMPTY PersistentArrayMap))))
 
+(defn obj-map
+  "keyval => key val
+  Returns a new object map with supplied mappings."
+  [& keyvals]
+  (let [ks  (array)
+        obj (js-obj)]
+    (loop [kvs (seq keyvals)]
+      (if kvs
+        (do (.push ks (first kvs))
+            (gobject/set obj (first kvs) (second kvs))
+            (recur (nnext kvs)))
+        (.fromObject ObjMap ks obj)))))
+
 (defn sorted-map
   "keyval => key val
   Returns a new sorted map with supplied mappings."
@@ -10684,6 +10854,10 @@ reduces them without incurring seq initialization"
 
   MapEntry
   (-pr-writer [coll writer opts] (pr-sequential-writer writer pr-writer "[" " " "]" opts coll))
+
+  ObjMap
+  (-pr-writer [coll writer opts]
+    (print-map coll pr-writer writer opts))
 
   KeySeq
   (-pr-writer [coll writer opts] (pr-sequential-writer writer pr-writer "(" " " ")" opts coll))
