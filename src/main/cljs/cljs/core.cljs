@@ -12349,12 +12349,6 @@ reduces them without incurring seq initialization"
 (declare simple-hash-map)
 
 (deftype ObjMap [meta keys strobj ^:mutable __hash]
-  Object
-  (toString [coll]
-    (pr-str* coll))
-  (equiv [this other]
-    (-equiv this other))
-
   IWithMeta
   (-with-meta [coll meta] (ObjMap. meta keys strobj __hash))
 
@@ -12482,12 +12476,6 @@ reduces them without incurring seq initialization"
 ; collisions. A bucket is an array of alternating keys (not their hashes) and
 ; vals.
 (deftype HashMap [meta count hashobj ^:mutable __hash]
-  Object
-  (toString [coll]
-    (pr-str* coll))
-  (equiv [this other]
-    (-equiv this other))
-
   IWithMeta
   (-with-meta [coll meta] (HashMap. meta count hashobj __hash))
 
@@ -12599,12 +12587,6 @@ reduces them without incurring seq initialization"
       out)))
 
 (deftype Set [meta hash-map ^:mutable __hash]
-  Object
-  (toString [coll]
-    (pr-str* coll))
-  (equiv [this other]
-    (-equiv this other))
-
   IWithMeta
   (-with-meta [coll meta] (Set. meta hash-map __hash))
 
@@ -12656,4 +12638,4 @@ reduces them without incurring seq initialization"
   IPrintWithWriter
   (-pr-writer [coll writer opts] (pr-sequential-writer writer pr-writer "#{" " " "}" opts coll)))
 
-(set! (. Set -EMPTY) (Set. nil (hash-map) empty-unordered-hash))
+(set! (. Set -EMPTY) (Set. nil (simple-hash-map) empty-unordered-hash))
