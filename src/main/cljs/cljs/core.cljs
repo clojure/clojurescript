@@ -12365,9 +12365,7 @@ reduces them without incurring seq initialization"
   (-conj [coll entry]
     (if (vector? entry)
       (-assoc coll (-nth entry 0) (-nth entry 1))
-      (reduce -conj
-              coll
-              entry)))
+      (reduce -conj coll entry)))
 
   IEmptyableCollection
   (-empty [coll] (with-meta (. ObjMap -EMPTY) meta))
@@ -12381,8 +12379,9 @@ reduces them without incurring seq initialization"
   ISeqable
   (-seq [coll]
     (when (pos? (alength keys))
-      (map #(vector % (unchecked-get strobj %))
-           (.sort keys obj-map-compare-keys))))
+      (prim-seq
+        (.map (.sort keys obj-map-compare-keys)
+          #(unchecked-get strobj %)) 0)))
 
   ICounted
   (-count [coll] (alength keys))
