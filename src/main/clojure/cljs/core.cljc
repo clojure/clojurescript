@@ -1507,7 +1507,7 @@
         ~@body))))
 
 (core/defn- add-obj-methods [type type-sym sigs]
-  (->> sigs
+  (core/->> sigs
     ;; Elide all toString methods in :lite-mode
     (remove
       (core/fn [[f]]
