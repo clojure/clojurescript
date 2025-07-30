@@ -523,7 +523,7 @@
          (= (count (into #{} keys)) (count keys)))))
 
 (defn lite-mode? []
-  (get-in @env/*compiler* [:options :lite-mode?]))
+  (get-in @env/*compiler* [:options :lite-mode]))
 
 (defn emit-map [keys vals comma-sep distinct-keys?]
   (cond
