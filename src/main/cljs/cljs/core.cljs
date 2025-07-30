@@ -12481,9 +12481,15 @@ reduces them without incurring seq initialization"
 ; hashobj. Each values in hashobj is actually a bucket in order to handle hash
 ; collisions. A bucket is an array of alternating keys (not their hashes) and
 ; vals.
-(deftype HashMap [meta count hashobj]
+(deftype HashMap [meta count hashobj ^:mutable __hash]
+  Object
+  (toString [coll]
+    (pr-str* coll))
+  (equiv [this other]
+    (-equiv this other))
+
   IWithMeta
-  (-with-meta [coll meta] (HashMap. meta count hashobj))
+  (-with-meta [coll meta] (HashMap. meta count hashobj __hash))
 
   IMeta
   (-meta [coll] meta)
@@ -12503,7 +12509,7 @@ reduces them without incurring seq initialization"
   (-equiv [coll other] (equiv-map coll other))
 
   IHash
-  (-hash [coll] (hash-coll coll))
+  (-hash [coll] (caching-hash coll hash-unordered-coll __hash))
 
   ISeqable
   (-seq [coll]
@@ -12535,13 +12541,13 @@ reduces them without incurring seq initialization"
           (if-let [i (scan-array 2 k new-bucket)]
             (do                         ; found key, replace
               (aset new-bucket (inc i) v)
-              (HashMap. meta count new-hashobj))
+              (HashMap. meta count new-hashobj nil))
             (do                         ; did not find key, append
               (.push new-bucket k v)
-              (HashMap. meta (inc count) new-hashobj))))
+              (HashMap. meta (inc count) new-hashobj nil))))
         (let [new-hashobj (goog.object/clone hashobj)] ; did not find bucket
           (aset new-hashobj h (array k v))
-          (HashMap. meta (inc count) new-hashobj)))))
+          (HashMap. meta (inc count) new-hashobj nil)))))
   (-contains-key? [coll k]
     (let [bucket (aget hashobj (hash k))
           i (when bucket (scan-array 2 k bucket))]
@@ -12562,7 +12568,7 @@ reduces them without incurring seq initialization"
             (let [new-bucket (aclone bucket)]
               (.splice new-bucket i 2)
               (aset new-hashobj h new-bucket)))
-          (HashMap. meta (dec count) new-hashobj)))))
+          (HashMap. meta (dec count) new-hashobj nil)))))
 
   IFn
   (-invoke [coll k]
@@ -12574,7 +12580,7 @@ reduces them without incurring seq initialization"
   (-pr-writer [coll writer opts]
     (print-map coll pr-writer writer opts)))
 
-(set! (. HashMap -EMPTY) (HashMap. nil 0 (js-obj)))
+(set! (. HashMap -EMPTY) (HashMap. nil 0 (js-obj) empty-unordered-hash))
 
 (set! (. HashMap -fromArrays) (fn [ks vs]
   (let [len (.-length ks)]
@@ -12592,16 +12598,22 @@ reduces them without incurring seq initialization"
       (recur (nnext in) (assoc out (first in) (second in)))
       out)))
 
-(deftype Set [meta hash-map]
+(deftype Set [meta hash-map ^:mutable __hash]
+  Object
+  (toString [coll]
+    (pr-str* coll))
+  (equiv [this other]
+    (-equiv this other))
+
   IWithMeta
-  (-with-meta [coll meta] (Set. meta hash-map))
+  (-with-meta [coll meta] (Set. meta hash-map __hash))
 
   IMeta
   (-meta [coll] meta)
 
   ICollection
   (-conj [coll o]
-    (Set. meta (assoc hash-map o nil)))
+    (Set. meta (assoc hash-map o nil) nil))
 
   IEmptyableCollection
   (-empty [coll] (with-meta (. Set -EMPTY) meta))
@@ -12615,7 +12627,7 @@ reduces them without incurring seq initialization"
              other)))
 
   IHash
-  (-hash [coll] (hash-coll coll))
+  (-hash [coll] (caching-hash coll hash-unordered-coll __hash))
 
   ISeqable
   (-seq [coll] (keys hash-map))
@@ -12633,7 +12645,7 @@ reduces them without incurring seq initialization"
 
   ISet
   (-disjoin [coll v]
-    (Set. meta (dissoc hash-map v)))
+    (Set. meta (dissoc hash-map v) nil))
 
   IFn
   (-invoke [coll k]
@@ -12644,4 +12656,4 @@ reduces them without incurring seq initialization"
   IPrintWithWriter
   (-pr-writer [coll writer opts] (pr-sequential-writer writer pr-writer "#{" " " "}" opts coll)))
 
-(set! (. Set -EMPTY) (Set. nil (hash-map)))
+(set! (. Set -EMPTY) (Set. nil (hash-map) empty-unordered-hash))
