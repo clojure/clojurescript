@@ -12527,7 +12527,7 @@ reduces them without incurring seq initialization"
           bucket (aget hashobj h)]
       (if bucket
         (let [new-bucket (aclone bucket)
-              new-hashobj (goog.object/clone hashobj)]
+              new-hashobj (gobject/clone hashobj)]
           (aset new-hashobj h new-bucket)
           (if-let [i (scan-array 2 k new-bucket)]
             (do                         ; found key, replace
@@ -12536,11 +12536,11 @@ reduces them without incurring seq initialization"
             (do                         ; did not find key, append
               (.push new-bucket k v)
               (HashMap. meta (inc count) new-hashobj nil))))
-        (let [new-hashobj (goog.object/clone hashobj)] ; did not find bucket
-          (aset new-hashobj h (array k v))
+        (let [new-hashobj (gobject/clone hashobj)] ; did not find bucket
+          (unchecked-set new-hashobj h (array k v))
           (HashMap. meta (inc count) new-hashobj nil)))))
   (-contains-key? [coll k]
-    (let [bucket (aget hashobj (hash k))
+    (let [bucket (unchecked-get hashobj (hash k))
           i (when bucket (scan-array 2 k bucket))]
       (if i
         true
@@ -12549,16 +12549,16 @@ reduces them without incurring seq initialization"
   IMap
   (-dissoc [coll k]
     (let [h (hash k)
-          bucket (aget hashobj h)
+          bucket (unchecked-get hashobj h)
           i (when bucket (scan-array 2 k bucket))]
       (if (not i)
         coll ; key not found, return coll unchanged
-        (let [new-hashobj (goog.object/clone hashobj)]
-          (if (> 3 (.-length bucket))
+        (let [new-hashobj (gobject/clone hashobj)]
+          (if (> 3 (alength bucket))
             (js-delete new-hashobj h)
             (let [new-bucket (aclone bucket)]
               (.splice new-bucket i 2)
-              (aset new-hashobj h new-bucket)))
+              (unchecked-set new-hashobj h new-bucket)))
           (HashMap. meta (dec count) new-hashobj nil)))))
 
   IFn
