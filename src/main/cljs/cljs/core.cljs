@@ -12334,7 +12334,7 @@ reduces them without incurring seq initialization"
   [& args]
   (if (and (instance? IndexedSeq args) (zero? (.-i args)))
     (.fromArray Vector (.-arr args) (not (array? (.-arr args))))
-    (vec args)))
+    (Vector. nil (into-array args) nil)))
 
 ; The keys field is an array of all keys of this map, in no particular
 ; order. Any string, keyword, or symbol key is used as a property name
