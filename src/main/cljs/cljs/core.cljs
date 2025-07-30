@@ -12514,7 +12514,7 @@ reduces them without incurring seq initialization"
   (-seq [coll]
     (when (pos? count)
       (let [hashes (.sort (js-keys hashobj))]
-        (mapcat #(map (fn [[k v]] (MapEntry. k v)) (partition 2 (unchecked-get hashobj %)))
+        (mapcat #(map (fn [[k v]] (MapEntry. k v nil)) (partition 2 (unchecked-get hashobj %)))
                 hashes))))
 
   ICounted
@@ -12588,8 +12588,6 @@ reduces them without incurring seq initialization"
         (recur (inc i) (assoc out (aget ks i) (aget vs i)))
         out)))))
 
-;; FIXME: calling this (simple-hash-map) expands the codesize significantly,
-;; not clear why at the moment, seems to do less than (hash-map)
 (defn simple-hash-map
   "keyval => key val
   Returns a new hash map with supplied mappings."
