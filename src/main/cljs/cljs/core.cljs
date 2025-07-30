@@ -12491,9 +12491,7 @@ reduces them without incurring seq initialization"
   (-conj [coll entry]
     (if (vector? entry)
       (-assoc coll (-nth entry 0) (-nth entry 1))
-      (reduce -conj
-              coll
-              entry)))
+      (reduce -conj coll entry)))
 
   IEmptyableCollection
   (-empty [coll] (with-meta (. HashMap -EMPTY) meta))
