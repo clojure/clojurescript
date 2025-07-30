@@ -525,6 +525,27 @@
 (defn lite-mode? []
   (get-in @env/*compiler* [:options :lite-mode]))
 
+(defn obj-map-key [x]
+  (if (keyword? x)
+    (str \" "\\uFDD0" \'
+      (if (namespace x)
+        (str (namespace x) "/") "")
+      (name x)
+      \")
+    x))
+
+(defn emit-obj-map [str-keys vals comma-sep distinct-keys?]
+  (if (zero? (count str-keys))
+    (emits "cljs.core.ObjMap.EMPTY")
+    (emits "cljs.core.ObjMap.fromObject([" (comma-sep str-keys) "], {"
+      (comma-sep (map (fn [k v] (str k ":" (emit-str v))) str-keys vals))
+      "})")))
+
+(defn emit-lite-map [keys vals comma-sep distinct-keys?]
+  (if (zero? (count keys))
+    (emits "cljs.core.HashMap.EMPTY")
+    (emits "cljs.core.HashMap.fromArrays([" (comma-sep keys) "], [" (comma-sep vals) "])")))
+
 (defn emit-map [keys vals comma-sep distinct-keys?]
   (cond
     (zero? (count keys))
@@ -547,9 +568,14 @@
       "])")))
 
 (defmethod emit* :map
-  [{:keys [env keys vals]}]
+  [{:keys [env form keys vals]}]
   (emit-wrap env
-    (emit-map keys vals comma-sep distinct-keys?)))
+    (if (lite-mode?)
+      (let [form-keys (clojure.core/keys form)]
+        (if (every? #(or (string? %) (keyword? %)) form-keys)
+          (emit-obj-map (map obj-map-key form-keys) vals comma-sep distinct-keys?)
+          (emit-lite-map keys vals comma-sep distinct-keys?)))
+      (emit-map keys vals comma-sep distinct-keys?))))
 
 (defn emit-list [items comma-sep]
   (if (empty? items)
