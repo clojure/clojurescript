@@ -2070,7 +2070,7 @@ reduces them without incurring seq initialization"
      (-assoc coll k v)
      (if-not (nil? coll)
        (-assoc coll k v)
-       (array-map k v))))
+       {k v})))
   ([coll k v & kvs]
      (let [ret (assoc coll k v)]
        (if kvs
