@@ -12356,7 +12356,7 @@ reduces them without incurring seq initialization"
     (-equiv this other))
 
   IWithMeta
-  (-with-meta [coll meta] (ObjMap. meta keys strobj))
+  (-with-meta [coll meta] (ObjMap. meta keys strobj __hash))
 
   IMeta
   (-meta [coll] meta)
@@ -12459,9 +12459,9 @@ reduces them without incurring seq initialization"
   (-pr-writer [coll writer opts]
     (print-map coll pr-writer writer opts)))
 
-(set! (. ObjMap -EMPTY) (ObjMap. nil (array) (js-obj)))
+(set! (. ObjMap -EMPTY) (ObjMap. nil (array) (js-obj) empty-ordered-hash))
 
-(set! (. ObjMap -fromObject) (fn [ks obj] (ObjMap. nil ks obj)))
+(set! (. ObjMap -fromObject) (fn [ks obj] (ObjMap. nil ks obj nil)))
 
 (defn obj-map
   "keyval => key val
