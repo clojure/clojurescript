@@ -522,6 +522,9 @@
     (and (every? #(= (:op %) :const) keys)
          (= (count (into #{} keys)) (count keys)))))
 
+(defn lite-mode? []
+  (get-in @env/*compiler* [:options :lite-mode?]))
+
 (defn emit-map [keys vals comma-sep distinct-keys?]
   (cond
     (zero? (count keys))
@@ -562,10 +565,17 @@
           ", 5, cljs.core.PersistentVector.EMPTY_NODE, ["  (comma-sep items) "], null)")
         (emits "cljs.core.PersistentVector.fromArray([" (comma-sep items) "], true)")))))
 
+(defn emit-lite-vector [items comma-sep]
+  (if (empty? items)
+    (emits "cljs.core.Vector.EMPTY")
+    (emits "new cljs.core.Vector(null, [" (comma-sep items) "], null)")))
+
 (defmethod emit* :vector
   [{:keys [items env]}]
   (emit-wrap env
-    (emit-vector items comma-sep)))
+    (if (lite-mode?)
+      (emit-lite-vector items comma-sep)
+      (emit-vector items comma-sep))))
 
 (defn distinct-constants? [items]
   (let [items (map ana/unwrap-quote items)]

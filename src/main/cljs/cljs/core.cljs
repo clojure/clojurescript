@@ -12232,9 +12232,9 @@ reduces them without incurring seq initialization"
 
 ;;; Vector
 
-(deftype Vector [meta array]
+(deftype Vector [meta array ^:mutable __hash]
   IWithMeta
-  (-with-meta [coll meta] (Vector. meta array))
+  (-with-meta [coll meta] (Vector. meta array __hash))
 
   IMeta
   (-meta [coll] meta)
@@ -12248,14 +12248,14 @@ reduces them without incurring seq initialization"
     (if (> (.-length array) 0)
       (let [new-array (aclone array)]
         (. new-array (pop))
-        (Vector. meta new-array))
+        (Vector. meta new-array nil))
       (throw (js/Error. "Can't pop empty vector"))))
 
   ICollection
   (-conj [coll o]
     (let [new-array (aclone array)]
       (.push new-array o)
-      (Vector. meta new-array)))
+      (Vector. meta new-array nil)))
 
   IEmptyableCollection
   (-empty [coll] (with-meta (. Vector -EMPTY) meta))
@@ -12298,7 +12298,7 @@ reduces them without incurring seq initialization"
   (-assoc [coll k v]
     (let [new-array (aclone array)]
       (aset new-array k v)
-      (Vector. meta new-array)))
+      (Vector. meta new-array nil)))
 
   IVector
   (-assoc-n [coll n val] (-assoc coll n val))
@@ -12318,9 +12318,9 @@ reduces them without incurring seq initialization"
   IPrintWithWriter
   (-pr-writer [coll writer opts] (pr-sequential-writer writer pr-writer "[" " " "]" opts coll)))
 
-(set! (. Vector -EMPTY) (Vector. nil (array)))
+(set! (. Vector -EMPTY) (Vector. nil (array) nil))
 
-(set! (. Vector -fromArray) (fn [xs] (Vector. nil xs)))
+(set! (. Vector -fromArray) (fn [xs] (Vector. nil xs nil)))
 
 ; The keys field is an array of all keys of this map, in no particular
 ; order. Any string, keyword, or symbol key is used as a property name
