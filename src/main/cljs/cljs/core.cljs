@@ -12417,7 +12417,7 @@ reduces them without incurring seq initialization"
   IFind
   (-find [coll k]
     (when (and (string? k)
-            (not (nil? (scan-array 1 k keys))))
+               (not (nil? (scan-array 1 k keys))))
       (MapEntry. k (unchecked-get strobj k) nil)))
 
   IKVReduce
