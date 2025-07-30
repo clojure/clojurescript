@@ -12577,6 +12577,8 @@ reduces them without incurring seq initialization"
         (recur (inc i) (assoc out (aget ks i) (aget vs i)))
         out)))))
 
+;; FIXME: calling this (simple-hash-map) expands the codesize significantly,
+;; not clear why at the moment, seems to do less than (hash-map)
 (defn simple-hash-map
   "keyval => key val
   Returns a new hash map with supplied mappings."
@@ -12638,4 +12640,4 @@ reduces them without incurring seq initialization"
   IPrintWithWriter
   (-pr-writer [coll writer opts] (pr-sequential-writer writer pr-writer "#{" " " "}" opts coll)))
 
-(set! (. Set -EMPTY) (Set. nil (simple-hash-map) empty-unordered-hash))
+(set! (. Set -EMPTY) (Set. nil (. HashMap -EMPTY) empty-unordered-hash))
