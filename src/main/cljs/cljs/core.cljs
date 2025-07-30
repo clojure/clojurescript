@@ -53,6 +53,11 @@
   , and \"global\" supported. "}
   *global* "default")
 
+(goog-define
+  ^{:doc "Boolean flag for LITE_MODE"
+    :jsdoc ["@type {boolean}"]}
+  LITE_MODE false)
+
 (def
   ^{:dynamic true
     :doc "Var bound to the current namespace. Only used for bootstrapping."
@@ -2262,7 +2267,10 @@ reduces them without incurring seq initialization"
 
 (defn chunked-seq?
   "Return true if x satisfies IChunkedSeq."
-  [x] (implements? IChunkedSeq x))
+  [x]
+  (if-not ^boolean LITE_MODE
+    (implements? IChunkedSeq x)
+    false))
 
 ;;;;;;;;;;;;;;;;;;;; js primitives ;;;;;;;;;;;;
 (defn js-obj
@@ -12506,7 +12514,7 @@ reduces them without incurring seq initialization"
   (-seq [coll]
     (when (pos? count)
       (let [hashes (.sort (js-keys hashobj))]
-        (mapcat #(map vec (partition 2 (aget hashobj %)))
+        (mapcat #(map (fn [[k v]] (MapEntry. k v)) (partition 2 (unchecked-get hashobj %)))
                 hashes))))
 
   ICounted

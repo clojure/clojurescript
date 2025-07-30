@@ -2519,6 +2519,10 @@
           :cache-analysis-format (:cache-analysis-format opts :transit))
         (update-in [:preamble] #(into (or % []) ["cljs/imul.js"])))
 
+      (:lite-mode opts)
+      (assoc-in [:closure-defines (str (comp/munge 'cljs.core/LITE_MODE))]
+        (:lite-mode opts))
+
       (:target opts)
       (assoc-in [:closure-defines (str (comp/munge 'cljs.core/*target*))]
         (name (:target opts)))
