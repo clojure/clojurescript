@@ -17,7 +17,10 @@
     cljs.core/vec    cljs.core/simple-vec})
 
 (defn update-var [{:keys [name] :as ast}]
-  (update ast :name ctor->simple-ctor))
+  (let [replacement (get ctor->simple-ctor name)]
+    (-> ast
+      (assoc :name replacement)
+      (assoc-in [:info :name] replacement))))
 
 (defn replace-var? [ast]
   (and (var? ast)
