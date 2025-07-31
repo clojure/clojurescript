@@ -12336,6 +12336,21 @@ reduces them without incurring seq initialization"
     (.fromArray Vector (.-arr args) (not (array? (.-arr args))))
     (Vector. nil (into-array args) nil)))
 
+(defn simple-vec
+  [coll]
+  (cond
+    (map-entry? coll)
+    [(key coll) (val coll)]
+
+    (vector? coll)
+    (with-meta coll nil)
+
+    (array? coll)
+    (.fromArray Vector coll)
+
+    :else
+    (into [] coll)))
+
 ; The keys field is an array of all keys of this map, in no particular
 ; order. Any string, keyword, or symbol key is used as a property name
 ; to store the value in strobj.  If a key is assoc'ed when that same
