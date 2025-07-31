@@ -6,21 +6,22 @@
 ;; the terms of this license.
 ;; You must not remove this notice, or any other, from this software.
 
-(ns cljs.analyzer.passes.lite)
+(ns cljs.analyzer.passes.lite
+  (:refer-clojure :exclude [var?]))
 
 (defn var? [ast]
   (= :var (:op ast)))
 
-(def replace
+(def ctor->simple-ctor
   '{cljs.core/vector cljs.core/simple-vector
     cljs.core/vec    cljs.core/simple-vec})
 
 (defn update-var [{:keys [name] :as ast}]
-  (update-in ast :name (get replace name)))
+  (update ast :name ctor->simple-ctor))
 
 (defn replace-var? [ast]
   (and (var? ast)
-       (contains? replace (:name ast))))
+       (contains? ctor->simple-ctor (:name ast))))
 
 (defn use-lite-types
   [env ast _]

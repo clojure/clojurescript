@@ -16,6 +16,7 @@
   #?(:clj  (:require [cljs.analyzer.impl :as impl]
                      [cljs.analyzer.impl.namespaces :as nses]
                      [cljs.analyzer.passes.and-or :as and-or]
+                     [cljs.analyzer.passes.lite :as lite]
                      [cljs.env :as env :refer [ensure]]
                      [cljs.externs :as externs]
                      [cljs.js-deps :as deps]
@@ -30,6 +31,7 @@
      :cljs (:require [cljs.analyzer.impl :as impl]
                      [cljs.analyzer.impl.namespaces :as nses]
                      [cljs.analyzer.passes.and-or :as and-or]
+                     [cljs.analyzer.passes.lite :as lite]
                      [cljs.env :as env]
                      [cljs.reader :as edn]
                      [cljs.tagged-literals :as tags]
@@ -4455,10 +4457,8 @@
      :cljs [infer-type and-or/optimize check-invoke-arg-types]))
 
 (defn analyze* [env form name opts]
-  (let [passes *passes*
-        passes (if (nil? passes)
-                 default-passes
-                 passes)
+  (let [passes (cond-> (or *passes* default-passes)
+                 (lite-mode?) (conj lite/use-lite-types))
         form   (if (instance? LazySeq form)
                  (if (seq form) form ())
                  form)
