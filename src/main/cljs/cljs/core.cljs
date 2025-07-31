@@ -12323,6 +12323,16 @@ reduces them without incurring seq initialization"
   (-invoke [coll k not-found]
     (-lookup coll k not-found))
 
+  IEditableCollection
+  (-as-transient [coll]
+    coll)
+
+  ITransientCollection
+  (-conj! [coll val]
+    (-conj coll val))
+  (-persistent! [coll]
+    coll)
+
   IPrintWithWriter
   (-pr-writer [coll writer opts] (pr-sequential-writer writer pr-writer "[" " " "]" opts coll)))
 
@@ -12473,9 +12483,23 @@ reduces them without incurring seq initialization"
   (-invoke [coll k not-found]
     (-lookup coll k not-found))
 
-  ;IEditableCollection
-  ;(-as-transient [coll]
-  ;  (transient (into (simple-hash-map) coll)))
+  IEditableCollection
+  (-as-transient [coll]
+    coll)
+
+  ITransientCollection
+  (-conj! [coll val]
+    (-conj coll val))
+  (-persistent! [coll]
+    coll)
+
+  ITransientAssociative
+  (-assoc! [coll key val]
+    (-assoc coll key val))
+
+  ITransientMap
+  (-dissoc! [coll key]
+    (-dissoc coll key))
 
   IPrintWithWriter
   (-pr-writer [coll writer opts]
@@ -12590,6 +12614,24 @@ reduces them without incurring seq initialization"
   (-invoke [coll k not-found]
     (-lookup coll k not-found))
 
+  IEditableCollection
+  (-as-transient [coll]
+    coll)
+
+  ITransientCollection
+  (-conj! [coll val]
+    (-conj coll val))
+  (-persistent! [coll]
+    coll)
+
+  ITransientAssociative
+  (-assoc! [coll key val]
+    (-assoc coll key val))
+
+  ITransientMap
+  (-dissoc! [coll key]
+    (-dissoc coll key))
+
   IPrintWithWriter
   (-pr-writer [coll writer opts]
     (print-map coll pr-writer writer opts)))
@@ -12654,6 +12696,20 @@ reduces them without incurring seq initialization"
   ISet
   (-disjoin [coll v]
     (Set. meta (dissoc hash-map v) nil))
+
+  IEditableCollection
+  (-as-transient [coll]
+    coll)
+
+  ITransientCollection
+  (-conj! [coll val]
+    (-conj coll val))
+  (-persistent! [coll]
+    coll)
+
+  ITransientSet
+  (-disjoin! [coll key]
+    (-disjoin coll key))
 
   IFn
   (-invoke [coll k]
