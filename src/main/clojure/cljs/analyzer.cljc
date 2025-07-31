@@ -492,6 +492,9 @@
 (def ^:dynamic *cljs-warning-handlers*
   [default-warning-handler])
 
+(defn lite-mode? []
+  (get-in @env/*compiler* [:options :lite-mode]))
+
 #?(:clj
    (defmacro with-warning-handlers [handlers & body]
      `(binding [*cljs-warning-handlers* ~handlers]

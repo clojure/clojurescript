@@ -522,9 +522,6 @@
     (and (every? #(= (:op %) :const) keys)
          (= (count (into #{} keys)) (count keys)))))
 
-(defn lite-mode? []
-  (get-in @env/*compiler* [:options :lite-mode]))
-
 (defn obj-map-key [x]
   (if (keyword? x)
     (str \" "\\uFDD0" \'
@@ -570,7 +567,7 @@
 (defmethod emit* :map
   [{:keys [env form keys vals]}]
   (emit-wrap env
-    (if (lite-mode?)
+    (if (ana/lite-mode?)
       (let [form-keys (clojure.core/keys form)]
         (if (every? #(or (string? %) (keyword? %)) form-keys)
           (emit-obj-map (map obj-map-key form-keys) vals comma-sep distinct-keys?)
@@ -599,7 +596,7 @@
 (defmethod emit* :vector
   [{:keys [items env]}]
   (emit-wrap env
-    (if (lite-mode?)
+    (if (ana/lite-mode?)
       (emit-lite-vector items comma-sep)
       (emit-vector items comma-sep))))
 
