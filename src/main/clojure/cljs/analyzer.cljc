@@ -4077,8 +4077,10 @@
           (if (and (some? nsym) (symbol? nsym))
             (.findInternedVar ^clojure.lang.Namespace
               #?(:clj (find-ns nsym) :cljs (find-macros-ns nsym)) sym)
-            (.findInternedVar ^clojure.lang.Namespace
-              #?(:clj (find-ns 'cljs.core) :cljs (find-macros-ns impl/CLJS_CORE_MACROS_SYM)) sym)))))))
+            ;; can't be done as compiler pass because macros get to run first
+            (when-not (and (lite-mode?) (= 'vector sym))
+              (.findInternedVar ^clojure.lang.Namespace
+                #?(:clj (find-ns 'cljs.core) :cljs (find-macros-ns impl/CLJS_CORE_MACROS_SYM)) sym))))))))
 
 (defn get-expander
   "Given a sym, a symbol identifying a macro, and env, an analysis environment
