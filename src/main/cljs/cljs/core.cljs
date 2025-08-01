@@ -12552,9 +12552,20 @@ reduces them without incurring seq initialization"
   ISeqable
   (-seq [coll]
     (when (pos? count)
-      (let [hashes (.sort (js-keys hashobj))]
-        (mapcat #(map (fn [[k v]] (MapEntry. k v nil)) (partition 2 (unchecked-get hashobj %)))
-                hashes))))
+      (let [hashes (.sort (js-keys hashobj))
+            cnt    (alength hashes)
+            arr    (array)]
+        (loop [i 0]
+          (if (< i cnt)
+            (let [bckt (unchecked-get hashobj (aget hashes i))
+                  len  (alength bkt)]
+              (loop [j 0]
+                (when (< j len)
+                  (do
+                    (.push arr (MapEntry. (aget bkt j) (aget bkt (inc j)) nil))
+                    (recur (+ j 2)))))
+              (recur (inc i)))
+            (prim-seq arr))))))
 
   ICounted
   (-count [coll] count)
