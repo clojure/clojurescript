@@ -12433,8 +12433,8 @@ reduces them without incurring seq initialization"
       (if-not (nil? (scan-array 1 k keys))
         (let [new-strobj (obj-clone strobj keys)]
           (gobject/set new-strobj k v)
-          (ObjMap. meta keys new-strobj nil))               ; overwrite
-        (let [new-strobj (obj-clone strobj keys)            ; append
+          (ObjMap. meta keys new-strobj nil)) ;overwrite
+        (let [new-strobj (obj-clone strobj keys) ; append
               new-keys (aclone keys)]
           (gobject/set new-strobj k v)
           (.push new-keys k)
