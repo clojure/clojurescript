@@ -12414,7 +12414,7 @@ reduces them without incurring seq initialization"
     (when (pos? (alength keys))
       (prim-seq
         (.map (.sort keys obj-map-compare-keys)
-          #(unchecked-get strobj %)) 0)))
+          #(MapEntry. % (unchecked-get strobj %))))))
 
   ICounted
   (-count [coll] (alength keys))
@@ -12558,11 +12558,11 @@ reduces them without incurring seq initialization"
         (loop [i 0]
           (if (< i cnt)
             (let [bckt (unchecked-get hashobj (aget hashes i))
-                  len  (alength bkt)]
+                  len  (alength bckt)]
               (loop [j 0]
                 (when (< j len)
                   (do
-                    (.push arr (MapEntry. (aget bkt j) (aget bkt (inc j)) nil))
+                    (.push arr (MapEntry. (aget bckt j) (aget bckt (inc j)) nil))
                     (recur (+ j 2)))))
               (recur (inc i)))
             (prim-seq arr))))))
