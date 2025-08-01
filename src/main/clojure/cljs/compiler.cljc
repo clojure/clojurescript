@@ -529,7 +529,7 @@
         (str (namespace x) "/") "")
       (name x)
       \")
-    x))
+    (str \" x \")))
 
 (defn emit-obj-map [str-keys vals comma-sep distinct-keys?]
   (if (zero? (count str-keys))

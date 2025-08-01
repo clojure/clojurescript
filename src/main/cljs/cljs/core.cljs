@@ -12401,7 +12401,7 @@ reduces them without incurring seq initialization"
       (reduce -conj coll entry)))
 
   IEmptyableCollection
-  (-empty [coll] (with-meta (. ObjMap -EMPTY) meta))
+  (-empty [coll] (-with-meta (. ObjMap -EMPTY) meta))
 
   IEquiv
   (-equiv [coll other] (equiv-map coll other))
@@ -12433,14 +12433,14 @@ reduces them without incurring seq initialization"
       (if-not (nil? (scan-array 1 k keys))
         (let [new-strobj (obj-clone strobj keys)]
           (gobject/set new-strobj k v)
-          (ObjMap. meta keys new-strobj nil)) ; overwrite
-        (let [new-strobj (obj-clone strobj keys) ; append
-              new-keys   (aclone keys)]
+          (ObjMap. meta keys new-strobj nil))               ; overwrite
+        (let [new-strobj (obj-clone strobj keys)            ; append
+              new-keys (aclone keys)]
           (gobject/set new-strobj k v)
           (.push new-keys k)
           (ObjMap. meta new-keys new-strobj nil)))
       ; non-string key. game over.
-      (with-meta (into (simple-hash-map k v) (seq coll)) meta)))
+      (-with-meta (apply simple-hash-map k v (-seq coll)) meta)))
   (-contains-key? [coll k]
     (if (and (string? k)
              (not (nil? (scan-array 1 k keys))))
@@ -12662,7 +12662,7 @@ reduces them without incurring seq initialization"
   [& keyvals]
   (loop [in (seq keyvals), out (. HashMap -EMPTY)]
     (if in
-      (recur (nnext in) (assoc out (first in) (second in)))
+      (recur (nnext in) (-assoc out (first in) (second in)))
       out)))
 
 (deftype Set [meta hash-map ^:mutable __hash]
@@ -12683,7 +12683,7 @@ reduces them without incurring seq initialization"
   (-equiv [coll other]
     (and
      (set? other)
-     (= (count coll) (count other))
+     (= (-count coll) (count other))
      (every? #(contains? coll %)
              other)))
 
@@ -12694,7 +12694,7 @@ reduces them without incurring seq initialization"
   (-seq [coll] (keys hash-map))
 
   ICounted
-  (-count [coll] (count (seq coll)))
+  (-count [coll] (-count (-seq coll)))
 
   ILookup
   (-lookup [coll v]
@@ -12706,7 +12706,7 @@ reduces them without incurring seq initialization"
 
   ISet
   (-disjoin [coll v]
-    (Set. meta (dissoc hash-map v) nil))
+    (Set. meta (-dissoc hash-map v) nil))
 
   IEditableCollection
   (-as-transient [coll]
@@ -12736,11 +12736,11 @@ reduces them without incurring seq initialization"
 (defn simple-set
   [coll]
   (if (set? coll)
-    (with-meta coll nil)
+    (-with-meta coll nil)
     (let [in (seq coll)]
       (if (nil? in)
         #{}
         (loop [in in out (. Set -EMPTY)]
           (if-not (nil? in)
-            (recur (next in) (conj out (first in)))
+            (recur (next in) (-conj out (first in)))
             out))))))
