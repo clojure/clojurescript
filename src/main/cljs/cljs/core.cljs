@@ -10383,7 +10383,7 @@ reduces them without incurring seq initialization"
        (implements? IMeta obj)
        (not (nil? (meta obj)))))
 
-(defn- pr-map-entry [k v]
+(defn- simple-map-entry [k v]
   (reify
     IMapEntry
     (-key [_] k)
@@ -10429,7 +10429,7 @@ reduces them without incurring seq initialization"
             (.map
               (js-keys obj)
               (fn [k]
-                (pr-map-entry
+                (simple-map-entry
                   (cond-> k (some? (.match k #"^[A-Za-z_\*\+\?!\-'][\w\*\+\?!\-']*$")) keyword)
                   (unchecked-get obj k))))
             pr-writer writer opts))
@@ -10610,10 +10610,10 @@ reduces them without incurring seq initialization"
           (when (or (keyword? k) (symbol? k))
             (if ns
               (when (= ns (namespace k))
-                (.push lm (pr-map-entry (strip-ns k) v))
+                (.push lm (simple-map-entry (strip-ns k) v))
                 (recur ns entries))
               (when-let [new-ns (namespace k)]
-                (.push lm (pr-map-entry (strip-ns k) v))
+                (.push lm (simple-map-entry (strip-ns k) v))
                 (recur new-ns entries))))
           #js [ns lm])))))
 
@@ -12414,7 +12414,7 @@ reduces them without incurring seq initialization"
     (when (pos? (alength keys))
       (prim-seq
         (.map (.sort keys obj-map-compare-keys)
-          #(MapEntry. % (unchecked-get strobj %))))))
+          #(simple-map-entry % (unchecked-get strobj %))))))
 
   ICounted
   (-count [coll] (alength keys))
@@ -12562,7 +12562,7 @@ reduces them without incurring seq initialization"
               (loop [j 0]
                 (when (< j len)
                   (do
-                    (.push arr (MapEntry. (aget bckt j) (aget bckt (inc j)) nil))
+                    (.push arr (simple-map-entry (aget bckt j) (aget bckt (inc j)) nil))
                     (recur (+ j 2)))))
               (recur (inc i)))
             (prim-seq arr))))))
