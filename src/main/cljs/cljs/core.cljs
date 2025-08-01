@@ -12440,7 +12440,12 @@ reduces them without incurring seq initialization"
           (.push new-keys k)
           (ObjMap. meta new-keys new-strobj nil)))
       ; non-string key. game over.
-      (-with-meta (apply simple-hash-map k v (-seq coll)) meta)))
+      (-with-meta
+        (-kv-reduce coll
+          (fn [ret k v]
+            (-assoc ret k v))
+          (. HashMap -EMPTY) )
+         meta)))
   (-contains-key? [coll k]
     (if (and (string? k)
              (not (nil? (scan-array 1 k keys))))
