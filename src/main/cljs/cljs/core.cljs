@@ -12721,3 +12721,15 @@ reduces them without incurring seq initialization"
   (-pr-writer [coll writer opts] (pr-sequential-writer writer pr-writer "#{" " " "}" opts coll)))
 
 (set! (. Set -EMPTY) (Set. nil (. HashMap -EMPTY) empty-unordered-hash))
+
+(defn simple-set
+  [coll]
+  (if (set? coll)
+    (with-meta coll nil)
+    (let [in (seq coll)]
+      (if (nil? in)
+        #{}
+        (loop [in in out (. Set -EMPTY)]
+          (if-not (nil? in)
+            (recur (next in) (conj out (first in)))
+            out))))))

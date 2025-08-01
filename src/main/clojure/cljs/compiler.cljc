@@ -616,10 +616,17 @@
 
     :else (emits "cljs.core.PersistentHashSet.createAsIfByAssoc([" (comma-sep items) "])")))
 
+(defn emit-lite-set [items comma-sep distinct-constants?]
+  (if (empty? items)
+    (emits "cljs.core.Set.EMPTY")
+    (emits "cljs.core.simple_set([" (comma-sep items) "])")))
+
 (defmethod emit* :set
   [{:keys [items env]}]
   (emit-wrap env
-    (emit-set items comma-sep distinct-constants?)))
+    (if (ana/lite-mode?)
+      (emit-lite-set items comma-sep distinct-constants?)
+      (emit-set items comma-sep distinct-constants?))))
 
 (defn emit-js-object [items emit-js-object-val]
   (emits "({")
