@@ -1,0 +1,10 @@
+{:optimizations :advanced
+ :main lite-test-runner
+ :output-to "builds/out-lite/lite-test.js"
+ :output-dir "builds/out-lite"
+ :output-wrapper true
+ :verbose true
+ :compiler-stats true
+ :parallel-build true
+ :closure-warnings {:non-standard-jsdoc :off :global-this :off}
+ :language-out :es5}

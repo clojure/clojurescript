@@ -12371,9 +12371,9 @@ reduces them without incurring seq initialization"
   (let [a (hash a)
         b (hash b)]
     (cond
-     (< a b) -1
-     (> a b) 1
-     :else 0)))
+      (< a b) -1
+      (> a b) 1
+      :else 0)))
 
 (defn- obj-clone [obj ks]
   (let [new-obj (js-obj)
@@ -12386,6 +12386,10 @@ reduces them without incurring seq initialization"
     new-obj))
 
 (declare simple-hash-map)
+
+(defn- keyword->obj-map-key
+  [k]
+  (str "\uFDD0" "'" (. k -fqn)))
 
 (deftype ObjMap [meta keys strobj ^:mutable __hash]
   IWithMeta
@@ -12422,41 +12426,45 @@ reduces them without incurring seq initialization"
   ILookup
   (-lookup [coll k] (-lookup coll k nil))
   (-lookup [coll k not-found]
-    (if (and (string? k)
-             (not (nil? (scan-array 1 k keys))))
-      (unchecked-get strobj k)
-      not-found))
+    (let [k (if-not (keyword? k) k (keyword->obj-map-key k))]
+      (if (and (string? k)
+               (not (nil? (scan-array 1 k keys))))
+        (unchecked-get strobj k)
+        not-found)))
 
   IAssociative
   (-assoc [coll k v]
-    (if (string? k)
-      (if-not (nil? (scan-array 1 k keys))
-        (let [new-strobj (obj-clone strobj keys)]
-          (gobject/set new-strobj k v)
-          (ObjMap. meta keys new-strobj nil)) ;overwrite
-        (let [new-strobj (obj-clone strobj keys) ; append
-              new-keys (aclone keys)]
-          (gobject/set new-strobj k v)
-          (.push new-keys k)
-          (ObjMap. meta new-keys new-strobj nil)))
-      ; non-string key. game over.
-      (-with-meta
-        (-kv-reduce coll
-          (fn [ret k v]
-            (-assoc ret k v))
-          (. HashMap -EMPTY) )
-         meta)))
+    (let [k (if-not (keyword? k) k (keyword->obj-map-key k))]
+      (if (string? k)
+        (if-not (nil? (scan-array 1 k keys))
+          (let [new-strobj (obj-clone strobj keys)]
+            (gobject/set new-strobj k v)
+            (ObjMap. meta keys new-strobj nil))             ;overwrite
+          (let [new-strobj (obj-clone strobj keys)          ; append
+                new-keys (aclone keys)]
+            (gobject/set new-strobj k v)
+            (.push new-keys k)
+            (ObjMap. meta new-keys new-strobj nil)))
+        ; non-string key. game over.
+        (-with-meta
+          (-kv-reduce coll
+            (fn [ret k v]
+              (-assoc ret k v))
+            (. HashMap -EMPTY))
+          meta))))
   (-contains-key? [coll k]
-    (if (and (string? k)
-             (not (nil? (scan-array 1 k keys))))
-      true
-      false))
+    (let [k (if-not (keyword? k) k (keyword->obj-map-key k))]
+      (if (and (string? k)
+               (not (nil? (scan-array 1 k keys))))
+        true
+        false)))
 
   IFind
   (-find [coll k]
-    (when (and (string? k)
-               (not (nil? (scan-array 1 k keys))))
-      (MapEntry. k (unchecked-get strobj k) nil)))
+    (let [k (if-not (keyword? k) k (keyword->obj-map-key k))]
+      (when (and (string? k)
+                 (not (nil? (scan-array 1 k keys))))
+        (MapEntry. k (unchecked-get strobj k) nil))))
 
   IKVReduce
   (-kv-reduce [coll f init]
@@ -12473,14 +12481,15 @@ reduces them without incurring seq initialization"
 
   IMap
   (-dissoc [coll k]
-    (if (and (string? k)
-             (not (nil? (scan-array 1 k keys))))
-      (let [new-keys (aclone keys)
-            new-strobj (obj-clone strobj keys)]
-        (.splice new-keys (scan-array 1 k new-keys) 1)
-        (js-delete new-strobj k)
-        (ObjMap. meta new-keys new-strobj nil))
-      coll)) ; key not found, return coll unchanged
+    (let [k (if-not (keyword? k) k (keyword->obj-map-key k))]
+      (if (and (string? k)
+            (not (nil? (scan-array 1 k keys))))
+        (let [new-keys (aclone keys)
+              new-strobj (obj-clone strobj keys)]
+          (.splice new-keys (scan-array 1 k new-keys) 1)
+          (js-delete new-strobj k)
+          (ObjMap. meta new-keys new-strobj nil))
+        coll))) ; key not found, return coll unchanged
 
   IFn
   (-invoke [coll k]
