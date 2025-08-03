@@ -12313,9 +12313,9 @@ reduces them without incurring seq initialization"
 
   IReduce
   (-reduce [v f]
-    (ci-reduce array f))
+    (array-reduce array f))
   (-reduce [v f start]
-    (ci-reduce array f start))
+    (array-reduce array f start))
 
   IFn
   (-invoke [coll k]
