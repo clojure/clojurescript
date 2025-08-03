@@ -12385,7 +12385,7 @@ reduces them without incurring seq initialization"
           (recur (inc i)))))
     new-obj))
 
-(declare simple-hash-map)
+(declare simple-hash-map HashMap)
 
 (defn- keyword->obj-map-key
   [k]
