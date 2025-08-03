@@ -7,7 +7,8 @@
 ;; You must not remove this notice, or any other, from this software.
 
 (ns lite-test-runner
-  (:require [cljs.lite-collections-test]))
+  (:require [cljs.test :refer-macros [run-tests]]
+            [cljs.lite-collections-test]))
 
 (set! *print-newline* false)
 
@@ -17,5 +18,5 @@
   (enable-console-print!))
 
 (run-tests
-  'cljs.collections-test
+  'cljs.lite-collections-test
   )

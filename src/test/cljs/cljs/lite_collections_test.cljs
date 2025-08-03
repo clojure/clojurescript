@@ -7,5 +7,11 @@
 ;   You must not remove this notice, or any other, from this software.
 
 (ns cljs.lite-collections-test
-  (:require [cljs.test :refer-macros [deftest testing is are run-tests]]
-            [clojure.test.check.clojure-test :refer-macros [defspec]]))
+  (:require [cljs.test :refer-macros [deftest testing is are run-tests]]))
+
+;; NOTE: ** this name space must be tested with :lite-mode true **
+
+(deftest test-obj-map
+  (let [a (. ObjMap -EMPTY)
+        b {}]
+    (is (identical? a b))))
