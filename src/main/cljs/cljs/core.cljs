@@ -10385,11 +10385,22 @@ reduces them without incurring seq initialization"
 
 (defn- simple-map-entry [k v]
   (reify
+    IVector
+    (-assoc-n [_ n x]
+      (case n
+        0 (simple-map-entry x v)
+        1 (simple-map-entry k x)
+        (throw (js/Error. "Index out of bounds"))))
     IMapEntry
     (-key [_] k)
     (-val [_] v)
     ISeqable
-    (-seq [_] (IndexedSeq. #js [k v] 0 nil))))
+    (-seq [_] (IndexedSeq. #js [k v] 0 nil))
+    IIndexed
+    (-nth [_ i]
+      (case i, 0 k, 1 v, (throw (js/Error. "Index out of bounds"))))
+    (-nth [_ i not-found]
+      (case i, 0 k, 1 v, not-found))))
 
 (defn- pr-writer-impl
   [obj writer opts]
