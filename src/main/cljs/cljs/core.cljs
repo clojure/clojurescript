@@ -12576,7 +12576,7 @@ reduces them without incurring seq initialization"
               (loop [j 0]
                 (when (< j len)
                   (do
-                    (.push arr (simple-map-entry (aget bckt j) (aget bckt (inc j)) nil))
+                    (.push arr (simple-map-entry (aget bckt j) (aget bckt (inc j))))
                     (recur (+ j 2)))))
               (recur (inc i)))
             (prim-seq arr))))))
