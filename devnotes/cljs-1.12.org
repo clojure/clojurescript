@@ -1,0 +1,44 @@
+ClojureScript 1.12 Dev Notes
+
+* Clojure 1.12 introduced method values in the following forms
+** `Classname/staticMethod` - existing static method descriptor
+** `Classname/.instancedMethod` - describes an instance method
+** `Classname/new` - describes a constructor
+* `Classname/staticMethod`
+** ClojureScript does not use JS class syntax to define anything
+** "static fields" are just properties on the ctor fn
+** However this could easily be detected by the compiler
+*** `(set! (.. Foo -prototype BAR) ...)`
+**** where `Foo` is a known deftype
+** Clojure can disambiguate between method/properties
+*** ClojureScript cannot in the general case
+**** foreign JS libraries
+*** It can work for Closure Compatible stuff
+**** due to externs parsing
+** Option: Could assume `Classname/staticMethod` fn
+*** CLJS doesn't support anything but namespaces before the `/`
+**** So minimal breakage likely
+* `Classname/.instanceMethod` no precendent so also easy to handle
+* `Classname/new` a special case so easy to handle
+** Again `non-namespace/foo` never worked before
+* Other considerations
+** `^:param-tags`
+*** Don't immediately see a use for this
+**** We don't have the method selection problem
+** `goog.foo.Bar`
+*** Users do sometimes depend on global access to Closure libs
+*** externs parsing can let us know if `/` should be allowed or not
+** js$foo.bar
+*** A proposed enhancement to use global libraries as namespaces
+*** `js$foo.bar.Baz/staticMethod` when `js$foo.bar` not required
+**** it's not a great pattern to encourage
+***** macros are a case where it can be useful
+****** i.e. macro depends on a require that the user didn't provide
+****** combining w/ js$ though seems gratuitous
+***** that said, argument for consistency
+****** and no need to prioritize library writers
+****** convenient for solo developers on their blog etc.
+** if something is `:refer`ed etc.
+*** Can easily support `/`
+** `js/foo/bar`
+*** Not supported
