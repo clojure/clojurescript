@@ -10387,6 +10387,8 @@ reduces them without incurring seq initialization"
 
 (defn- simple-map-entry [k v]
   (reify
+    IEquiv
+    (-equiv [coll other] (equiv-sequential coll other))
     IVector
     (-assoc-n [_ n x]
       (case n
