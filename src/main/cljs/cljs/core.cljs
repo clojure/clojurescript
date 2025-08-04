@@ -10347,8 +10347,10 @@ reduces them without incurring seq initialization"
         (-write writer end)))))
 
 (defn write-all [writer & ss]
-  (doseq [s ss]
-    (-write writer s)))
+  (loop [ss (seq ss)]
+    (when-not (nil? ss)
+      (-write writer (first ss))
+      (recur (next ss)))))
 
 (defn string-print [x]
   (when (nil? *print-fn*)
@@ -10509,9 +10511,11 @@ reduces them without incurring seq initialization"
 
 (defn pr-seq-writer [objs writer opts]
   (pr-writer (first objs) writer opts)
-  (doseq [obj (next objs)]
-    (-write writer " ")
-    (pr-writer obj writer opts)))
+  (loop [objs (next objs)]
+    (when-not (nil? objs)
+      (-write writer " ")
+      (pr-writer (first objs) writer opts)
+      (recur (next objs)))))
 
 (defn- pr-sb-with-opts [objs opts]
   (let [sb (StringBuffer.)
@@ -12402,6 +12406,12 @@ reduces them without incurring seq initialization"
   [k]
   (str "\uFDD0" "'" (. k -fqn)))
 
+(defn- obj-map-key->keyword
+  [k]
+  (if (.startsWith k "\uFDD0")
+    (keyword (.substring k 2 (. k -length)))
+    k))
+
 (deftype ObjMap [meta keys strobj ^:mutable __hash]
   IWithMeta
   (-with-meta [coll meta] (ObjMap. meta keys strobj __hash))
@@ -12429,7 +12439,7 @@ reduces them without incurring seq initialization"
     (when (pos? (alength keys))
       (prim-seq
         (.map (.sort keys obj-map-compare-keys)
-          #(simple-map-entry % (unchecked-get strobj %))))))
+          #(simple-map-entry (obj-map-key->keyword %) (unchecked-get strobj %))))))
 
   ICounted
   (-count [coll] (alength keys))
@@ -12484,7 +12494,7 @@ reduces them without incurring seq initialization"
              init init]
         (if (seq keys)
           (let [k (first keys)
-                init (f init k (unchecked-get strobj k))]
+                init (f init (obj-map-key->keyword k) (unchecked-get strobj k))]
             (if (reduced? init)
               @init
               (recur (rest keys) init)))
@@ -12494,7 +12504,7 @@ reduces them without incurring seq initialization"
   (-dissoc [coll k]
     (let [k (if-not (keyword? k) k (keyword->obj-map-key k))]
       (if (and (string? k)
-            (not (nil? (scan-array 1 k keys))))
+               (not (nil? (scan-array 1 k keys))))
         (let [new-keys (aclone keys)
               new-strobj (obj-clone strobj keys)]
           (.splice new-keys (scan-array 1 k new-keys) 1)
