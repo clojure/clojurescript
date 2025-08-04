@@ -9,12 +9,9 @@
 (ns cljs.collections-test
   (:refer-clojure :exclude [iter])
   (:require [cljs.test :refer-macros [deftest testing is are run-tests]]
-            [clojure.test.check :as tc]
             [clojure.test.check.clojure-test :refer-macros [defspec]]
             [clojure.test.check.generators :as gen]
-            [clojure.test.check.properties :as prop :include-macros true]
-            [clojure.string :as s]
-            [clojure.set :as set]))
+            [clojure.test.check.properties :as prop :include-macros true]))
 
 (deftest test-map-operations
   (testing "Test basic map collection operations"
@@ -1156,6 +1153,22 @@
 (deftest test-cljs-3240-overflow-regress
   (let [things (zipmap (range 15000) (repeat 0))]
     (is (zero? (count (filter #(-> % key string?) things))))))
+
+(deftest test-obj-map
+  (let [a (obj-map)]
+    (is (empty? a))
+    (is (zero? (count a))))
+  (let [b (obj-map :a 1)]
+    (is (not (empty? b)))
+    (is (== 1 (count b))))
+  (let [c (obj-map :a 1 :b 2 :c 3)]
+    (is (== 3 (count c)))
+    (is (= 1 (get c :a)))
+    (is (= 1 (:a c)))
+    (is (every? keyword? (keys c)))
+    (is (= (set [:a :b :c]) (set (keys c)))))
+  (is (= (obj-map :a 1 :b 2 :c 3)
+         (obj-map :a 1 :b 2 :c 3))))
 
 (comment
 
