@@ -12552,9 +12552,10 @@ reduces them without incurring seq initialization"
         obj (js-obj)]
     (loop [kvs (seq keyvals)]
       (if kvs
-        (do (.push ks (first kvs))
-            (gobject/set obj (first kvs) (second kvs))
-            (recur (nnext kvs)))
+        (let [k (-> kvs first keyword->obj-map-key)]
+          (.push ks k)
+          (gobject/set obj k (second kvs))
+          (recur (nnext kvs)))
         (.fromObject ObjMap ks obj)))))
 
 ; The keys field is an array of all keys of this map, in no particular
