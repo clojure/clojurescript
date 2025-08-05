@@ -7,11 +7,13 @@
 ;   You must not remove this notice, or any other, from this software.
 
 (ns cljs.lite-collections-test
-  (:require [cljs.test :refer-macros [deftest testing is are run-tests]]))
+  (:require [cljs.test :refer [deftest testing is]]))
 
-;; NOTE: ** this name space must be tested with :lite-mode true **
+;; NOTE: ** this namespace must be tested with :lite-mode true **
 
 (deftest test-obj-map
   (let [a (. ObjMap -EMPTY)
         b {}]
-    (is (identical? a b))))
+    (is (identical? a b)))
+  (let [a {:foo 1}]
+    (is (== 1 (:foo a)))))
