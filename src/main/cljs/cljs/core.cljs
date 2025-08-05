@@ -12249,6 +12249,10 @@ reduces them without incurring seq initialization"
 ;;; Vector
 
 (deftype Vector [meta array ^:mutable __hash]
+  Object
+  (toString [coll]
+    (pr-str* coll))
+
   IWithMeta
   (-with-meta [coll meta] (Vector. meta array __hash))
 
@@ -12414,6 +12418,10 @@ reduces them without incurring seq initialization"
           (recur (+ i incr)))))))
 
 (deftype ObjMap [meta keys strobj ^:mutable __hash]
+  Object
+  (toString [coll]
+    (pr-str* coll))
+
   IWithMeta
   (-with-meta [coll meta] (ObjMap. meta keys strobj __hash))
 
@@ -12573,6 +12581,10 @@ reduces them without incurring seq initialization"
 ; collisions. A bucket is an array of alternating keys (not their hashes) and
 ; vals.
 (deftype HashMap [meta count hashobj ^:mutable __hash]
+  Object
+  (toString [coll]
+    (pr-str* coll))
+
   IWithMeta
   (-with-meta [coll meta] (HashMap. meta count hashobj __hash))
 
@@ -12716,6 +12728,10 @@ reduces them without incurring seq initialization"
       out)))
 
 (deftype Set [meta hash-map ^:mutable __hash]
+  Object
+  (toString [coll]
+    (pr-str* coll))
+
   IWithMeta
   (-with-meta [coll meta] (Set. meta hash-map __hash))
 
