@@ -12472,7 +12472,7 @@ reduces them without incurring seq initialization"
           (-kv-reduce coll
             (fn [ret k v]
               (-assoc ret k v))
-            (. HashMap -EMPTY))
+            (simple-hash-map k v))
           meta))))
   (-contains-key? [coll k]
     (let [k (if-not (keyword? k) k (keyword->obj-map-key k))]
@@ -12628,11 +12628,12 @@ reduces them without incurring seq initialization"
   (-assoc [coll k v]
     (let [h (hash k)
           bucket (unchecked-get hashobj h)]
-      (if bucket
+      (if (some? bucket)
         (let [new-bucket (aclone bucket)
-              new-hashobj (gobject/clone hashobj)]
+              new-hashobj (gobject/clone hashobj)
+              i (scan-array-equiv 2 k new-bucket)]
           (aset new-hashobj h new-bucket)
-          (if-let [i (scan-array-equiv 2 k new-bucket)]
+          (if (some? i)
             (do
               ; found key, replace
               (aset new-bucket (inc i) v)
@@ -12641,7 +12642,8 @@ reduces them without incurring seq initialization"
               ; did not find key, append
               (.push new-bucket k v)
               (HashMap. meta (inc count) new-hashobj nil))))
-        (let [new-hashobj (gobject/clone hashobj)] ; did not find bucket
+        (let [new-hashobj (gobject/clone hashobj)]
+          ; did not find bucket
           (unchecked-set new-hashobj h (array k v))
           (HashMap. meta (inc count) new-hashobj nil)))))
   (-contains-key? [coll k]
@@ -12656,15 +12658,16 @@ reduces them without incurring seq initialization"
     (let [h (hash k)
           bucket (unchecked-get hashobj h)
           i (when bucket (scan-array-equiv 2 k bucket))]
-      (if (not i)
-        coll ; key not found, return coll unchanged
+      (if (some? i)
         (let [new-hashobj (gobject/clone hashobj)]
           (if (> 3 (alength bucket))
             (js-delete new-hashobj h)
             (let [new-bucket (aclone bucket)]
               (.splice new-bucket i 2)
               (unchecked-set new-hashobj h new-bucket)))
-          (HashMap. meta (dec count) new-hashobj nil)))))
+          (HashMap. meta (dec count) new-hashobj nil))
+        ; key not found, return coll unchanged
+        coll)))
 
   IFn
   (-invoke [coll k]
