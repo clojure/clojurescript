@@ -497,6 +497,9 @@
 (defn lite-mode? []
   (get-in @env/*compiler* [:options :lite-mode]))
 
+(defn elide-to-string? []
+  (get-in @env/*compiler* [:options :elide-to-string]))
+
 #?(:clj
    (defmacro with-warning-handlers [handlers & body]
      `(binding [*cljs-warning-handlers* ~handlers]

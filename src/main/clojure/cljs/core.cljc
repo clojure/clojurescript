@@ -1511,7 +1511,7 @@
     ;; Elide all toString methods in :lite-mode
     (remove
       (core/fn [[f]]
-        (core/and (ana/lite-mode?) (core/= 'toString f))))
+        (core/and (ana/elide-to-string?) (core/= 'toString f))))
     (map
       (core/fn [[f & meths :as form]]
         (core/let [[f meths] (if (vector? (first meths))
