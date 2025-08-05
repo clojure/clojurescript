@@ -1168,10 +1168,63 @@
     (is (every? keyword? (keys c)))
     (is (= (set [:a :b :c]) (set (keys c)))))
   (is (= (obj-map :a 1 :b 2 :c 3)
-         (obj-map :a 1 :b 2 :c 3))))
+         (obj-map :a 1 :b 2 :c 3)))
+  (is (= (obj-map :a 1 :b 2)
+         (into (obj-map) [[:a 1] [:b 2]])))
+  (is (= (merge-with +
+           (obj-map :a 1 :b 2)
+           (obj-map :a 1 :b 2))
+         (into (obj-map) [[:a 2] [:b 4]])))
+  (is (= (transient (obj-map :a 1 :b 2))
+         (obj-map :a 1 :b 2))))
+
+(deftest test-hash-map
+  (let [a (simple-hash-map)]
+    (is (empty? a))
+    (is (zero? (count a))))
+  (let [b (simple-hash-map :a 1)]
+    (is (not (empty? b)))
+    (is (== 1 (count b))))
+  (let [c (simple-hash-map :a 1 :b 2 :c 3)]
+    (is (== 3 (count c)))
+    (is (= 1 (get c :a)))
+    (is (= 1 (:a c)))
+    (is (every? keyword? (keys c)))
+    (is (= (set [:a :b :c]) (set (keys c)))))
+  (is (= (simple-hash-map :a 1 :b 2 :c 3)
+        (simple-hash-map :a 1 :b 2 :c 3)))
+  (is (= (simple-hash-map :a 1 :b 2)
+        (into (simple-hash-map) [[:a 1] [:b 2]])))
+  (is (= (merge-with +
+           (simple-hash-map :a 1 :b 2)
+           (simple-hash-map :a 1 :b 2))
+        (into (simple-hash-map) [[:a 2] [:b 4]])))
+  (is (= (transient (simple-hash-map :a 1 :b 2))
+        (simple-hash-map :a 1 :b 2))))
 
 (comment
 
   (run-tests)
+
+  (defn simple-group-by
+    [f coll]
+    (persistent!
+      (reduce
+        (fn [ret x]
+          (let [k (f x)]
+            (assoc! ret k (conj (get ret k (. Vector -EMPTY)) x))))
+        (transient (. ObjMap -EMPTY)) coll)))
+
+  (simple-group-by
+    :ns
+    '[{:ns foo :name woz}
+      {:ns bar :name goz}
+      {:ns bar :name baz}
+      {:ns foo :name naz}])
+
+  (get (simple-hash-map :a 1 :b 2 :c 3) :a)
+
+  (#'scan-array-equiv 2 :a
+    (unchecked-get (. (simple-hash-map :a 1 :b 2 :c 3) -hashobj) (hash :a)))
 
   )
