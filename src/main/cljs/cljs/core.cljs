@@ -6560,15 +6560,6 @@ reduces them without incurring seq initialization"
               (= (get y (first xkv) never-equiv) (second xkv)))
             x))))))
 
-
-(defn- scan-array [incr k array]
-  (let [len (alength array)]
-    (loop [i 0]
-      (when (< i len)
-        (if (identical? k (aget array i))
-          i
-          (recur (+ i incr)))))))
-
 ;; Record Iterator
 (deftype RecordIter [^:mutable i record base-count fields ext-map-iter]
   Object
@@ -12414,6 +12405,14 @@ reduces them without incurring seq initialization"
     (keyword (.substring k 2 (. k -length)))
     k))
 
+(defn- scan-array [incr k array]
+  (let [len (alength array)]
+    (loop [i 0]
+      (when (< i len)
+        (if (identical? k (aget array i))
+          i
+          (recur (+ i incr)))))))
+
 (deftype ObjMap [meta keys strobj ^:mutable __hash]
   IWithMeta
   (-with-meta [coll meta] (ObjMap. meta keys strobj __hash))
@@ -12560,6 +12559,14 @@ reduces them without incurring seq initialization"
           (recur (nnext kvs)))
         (.fromObject ObjMap ks obj)))))
 
+(defn- scan-array-equiv [incr k array]
+  (let [len (alength array)]
+    (loop [i 0]
+      (when (< i len)
+        (if (= k (aget array i))
+          i
+          (recur (+ i incr)))))))
+
 ; The keys field is an array of all keys of this map, in no particular
 ; order. Each key is hashed and the result used as a property name of
 ; hashobj. Each values in hashobj is actually a bucket in order to handle hash
@@ -12611,25 +12618,27 @@ reduces them without incurring seq initialization"
   ILookup
   (-lookup [coll k] (-lookup coll k nil))
   (-lookup [coll k not-found]
-    (let [bucket (aget hashobj (hash k))
-          i (when bucket (scan-array 2 k bucket))]
-      (if i
+    (let [bucket (unchecked-get hashobj (hash k))
+          i (when bucket (scan-array-equiv 2 k bucket))]
+      (if (some? i)
         (aget bucket (inc i))
         not-found)))
 
   IAssociative
   (-assoc [coll k v]
     (let [h (hash k)
-          bucket (aget hashobj h)]
+          bucket (unchecked-get hashobj h)]
       (if bucket
         (let [new-bucket (aclone bucket)
               new-hashobj (gobject/clone hashobj)]
           (aset new-hashobj h new-bucket)
-          (if-let [i (scan-array 2 k new-bucket)]
-            (do                         ; found key, replace
+          (if-let [i (scan-array-equiv 2 k new-bucket)]
+            (do
+              ; found key, replace
               (aset new-bucket (inc i) v)
               (HashMap. meta count new-hashobj nil))
-            (do                         ; did not find key, append
+            (do
+              ; did not find key, append
               (.push new-bucket k v)
               (HashMap. meta (inc count) new-hashobj nil))))
         (let [new-hashobj (gobject/clone hashobj)] ; did not find bucket
@@ -12637,8 +12646,8 @@ reduces them without incurring seq initialization"
           (HashMap. meta (inc count) new-hashobj nil)))))
   (-contains-key? [coll k]
     (let [bucket (unchecked-get hashobj (hash k))
-          i (when bucket (scan-array 2 k bucket))]
-      (if i
+          i (when bucket (scan-array-equiv 2 k bucket))]
+      (if (some? i)
         true
         false)))
 
@@ -12646,7 +12655,7 @@ reduces them without incurring seq initialization"
   (-dissoc [coll k]
     (let [h (hash k)
           bucket (unchecked-get hashobj h)
-          i (when bucket (scan-array 2 k bucket))]
+          i (when bucket (scan-array-equiv 2 k bucket))]
       (if (not i)
         coll ; key not found, return coll unchanged
         (let [new-hashobj (gobject/clone hashobj)]
