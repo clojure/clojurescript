@@ -12261,11 +12261,11 @@ reduces them without incurring seq initialization"
 
   IStack
   (-peek [coll]
-    (let [count (.-length array)]
+    (let [count (alength array)]
       (when (> count 0)
         (aget array (dec count)))))
   (-pop [coll]
-    (if (> (.-length array) 0)
+    (if (> (alength array) 0)
       (let [new-array (aclone array)]
         (. new-array (pop))
         (Vector. meta new-array nil))
@@ -12289,24 +12289,24 @@ reduces them without incurring seq initialization"
 
   ISeqable
   (-seq [coll]
-    (when (> (.-length array) 0)
+    (when (> (alength array) 0)
       (let [vector-seq
              (fn vector-seq [i]
                (lazy-seq
-                 (when (< i (.-length array))
+                 (when (< i (alength array))
                    (cons (aget array i) (vector-seq (inc i))))))]
         (vector-seq 0))))
 
   ICounted
-  (-count [coll] (.-length array))
+  (-count [coll] (alength array))
 
   IIndexed
   (-nth [coll n]
-    (if (and (<= 0 n) (< n (.-length array)))
+    (if (and (<= 0 n) (< n (alength array)))
       (aget array n)
-      #_(throw (js/Error. (str "No item " n " in vector of length " (.-length array))))))
+      #_(throw (js/Error. (str "No item " n " in vector of length " (alength array))))))
   (-nth [coll n not-found]
-    (if (and (<= 0 n) (< n (.-length array)))
+    (if (and (<= 0 n) (< n (alength array)))
       (aget array n)
       not-found))
 
@@ -12319,6 +12319,11 @@ reduces them without incurring seq initialization"
     (let [new-array (aclone array)]
       (aset new-array k v)
       (Vector. meta new-array nil)))
+  (-contains-key? [coll k]
+    (if (integer? k)
+      (and (<= 0 k) (< k (alength array)))
+      false))
+
 
   IVector
   (-assoc-n [coll n val] (-assoc coll n val))
