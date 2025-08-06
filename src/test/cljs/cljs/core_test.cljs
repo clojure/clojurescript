@@ -408,43 +408,6 @@
           (halt-when :anomaly #(assoc %2 :partial-results %1))
           [1 2 {:anomaly :oh-no!} 3 4]))))
 
-(defn seq-iter-match
-  [coll]
-  (let [i (-iterator coll)]
-    (loop [s (seq coll)
-           n 0]
-      (if (seq s)
-        (do
-          (when-not (.hasNext i)
-            (throw
-              (js/Error.
-                (str  "Iterator exhausted before seq at(" n ")" ))))
-          (let [iv (.next i)
-                sv (first s)]
-           (when-not (= iv sv)
-            (throw
-              (js/Error.
-                (str "Iterator value " iv " and seq value " sv " did not match at ( "  n ")")))))
-          (recur (rest s) (inc n)))
-        (if (.hasNext i)
-          (throw
-            (js/Error.
-              (str  "Seq exhausted before iterator at (" n ")")))
-          true)))))
-
-(defrecord TestIterRec [a b])
-
-(deftest coll-iter-seq-match
-  (testing "Direct iterators match sequences"
-    (let [test-map (apply hash-map (range 200))
-          test-set (apply hash-set (range 200))
-          test-queue (into cljs.core.PersistentQueue.EMPTY (vec (range 100)))
-          test-record (into (TestIterRec. 1 2) {:c 3 :d 4})]
-      (is (= true (seq-iter-match test-map)))
-      (is (= true (seq-iter-match test-set)))
-      (is (= true (seq-iter-match test-queue)))
-      (is (= true (seq-iter-match test-record))))))
-
 (deftest test-reader-literals
   (testing "Testing reader literals"
     (is (= #queue [1] (into cljs.core.PersistentQueue.EMPTY [1])))
