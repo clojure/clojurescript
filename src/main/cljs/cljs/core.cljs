@@ -12321,9 +12321,11 @@ reduces them without incurring seq initialization"
 
   IAssociative
   (-assoc [coll k v]
-    (let [new-array (aclone array)]
-      (aset new-array k v)
-      (Vector. meta new-array nil)))
+    (if (number? k)
+      (let [new-array (aclone array)]
+        (aset new-array k v)
+        (Vector. meta new-array nil))
+      (throw (js/Error. "Vector's key for assoc must be a number."))))
   (-contains-key? [coll k]
     (if (integer? k)
       (and (<= 0 k) (< k (alength array)))
