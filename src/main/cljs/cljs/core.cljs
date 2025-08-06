@@ -12311,8 +12311,13 @@ reduces them without incurring seq initialization"
       not-found))
 
   ILookup
-  (-lookup [coll k] (-nth coll k nil))
-  (-lookup [coll k not-found] (-nth coll k not-found))
+  (-lookup [coll k]
+    (when (number? k)
+      (-nth coll k nil)))
+  (-lookup [coll k not-found]
+    (if (number? k)
+      (-nth coll k not-found)
+      not-found))
 
   IAssociative
   (-assoc [coll k v]
