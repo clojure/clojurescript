@@ -17,6 +17,8 @@
             [cljs.collections-test]
             [cljs.hashing-test]
             [cljs.core-test :as core-test]
+            [cljs.chunked-seq]
+            [cljs.interop-test]
             [cljs.reader-test]
             [cljs.binding-test]
             [cljs.parse-test]
@@ -77,6 +79,8 @@
   'cljs.collections-test
   'cljs.hashing-test
   'cljs.core-test
+  'cljs.chunked-seq
+  'cljs.interop-test
   'cljs.reader-test
   'cljs.parse-test
   'clojure.set-test

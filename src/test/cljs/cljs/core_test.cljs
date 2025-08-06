@@ -408,17 +408,6 @@
           (halt-when :anomaly #(assoc %2 :partial-results %1))
           [1 2 {:anomaly :oh-no!} 3 4]))))
 
-(deftest test-obj-equiv
-  (testing "Object equiv method"
-    (is (.equiv :foo :foo))
-    (is (.equiv 'foo 'foo))
-    (is (.equiv {:foo 1 :bar 2} {:foo 1 :bar 2}))
-    (is (.equiv [1 2 3] [1 2 3]))
-    (is (.equiv '(1 2 3) '(1 2 3)))
-    (is (.equiv (map inc [1 2 3]) (map inc [1 2 3])))
-    (is (.equiv #{:cat :dog :bird} #{:cat :dog :bird}))
-    ))
-
 (defn seq-iter-match
   [coll]
   (let [i (-iterator coll)]
@@ -455,54 +444,6 @@
       (is (= true (seq-iter-match test-set)))
       (is (= true (seq-iter-match test-queue)))
       (is (= true (seq-iter-match test-record))))))
-
-(deftest test-es6-interfaces
-  (testing "ES6 collection interfaces"
-    (let [iter (es6-iterator [1 2 3])]
-      (testing "basic iterations"
-        (is (= (.-value (.next iter)) 1))
-        (is (= (.-value (.next iter)) 2))
-        (is (= (.-value (.next iter)) 3))
-        (is (.-done (.next iter)))))
-    (is (.has {:foo "bar"} :foo))
-    (is (= (.get {:foo "bar"} :foo) "bar"))
-    (is (= (.get {:foo "bar"} :bar :default) :default))
-    (let [iter (.keys {:foo "bar" :baz "woz"})]
-      (testing "map key iteration"
-        (is (#{:foo :baz} (.-value (.next iter))))
-        (is (#{:foo :baz} (.-value (.next iter))))
-        (is (.-done (.next iter)))))
-    (let [eiter (.entries {:foo "bar" :baz "woz"})]
-      (testing "map entry iteration"
-        (let [entries #{(seq #js [:foo "bar"]) (seq #js [:baz "woz"])}]
-          (is (entries (seq (.-value (.next eiter)))))
-          (is (entries (seq (.-value (.next eiter))))))
-        (is (.-done (.next eiter)))))
-    (let [iter (.values {:foo "bar" :baz "woz"})]
-      (testing "map value iteration"
-        (is (#{"bar" "woz"} (.-value (.next iter))))
-        (is (#{"bar" "woz"} (.-value (.next iter))))
-        (is (.-done (.next iter)))))
-    (is (.has #{:cat :bird :dog} :bird))
-    (let [iter (.keys #{:cat :bird :dog})]
-      (testing "set key iteration"
-        (is (#{:cat :bird :dog} (.-value (.next iter))))
-        (is (#{:cat :bird :dog} (.-value (.next iter))))
-        (is (#{:cat :bird :dog} (.-value (.next iter))))
-        (is (.-done (.next iter)))))
-    (let [iter (.entries #{:cat :bird :dog})]
-      (testing "set entry iteration"
-        (is (#{[:cat :cat] [:bird :bird] [:dog :dog]} (seq (.-value (.next iter)))))
-        (is (#{[:cat :cat] [:bird :bird] [:dog :dog]} (seq (.-value (.next iter)))))
-        (is (#{[:cat :cat] [:bird :bird] [:dog :dog]} (seq (.-value (.next iter)))))
-        (is (.-done (.next iter)))))
-    (let [iter (.values #{:cat :bird :dog})]
-      (testing "set value iteration"
-        (is (#{:cat :bird :dog} (.-value (.next iter))))
-        (is (#{:cat :bird :dog} (.-value (.next iter))))
-        (is (#{:cat :bird :dog} (.-value (.next iter))))
-        (is (.-done (.next iter)))))
-))
 
 (deftest test-reader-literals
   (testing "Testing reader literals"
@@ -1669,22 +1610,6 @@
   (is (= true ((or int? string?) 1)))
   ;; Make sure we didn't delete the alpha? fn
   (is (some? alpha-2585?)))
-
-(deftest test-cljs-2693
-  (is (chunked-seq? (range 5)))
-  (is (satisfies? IChunk (chunk-first (range 5))))
-  (is (nil? (chunk-next (range 32))))
-  (is (not (chunked-seq? (range 2 -2 0))))
-  (is (chunked-seq? (range)))
-  (is (= 5 (count (chunk-first (range 5)))))
-  (is (= 32 (count (chunk-first (range)))))
-  (is (= 17 (nth (chunk-first (range 100)) 17)))
-  (is (= 35 (nth (chunk-first (range 100)) 35)))
-  (is (= 32 (count (chunk-first (range 100)))))
-  (is (= 0 (first (range 5))))
-  (is (= 1 (second (range 5))))
-  (is (= (range 1 5) (rest (range 5))))
-  (is (= (range 1 5) (next (range 5)))))
 
 (defn fn-2741* ([x]) ([x y]))
 (def fn-2741 fn-2741*)
