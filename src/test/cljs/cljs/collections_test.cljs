@@ -1178,7 +1178,7 @@
   (is (= (transient (obj-map :a 1 :b 2))
          (obj-map :a 1 :b 2))))
 
-(deftest test-hash-map
+(deftest test-simple-hash-map
   (let [a (simple-hash-map)]
     (is (empty? a))
     (is (zero? (count a))))
@@ -1201,6 +1201,12 @@
         (into (simple-hash-map) [[:a 2] [:b 4]])))
   (is (= (transient (simple-hash-map :a 1 :b 2))
          (simple-hash-map :a 1 :b 2))))
+
+(deftest test-simple-set
+  (is (= #{1 2 3} #{1 2 3}))
+  (is (= 3 (count #{1 2 3})))
+  (let [x #{1 2 3}]
+    (is (every? #(contains? x %) [1 2 3]))))
 
 (comment
 
