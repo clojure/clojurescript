@@ -12360,7 +12360,7 @@ reduces them without incurring seq initialization"
 (defn simple-vector
   [& args]
   (if (and (instance? IndexedSeq args) (zero? (.-i args)))
-    (.fromArray Vector (.-arr args) (not (array? (.-arr args))))
+    (.fromArray Vector (aclone (.-arr args)))
     (Vector. nil (into-array args) nil)))
 
 (defn simple-vec
