@@ -12557,6 +12557,13 @@ reduces them without incurring seq initialization"
   (-dissoc! [coll key]
     (-dissoc coll key))
 
+  IIterable
+  (-iterator [coll]
+    (let [xs (-seq coll)]
+      (if (some? xs)
+        (-iterator xs)
+        (nil-iter))))
+
   IPrintWithWriter
   (-pr-writer [coll writer opts]
     (print-map coll pr-writer writer opts)))
@@ -12716,6 +12723,13 @@ reduces them without incurring seq initialization"
   ITransientMap
   (-dissoc! [coll key]
     (-dissoc coll key))
+
+  IIterable
+  (-iterator [coll]
+    (let [xs (-seq coll)]
+      (if (some? xs)
+        (-iterator xs)
+        (nil-iter))))
 
   IPrintWithWriter
   (-pr-writer [coll writer opts]
