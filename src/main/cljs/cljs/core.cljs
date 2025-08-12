@@ -12769,10 +12769,16 @@ reduces them without incurring seq initialization"
   (-hash [coll] (caching-hash coll hash-unordered-coll __hash))
 
   ISeqable
-  (-seq [coll] (keys hash-map))
+  (-seq [coll]
+    (let [xs (-seq hash-map)]
+      (when (some? xs)
+        (prim-seq (.map (.-arr xs) (fn [kv] (-key kv)))))))
 
   ICounted
-  (-count [coll] (-count (-seq coll)))
+  (-count [coll]
+    (let [xs (-seq coll)]
+      (when (some? xs)
+        (-count xs))))
 
   ILookup
   (-lookup [coll v]
