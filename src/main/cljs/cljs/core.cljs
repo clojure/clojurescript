@@ -10378,6 +10378,10 @@ reduces them without incurring seq initialization"
 
 (defn- simple-map-entry [k v]
   (reify
+    ICounted
+    (-count [coll] 2)
+    IHash
+    (-hash [coll] (hash-ordered-coll [k v]))
     IEquiv
     (-equiv [coll other] (equiv-sequential coll other))
     IVector
