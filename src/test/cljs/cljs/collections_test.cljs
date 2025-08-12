@@ -1206,7 +1206,9 @@
   (is (= #{1 2 3} #{1 2 3}))
   (is (= 3 (count #{1 2 3})))
   (let [x #{1 2 3}]
-    (is (every? #(contains? x %) [1 2 3]))))
+    (is (every? #(contains? x %) [1 2 3])))
+  (is (= (simple-set [[3 4] [1 2] [5 6]])
+         (into #{} [[3 4] [1 2] [5 6]]))))
 
 (deftest test-simple-map-entry
   (is (= (simple-map-entry :foo 1)
