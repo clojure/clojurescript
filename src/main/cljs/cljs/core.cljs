@@ -12308,7 +12308,7 @@ reduces them without incurring seq initialization"
   (-nth [coll n]
     (if (and (<= 0 n) (< n (alength array)))
       (aget array n)
-      #_(throw (js/Error. (str "No item " n " in vector of length " (alength array))))))
+      (throw (js/Error. (str "No item " n " in vector of length " (alength array))))))
   (-nth [coll n not-found]
     (if (and (<= 0 n) (< n (alength array)))
       (aget array n)
@@ -12317,7 +12317,7 @@ reduces them without incurring seq initialization"
   ILookup
   (-lookup [coll k]
     (when (number? k)
-      (-nth coll k nil)))
+      (-nth coll k)))
   (-lookup [coll k not-found]
     (if (number? k)
       (-nth coll k not-found)
