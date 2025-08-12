@@ -9,12 +9,9 @@
 (ns cljs.collections-test
   (:refer-clojure :exclude [iter])
   (:require [cljs.test :refer-macros [deftest testing is are run-tests]]
-            [clojure.test.check :as tc]
             [clojure.test.check.clojure-test :refer-macros [defspec]]
             [clojure.test.check.generators :as gen]
-            [clojure.test.check.properties :as prop :include-macros true]
-            [clojure.string :as s]
-            [clojure.set :as set]))
+            [clojure.test.check.properties :as prop :include-macros true]))
 
 (deftest test-map-operations
   (testing "Test basic map collection operations"
@@ -1156,6 +1153,68 @@
 (deftest test-cljs-3240-overflow-regress
   (let [things (zipmap (range 15000) (repeat 0))]
     (is (zero? (count (filter #(-> % key string?) things))))))
+
+(deftest test-obj-map
+  (let [a (obj-map)]
+    (is (empty? a))
+    (is (zero? (count a))))
+  (let [b (obj-map :a 1)]
+    (is (not (empty? b)))
+    (is (== 1 (count b))))
+  (let [c (obj-map :a 1 :b 2 :c 3)]
+    (is (== 3 (count c)))
+    (is (= 1 (get c :a)))
+    (is (= 1 (:a c)))
+    (is (every? keyword? (keys c)))
+    (is (= (set [:a :b :c]) (set (keys c)))))
+  (is (= (obj-map :a 1 :b 2 :c 3)
+         (obj-map :a 1 :b 2 :c 3)))
+  (is (= (obj-map :a 1 :b 2)
+         (into (obj-map) [[:a 1] [:b 2]])))
+  (is (= (merge-with +
+           (obj-map :a 1 :b 2)
+           (obj-map :a 1 :b 2))
+         (into (obj-map) [[:a 2] [:b 4]])))
+  (is (= (transient (obj-map :a 1 :b 2))
+         (obj-map :a 1 :b 2))))
+
+(deftest test-simple-hash-map
+  (let [a (simple-hash-map)]
+    (is (empty? a))
+    (is (zero? (count a))))
+  (let [b (simple-hash-map :a 1)]
+    (is (not (empty? b)))
+    (is (== 1 (count b))))
+  (let [c (simple-hash-map :a 1 :b 2 :c 3)]
+    (is (== 3 (count c)))
+    (is (= 1 (get c :a)))
+    (is (= 1 (:a c)))
+    (is (every? keyword? (keys c)))
+    (is (= (set [:a :b :c]) (set (keys c)))))
+  (is (= (simple-hash-map :a 1 :b 2 :c 3)
+        (simple-hash-map :a 1 :b 2 :c 3)))
+  (is (= (simple-hash-map :a 1 :b 2)
+        (into (simple-hash-map) [[:a 1] [:b 2]])))
+  (is (= (merge-with +
+           (simple-hash-map :a 1 :b 2)
+           (simple-hash-map :a 1 :b 2))
+        (into (simple-hash-map) [[:a 2] [:b 4]])))
+  (is (= (transient (simple-hash-map :a 1 :b 2))
+         (simple-hash-map :a 1 :b 2))))
+
+(deftest test-simple-set
+  (is (= #{1 2 3} #{1 2 3}))
+  (is (= 3 (count #{1 2 3})))
+  (let [x #{1 2 3}]
+    (is (every? #(contains? x %) [1 2 3])))
+  (is (= (simple-set [[3 4] [1 2] [5 6]])
+         (into #{} [[3 4] [1 2] [5 6]]))))
+
+(deftest test-simple-map-entry
+  (is (= (simple-map-entry :foo 1)
+         (MapEntry. :foo 1 nil)))
+  (is (= (hash (simple-map-entry :foo 1))
+         (hash (MapEntry. :foo 1 nil)))))
 
 (comment
 
