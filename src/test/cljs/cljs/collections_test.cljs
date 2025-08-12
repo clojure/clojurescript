@@ -1208,6 +1208,12 @@
   (let [x #{1 2 3}]
     (is (every? #(contains? x %) [1 2 3]))))
 
+(deftest test-simple-map-entry
+  (is (= (simple-map-entry :foo 1)
+         (MapEntry. :foo 1 nil)))
+  (is (= (hash (simple-map-entry :foo 1))
+         (hash (MapEntry. :foo 1 nil)))))
+
 (comment
 
   (run-tests)
