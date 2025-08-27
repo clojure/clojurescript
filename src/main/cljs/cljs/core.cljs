@@ -12345,6 +12345,23 @@ reduces them without incurring seq initialization"
   (-reduce [v f start]
     (array-reduce array f start))
 
+  IKVReduce
+  (-kv-reduce [v f init]
+    (let [len (alength array)]
+      (loop [i 0 init init]
+        (if (< i len)
+          (let [init (f init i (aget array i))]
+            (if (reduced? init)
+              @init
+              (recur (inc i) init)))
+          init))))
+
+  IComparable
+  (-compare [x y]
+    (if (vector? y)
+      (compare-indexed x y)
+      (throw (js/Error. "Cannot compare with Vector"))))
+
   IFn
   (-invoke [coll k]
     (-lookup coll k))
