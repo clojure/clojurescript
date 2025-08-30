@@ -12289,7 +12289,7 @@ reduces them without incurring seq initialization"
   (-equiv [coll other] (equiv-sequential coll other))
 
   IHash
-  (-hash [coll] (hash-coll coll))
+  (-hash [coll] (hash-ordered-coll coll))
 
   ISeqable
   (-seq [coll]
