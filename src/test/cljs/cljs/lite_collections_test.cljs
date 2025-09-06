@@ -19,22 +19,29 @@
     (is (== 1 (:foo a)))))
 
 (deftest test-simple-map-entry-eq-hash
+  (is (= (simple-map-entry 1 2) (simple-map-entry 1 2)))
   (is (= (simple-map-entry 1 2)
-         (MapEntry. 1 2 nil)))
+        (MapEntry. 1 2 nil)))
   (is (== (hash (simple-map-entry 1 2))
           (hash (MapEntry. 1 2 nil)))))
 
 (deftest test-simple-set-with-set
   (is (= (simple-set []) (set [])))
-  (is (= (set []) (simple-set []))))
+  (is (= (set []) (simple-set [])))
+  (is (= (simple-set [(simple-map-entry 1 2)])
+         (set [(MapEntry. 1 2 nil)]))))
+
+(deftest test-hash-map-simple-map-entry
+  (let [m (assoc (. HashMap -EMPTY) (simple-map-entry 1 2) true)]
+    (is (contains? m (simple-map-entry 1 2)))))
+
+(deftest test-simple-set-simple-map-entry
+  (let [a (simple-set [(simple-map-entry 1 2)])]
+    (is (contains? a (simple-map-entry 1 2)))))
 
 (comment
 
- (require '[cljs.lite-collections-test] :reload)
- (cljs.test/run-tests)
+  (require '[cljs.lite-collections-test])
+  (cljs.test/run-tests)
 
- ;; failing
- (= (simple-set [(simple-map-entry 1 2)])
-    (set [(MapEntry. 1 2 nil)]))
-
-)
+  )

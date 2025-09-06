@@ -10382,6 +10382,7 @@ reduces them without incurring seq initialization"
     (-count [coll] 2)
     IHash
     (-hash [coll] (hash-ordered-coll [k v]))
+    ISequential
     IEquiv
     (-equiv [coll other] (equiv-sequential coll other))
     IVector
