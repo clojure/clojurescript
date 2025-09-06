@@ -24,9 +24,17 @@
   (is (== (hash (simple-map-entry 1 2))
           (hash (MapEntry. 1 2 nil)))))
 
+(deftest test-simple-set-with-set
+  (is (= (simple-set []) (set [])))
+  (is (= (set []) (simple-set []))))
+
 (comment
 
  (require '[cljs.lite-collections-test] :reload)
  (cljs.test/run-tests)
+
+ ;; failing
+ (= (simple-set [(simple-map-entry 1 2)])
+    (set [(MapEntry. 1 2 nil)]))
 
 )
