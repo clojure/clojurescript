@@ -8,6 +8,7 @@
 
 (ns lite-test-runner
   (:require [cljs.test :refer-macros [run-tests]]
+            [cljs.core-test]
             [cljs.lite-collections-test]))
 
 (set! *print-newline* false)
@@ -19,4 +20,5 @@
 
 (run-tests
   'cljs.lite-collections-test
+  'cljs.core-test
   )

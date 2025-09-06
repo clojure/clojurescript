@@ -17,3 +17,16 @@
     (is (identical? a b)))
   (let [a {:foo 1}]
     (is (== 1 (:foo a)))))
+
+(deftest test-simple-map-entry-eq-hash
+  (is (= (simple-map-entry 1 2)
+         (MapEntry. 1 2 nil)))
+  (is (== (hash (simple-map-entry 1 2))
+          (hash (MapEntry. 1 2 nil)))))
+
+(comment
+
+ (require '[cljs.lite-collections-test] :reload)
+ (cljs.test/run-tests)
+
+)
