@@ -14,10 +14,15 @@
             [cljs.new-new-test]
             [cljs.printing-test]
             [cljs.seqs-test]
+            ;; [cljs.collections-test]
             [cljs.hashing-test]
+            [cljs.core-test]
+            ;; [cljs.chunked-seq] ;; doesn't exist in :lite-mode
             [cljs.interop-test]
             [cljs.iterator-test]
+            [cljs.reader-test]
             [cljs.binding-test]
+            [cljs.parse-test]
             [cljs.ns-test]
             [clojure.set-test]
             [clojure.string-test]
@@ -41,6 +46,8 @@
             [cljs.specials-test]
             [cljs.spec.test-test]
             [cljs.clojure-alias-test]
+            ;; [cljs.hash-map-test]
+            ;; [cljs.map-entry-test]
             ;; [cljs.metadata-test]
             ;; [cljs.npm-deps-test]
             [cljs.other-functions-test]
@@ -55,7 +62,6 @@
             [cljs.repl-test]
             ;; [cljs.extend-to-native-test]
             [cljs.var-test]
-            [cljs.core-test]
             [cljs.lite-collections-test]))
 
 (set! *print-newline* false)
@@ -75,7 +81,9 @@
   #_'cljs.hashing-test
   #_'cljs.interop-test ;; ES6 stuff
   #_'cljs.iterator-test
+  'cljs.reader-test
   'cljs.binding-test
+  'cljs.parse-test
   'cljs.ns-test
   'clojure.set-test
   'clojure.string-test
