@@ -12261,6 +12261,9 @@ reduces them without incurring seq initialization"
   IWithMeta
   (-with-meta [coll meta] (Vector. meta array __hash))
 
+  ICloneable
+  (-clone [coll] (Vector. meta array __hash))
+
   IMeta
   (-meta [coll] meta)
 
@@ -12462,6 +12465,9 @@ reduces them without incurring seq initialization"
   IMeta
   (-meta [coll] meta)
 
+  ICloneable
+  (-clone [coll] (ObjMap. meta keys strobj __hash))
+
   ICollection
   (-conj [coll entry]
     (if (vector? entry)
@@ -12632,6 +12638,9 @@ reduces them without incurring seq initialization"
   IMeta
   (-meta [coll] meta)
 
+  ICloneable
+  (-clone [coll] (HashMap. meta count hashobj __hash))
+
   ICollection
   (-conj [coll entry]
     (if (vector? entry)
@@ -12785,6 +12794,9 @@ reduces them without incurring seq initialization"
 
   IMeta
   (-meta [coll] meta)
+
+  ICloneable
+  (-clone [coll] (Set. meta hash-map __hash))
 
   ICollection
   (-conj [coll o]

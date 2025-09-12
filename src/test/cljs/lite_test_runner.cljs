@@ -8,6 +8,25 @@
 
 (ns lite-test-runner
   (:require [cljs.test :refer-macros [run-tests]]
+            [cljs.apply-test]
+            [cljs.primitives-test]
+            [cljs.destructuring-test]
+            [cljs.new-new-test]
+            [cljs.seqs-test]
+            [cljs.hashing-test]
+            [cljs.interop-test]
+            [cljs.iterator-test]
+            [cljs.binding-test]
+            [cljs.ns-test]
+            [clojure.set-test]
+            [clojure.string-test]
+            [clojure.data-test]
+            [clojure.datafy-test]
+            [clojure.edn-test]
+            [clojure.walk-test]
+            [clojure.math-test]
+            [cljs.macro-test]
+            [cljs.letfn-test]
             [cljs.core-test]
             [cljs.lite-collections-test]))
 
@@ -19,6 +38,24 @@
   (enable-console-print!))
 
 (run-tests
-  'cljs.lite-collections-test
+  'cljs.apply-test
+  'cljs.primitives-test
+  'cljs.destructuring-test
+  'cljs.new-new-test
+  #_'cljs.seqs-test ;; rseq Vector
+  #_'cljs.hashing-test
+  #_'cljs.interop-test ;; ES6 stuff
+  #_'cljs.iterator-test
+  'cljs.binding-test
+  'cljs.ns-test
+  'clojure.set-test
+  'clojure.string-test
+  #_'clojure.data-test ;; 1 failure #object[Error Error: No item 1 in vector of length 1]
+  'clojure.datafy-test
+  'clojure.edn-test
+  'clojure.walk-test
+  'clojure.math-test
+  'cljs.macro-test
   'cljs.core-test
+  'cljs.lite-collections-test
   )
