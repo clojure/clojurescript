@@ -27,6 +27,19 @@
             [clojure.math-test]
             [cljs.macro-test]
             [cljs.letfn-test]
+            [foo.ns-shadow-test]
+            [cljs.top-level]
+            [cljs.reducers-test]
+            [cljs.keyword-test]
+            [cljs.import-test]
+            [cljs.ns-test.foo]
+            [cljs.syntax-quote-test]
+            [cljs.pprint]
+            [cljs.pprint-test]
+            [cljs.spec-test]
+            [cljs.specials-test]
+            [cljs.spec.test-test]
+            [cljs.clojure-alias-test]
             [cljs.core-test]
             [cljs.lite-collections-test]))
 
@@ -56,6 +69,20 @@
   'clojure.walk-test
   'clojure.math-test
   'cljs.macro-test
+  'cljs.letfn-test
+  'foo.ns-shadow-test
+  'cljs.top-level
+  #_'cljs.reducers-test ;; missing IReduce, IKVReduce
+  'cljs.keyword-test
+  'cljs.import-test
+  'cljs.ns-test.foo
+  'cljs.syntax-quote-test
+  'cljs.pprint
+  'cljs.pprint-test
+  #_'cljs.spec-test ;; this one is strange
+  'cljs.specials-test
+  'cljs.spec.test-test
+  'cljs.clojure-alias-test
   'cljs.core-test
   'cljs.lite-collections-test
   )
