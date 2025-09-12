@@ -1768,7 +1768,7 @@ reduces them without incurring seq initialization"
   (indexOf [coll x start]
     (-indexOf coll x start))
   (lastIndexOf [coll x]
-    (-lastIndexOf coll x (count coll)))
+    (-lastIndexOf coll x (-count coll)))
   (lastIndexOf [coll x start]
     (-lastIndexOf coll x start))
 
@@ -10396,6 +10396,9 @@ reduces them without incurring seq initialization"
       (-assoc-n node k v))
     (-contains-key? [node k]
       (or (== k 0) (== k 1)))
+    ICollection
+    (-conj [coll x]
+      (Vector. nil #js [k v x] nil))
     IMapEntry
     (-key [_] k)
     (-val [_] v)
@@ -12262,6 +12265,36 @@ reduces them without incurring seq initialization"
   Object
   (toString [coll]
     (pr-str* coll))
+  (equiv [coll other]
+    (-equiv coll other))
+  (indexOf [coll x start]
+    (let [start (if (nil? start) 0 start)
+          len   (-count coll)]
+      (if (>= start len)
+        -1
+        (loop [idx (cond
+                     (pos? start) start
+                     (neg? start) (max 0 (+ start len))
+                     :else start)]
+          (if (< idx len)
+            (if (= (-nth coll idx) x)
+              idx
+              (recur (inc idx)))
+            -1)))))
+  (lastIndexOf [coll x start]
+    (let [start (if (nil? start) (alength array) start)
+          len   (-count coll)]
+      (if (zero? len)
+        -1
+        (loop [idx (cond
+                     (pos? start) (min (dec len) start)
+                     (neg? start) (+ len start)
+                     :else start)]
+          (if (>= idx 0)
+            (if (= (-nth coll idx) x)
+              idx
+              (recur (dec idx)))
+            -1)))))
 
   IWithMeta
   (-with-meta [coll meta] (Vector. meta array __hash))
@@ -12344,9 +12377,14 @@ reduces them without incurring seq initialization"
       (and (<= 0 k) (< k (alength array)))
       false))
 
-
   IVector
   (-assoc-n [coll n val] (-assoc coll n val))
+
+  IReversible
+  (-rseq [coll]
+    (let [cnt (alength array)]
+      (when (pos? cnt)
+        (RSeq. coll (dec cnt) nil))))
 
   IReduce
   (-reduce [v f]
@@ -12830,8 +12868,9 @@ reduces them without incurring seq initialization"
   ICounted
   (-count [coll]
     (let [xs (-seq coll)]
-      (when (some? xs)
-        (-count xs))))
+      (if (some? xs)
+        (-count xs)
+        0)))
 
   ILookup
   (-lookup [coll v]

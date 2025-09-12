@@ -203,20 +203,21 @@
     (is (= (.lastIndexOf (sequence (map inc) '(0 1 0 3 4)) 1) 2))))
 
 (deftest test-chunked
-  (let [r (range 64)
-        v (into [] r)]
-    (testing "Testing Chunked Seqs"
-      (is (= (hash (seq v)) (hash (seq v))))
-      (is (= 6 (reduce + (array-chunk (array 1 2 3)))))
-      (is (instance? ChunkedSeq (seq v)))
-      (is (= r (seq v)))
-      (is (= (map inc r) (map inc v)))
-      (is (= (filter even? r) (filter even? v)))
-      (is (= (filter odd? r) (filter odd? v)))
-      (is (= (concat r r r) (concat v v v)))
-      (is (satisfies? IReduce (seq v)))
-      (is (== 2010 (reduce + (nnext (nnext (seq v))))))
-      (is (== 2020 (reduce + 10 (nnext (nnext (seq v)))))))))
+  (when-not LITE_MODE
+    (let [r (range 64)
+          v (into [] r)]
+      (testing "Testing Chunked Seqs"
+        (is (= (hash (seq v)) (hash (seq v))))
+        (is (= 6 (reduce + (array-chunk (array 1 2 3)))))
+        (is (instance? ChunkedSeq (seq v)))
+        (is (= r (seq v)))
+        (is (= (map inc r) (map inc v)))
+        (is (= (filter even? r) (filter even? v)))
+        (is (= (filter odd? r) (filter odd? v)))
+        (is (= (concat r r r) (concat v v v)))
+        (is (satisfies? IReduce (seq v)))
+        (is (== 2010 (reduce + (nnext (nnext (seq v))))))
+        (is (== 2020 (reduce + 10 (nnext (nnext (seq v)))))))))||||)
 
 (deftest test-778
   (testing "Testing CLJS-778, -rest, -next RSeq"

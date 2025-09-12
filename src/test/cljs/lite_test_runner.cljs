@@ -77,7 +77,7 @@
   'cljs.destructuring-test
   'cljs.printing-test
   'cljs.new-new-test
-  #_'cljs.seqs-test ;; rseq Vector
+  'cljs.seqs-test ;; rseq Vector
   #_'cljs.hashing-test
   #_'cljs.interop-test ;; ES6 stuff
   #_'cljs.iterator-test
