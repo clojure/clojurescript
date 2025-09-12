@@ -10391,6 +10391,11 @@ reduces them without incurring seq initialization"
         0 (simple-map-entry x v)
         1 (simple-map-entry k x)
         (throw (js/Error. "Index out of bounds"))))
+    IAssociative
+    (-assoc [node k v]
+      (-assoc-n node k v))
+    (-contains-key? [node k]
+      (or (== k 0) (== k 1)))
     IMapEntry
     (-key [_] k)
     (-val [_] v)

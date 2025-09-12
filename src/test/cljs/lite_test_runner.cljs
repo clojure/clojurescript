@@ -12,6 +12,7 @@
             [cljs.primitives-test]
             [cljs.destructuring-test]
             [cljs.new-new-test]
+            [cljs.printing-test]
             [cljs.seqs-test]
             [cljs.hashing-test]
             [cljs.interop-test]
@@ -40,6 +41,20 @@
             [cljs.specials-test]
             [cljs.spec.test-test]
             [cljs.clojure-alias-test]
+            ;; [cljs.metadata-test]
+            ;; [cljs.npm-deps-test]
+            [cljs.other-functions-test]
+            [cljs.predicates-test]
+            ;; [cljs.tagged-literals-test]
+            [cljs.test-test]
+            [static.core-test]
+            [cljs.recur-test]
+            [cljs.array-access-test]
+            [cljs.inference-test]
+            ;; [cljs.walk-test]
+            [cljs.repl-test]
+            ;; [cljs.extend-to-native-test]
+            [cljs.var-test]
             [cljs.core-test]
             [cljs.lite-collections-test]))
 
@@ -54,6 +69,7 @@
   'cljs.apply-test
   'cljs.primitives-test
   'cljs.destructuring-test
+  'cljs.printing-test
   'cljs.new-new-test
   #_'cljs.seqs-test ;; rseq Vector
   #_'cljs.hashing-test
@@ -83,6 +99,20 @@
   'cljs.specials-test
   'cljs.spec.test-test
   'cljs.clojure-alias-test
+  #_'cljs.metadata-test ;; another RSeq one
+  #_'cljs.npm-deps-test
+  'cljs.other-functions-test
+  'cljs.predicates-test
+  #_'cljs.tagged-literals-test ;; duplicate keys in ObjMap/HashMap
+  'cljs.test-test
+  'static.core-test
+  'cljs.recur-test
+  'cljs.array-access-test
+  'cljs.inference-test
+  #_'cljs.walk-test ;; not sure here
+  'cljs.repl-test
+  #_'cljs.extend-to-native-test ;; this one breaks a bunchof things
+  'cljs.var-test
   'cljs.core-test
   'cljs.lite-collections-test
   )
