@@ -58,7 +58,7 @@
             [cljs.recur-test]
             [cljs.array-access-test]
             [cljs.inference-test]
-            ;; [cljs.walk-test]
+            [cljs.walk-test]
             [cljs.repl-test]
             ;; [cljs.extend-to-native-test]
             [cljs.var-test]
@@ -117,7 +117,7 @@
   'cljs.recur-test
   'cljs.array-access-test
   'cljs.inference-test
-  #_'cljs.walk-test ;; not sure here
+  'cljs.walk-test ;; not sure here
   'cljs.repl-test
   #_'cljs.extend-to-native-test ;; this one breaks a bunchof things
   'cljs.var-test
