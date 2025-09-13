@@ -217,7 +217,7 @@
         (is (= (concat r r r) (concat v v v)))
         (is (satisfies? IReduce (seq v)))
         (is (== 2010 (reduce + (nnext (nnext (seq v))))))
-        (is (== 2020 (reduce + 10 (nnext (nnext (seq v)))))))))||||)
+        (is (== 2020 (reduce + 10 (nnext (nnext (seq v))))))))))
 
 (deftest test-778
   (testing "Testing CLJS-778, -rest, -next RSeq"
