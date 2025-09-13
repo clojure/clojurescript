@@ -12678,7 +12678,7 @@ reduces them without incurring seq initialization"
 
 (es6-iterable ObjMap)
 
-(set! (. ObjMap -EMPTY) (ObjMap. nil (array) (js-obj) empty-ordered-hash))
+(set! (. ObjMap -EMPTY) (ObjMap. nil (array) (js-obj) empty-unordered-hash))
 
 (set! (. ObjMap -fromObject) (fn [ks obj] (ObjMap. nil ks obj nil)))
 
