@@ -10412,7 +10412,16 @@ reduces them without incurring seq initialization"
     (-nth [_ i]
       (case i, 0 k, 1 v, (throw (js/Error. "Index out of bounds"))))
     (-nth [_ i not-found]
-      (case i, 0 k, 1 v, not-found))))
+      (case i, 0 k, 1 v, not-found))
+    ILookup
+    (-lookup [coll k] (-nth coll k nil))
+    (-lookup [coll k not-found] (-nth coll k not-found))
+    IFind
+    (-find [node x]
+      (case x
+        0 (simple-map-entry 0 k)
+        1 (simple-map-entry 1 v)
+        nil))))
 
 (defn- pr-writer-impl
   [obj writer opts]

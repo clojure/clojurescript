@@ -39,9 +39,19 @@
   (let [a (simple-set [(simple-map-entry 1 2)])]
     (is (contains? a (simple-map-entry 1 2)))))
 
+(deftest test-simple-map-entry-lookups
+  (let [me (simple-map-entry :foo "bar")]
+    (is (= :foo (get me 0)))
+    (is (= "bar" (get me 1)))
+    (is (= [0 :foo]
+          (vec (find (simple-map-entry :foo "bar") 0))))
+    (is (= [:foo "b"]
+          (vec (update (simple-map-entry :foo "bar") 1 first))
+          (vec (update-in (simple-map-entry :foo "bar") [1] first))))))
+
 (comment
 
-  (require '[cljs.lite-collections-test])
+  (require '[cljs.lite-collections-test] :reload)
   (cljs.test/run-tests)
 
   )
