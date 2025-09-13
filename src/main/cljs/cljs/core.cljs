@@ -10400,7 +10400,9 @@ reduces them without incurring seq initialization"
       (or (== k 0) (== k 1)))
     ICollection
     (-conj [coll x]
-      (Vector. nil #js [k v x] nil))
+      (if ^boolean LITE_MODE
+        (Vector. nil #js [k v x] nil)
+        [k v x]))
     IMapEntry
     (-key [_] k)
     (-val [_] v)
