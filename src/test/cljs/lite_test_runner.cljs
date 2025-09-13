@@ -79,7 +79,7 @@
   'cljs.new-new-test
   'cljs.seqs-test
   #_'cljs.hashing-test
-  #_'cljs.interop-test ;; ES6 stuff
+  'cljs.interop-test ;; ES6 stuff
   #_'cljs.iterator-test
   'cljs.reader-test
   'cljs.binding-test

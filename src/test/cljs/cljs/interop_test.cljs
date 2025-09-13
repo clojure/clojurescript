@@ -14,12 +14,17 @@
   (testing "Object equiv method"
     (is (.equiv :foo :foo))
     (is (.equiv 'foo 'foo))
-    (is (.equiv {:foo 1 :bar 2} {:foo 1 :bar 2}))
+    ;; .equiv is not a standard thing, primarily for interop
+    ;; in transit-js, probably not a concern for lite-mode users
+    (when-not LITE_MODE
+      (is (.equiv {:foo 1 :bar 2} {:foo 1 :bar 2})))
     (is (.equiv [1 2 3] [1 2 3]))
     (is (.equiv '(1 2 3) '(1 2 3)))
     (is (.equiv (map inc [1 2 3]) (map inc [1 2 3])))
-    (is (.equiv #{:cat :dog :bird} #{:cat :dog :bird}))
-    ))
+    ;; .equiv is not a standard thing, primarily for interop
+    ;; in transit-js, probably not a concern for lite-mode users
+    (when-not LITE_MODE
+      (is (.equiv #{:cat :dog :bird} #{:cat :dog :bird})))))
 
 (deftest test-es6-interfaces
   (testing "ES6 collection interfaces"

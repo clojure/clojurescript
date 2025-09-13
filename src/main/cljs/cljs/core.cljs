@@ -12432,6 +12432,8 @@ reduces them without incurring seq initialization"
   IPrintWithWriter
   (-pr-writer [coll writer opts] (pr-sequential-writer writer pr-writer "[" " " "]" opts coll)))
 
+(es6-iterable PersistentVector)
+
 (set! (. Vector -EMPTY) (Vector. nil (array) nil))
 
 (set! (. Vector -fromArray) (fn [xs] (Vector. nil xs nil)))
@@ -12501,19 +12503,38 @@ reduces them without incurring seq initialization"
           i
           (recur (+ i incr)))))))
 
-(deftype ObjMap [meta keys strobj ^:mutable __hash]
+(deftype ObjMap [meta strkeys strobj ^:mutable __hash]
   Object
   (toString [coll]
     (pr-str* coll))
+  (keys [coll]
+    (es6-iterator
+      (prim-seq
+        (.map (.sort strkeys obj-map-compare-keys)
+          obj-map-key->keyword))))
+  (entries [coll]
+    (es6-entries-iterator (-seq coll)))
+  (values [coll]
+    (es6-iterator
+      (prim-seq
+        (.map (.sort strkeys obj-map-compare-keys)
+          #(unchecked-get strobj %)))))
+  (has [coll k]
+    (contains? coll k))
+  (get [coll k not-found]
+    (-lookup coll k not-found))
+  (forEach [coll f]
+    (.forEach (.sort strkeys obj-map-compare-keys)
+      #(f (unchecked-get strobj %) (obj-map-key->keyword %))))
 
   IWithMeta
-  (-with-meta [coll meta] (ObjMap. meta keys strobj __hash))
+  (-with-meta [coll meta] (ObjMap. meta strkeys strobj __hash))
 
   IMeta
   (-meta [coll] meta)
 
   ICloneable
-  (-clone [coll] (ObjMap. meta keys strobj __hash))
+  (-clone [coll] (ObjMap. meta strkeys strobj __hash))
 
   ICollection
   (-conj [coll entry]
@@ -12532,20 +12553,20 @@ reduces them without incurring seq initialization"
 
   ISeqable
   (-seq [coll]
-    (when (pos? (alength keys))
+    (when (pos? (alength strkeys))
       (prim-seq
-        (.map (.sort keys obj-map-compare-keys)
+        (.map (.sort strkeys obj-map-compare-keys)
           #(simple-map-entry (obj-map-key->keyword %) (unchecked-get strobj %))))))
 
   ICounted
-  (-count [coll] (alength keys))
+  (-count [coll] (alength strkeys))
 
   ILookup
   (-lookup [coll k] (-lookup coll k nil))
   (-lookup [coll k not-found]
     (let [k (if-not (keyword? k) k (keyword->obj-map-key k))]
       (if (and (string? k)
-               (not (nil? (scan-array 1 k keys))))
+               (not (nil? (scan-array 1 k strkeys))))
         (unchecked-get strobj k)
         not-found)))
 
@@ -12553,12 +12574,12 @@ reduces them without incurring seq initialization"
   (-assoc [coll k v]
     (let [k (if-not (keyword? k) k (keyword->obj-map-key k))]
       (if (string? k)
-        (if-not (nil? (scan-array 1 k keys))
-          (let [new-strobj (obj-clone strobj keys)]
+        (if-not (nil? (scan-array 1 k strkeys))
+          (let [new-strobj (obj-clone strobj strkeys)]
             (gobject/set new-strobj k v)
-            (ObjMap. meta keys new-strobj nil))             ;overwrite
-          (let [new-strobj (obj-clone strobj keys)          ; append
-                new-keys (aclone keys)]
+            (ObjMap. meta strkeys new-strobj nil))             ;overwrite
+          (let [new-strobj (obj-clone strobj strkeys)          ; append
+                new-keys (aclone strkeys)]
             (gobject/set new-strobj k v)
             (.push new-keys k)
             (ObjMap. meta new-keys new-strobj nil)))
@@ -12572,7 +12593,7 @@ reduces them without incurring seq initialization"
   (-contains-key? [coll k]
     (let [k (if-not (keyword? k) k (keyword->obj-map-key k))]
       (if (and (string? k)
-               (not (nil? (scan-array 1 k keys))))
+               (not (nil? (scan-array 1 k strkeys))))
         true
         false)))
 
@@ -12580,13 +12601,13 @@ reduces them without incurring seq initialization"
   (-find [coll k]
     (let [k (if-not (keyword? k) k (keyword->obj-map-key k))]
       (when (and (string? k)
-                 (not (nil? (scan-array 1 k keys))))
+                 (not (nil? (scan-array 1 k strkeys))))
         (MapEntry. k (unchecked-get strobj k) nil))))
 
   IKVReduce
   (-kv-reduce [coll f init]
-    (let [len (alength keys)]
-      (loop [keys (.sort keys obj-map-compare-keys)
+    (let [len (alength strkeys)]
+      (loop [keys (.sort strkeys obj-map-compare-keys)
              init init]
         (if (seq keys)
           (let [k (first keys)
@@ -12600,9 +12621,9 @@ reduces them without incurring seq initialization"
   (-dissoc [coll k]
     (let [k (if-not (keyword? k) k (keyword->obj-map-key k))]
       (if (and (string? k)
-               (not (nil? (scan-array 1 k keys))))
-        (let [new-keys (aclone keys)
-              new-strobj (obj-clone strobj keys)]
+               (not (nil? (scan-array 1 k strkeys))))
+        (let [new-keys (aclone strkeys)
+              new-strobj (obj-clone strobj strkeys)]
           (.splice new-keys (scan-array 1 k new-keys) 1)
           (js-delete new-strobj k)
           (ObjMap. meta new-keys new-strobj nil))
@@ -12643,6 +12664,8 @@ reduces them without incurring seq initialization"
   (-pr-writer [coll writer opts]
     (print-map coll pr-writer writer opts)))
 
+(es6-iterable ObjMap)
+
 (set! (. ObjMap -EMPTY) (ObjMap. nil (array) (js-obj) empty-ordered-hash))
 
 (set! (. ObjMap -fromObject) (fn [ks obj] (ObjMap. nil ks obj nil)))
@@ -12678,6 +12701,21 @@ reduces them without incurring seq initialization"
   Object
   (toString [coll]
     (pr-str* coll))
+  (keys [coll]
+    (es6-iterator (map #(-key %) (-seq coll))))
+  (entries [coll]
+    (es6-entries-iterator (-seq coll)))
+  (values [coll]
+    (es6-iterator (map #(-val %) (-key coll))))
+  (has [coll k]
+    (contains? coll k))
+  (get [coll k not-found]
+    (-lookup coll k not-found))
+  (forEach [coll f]
+    (let [xs (-seq coll)]
+      (when-not (nil? xs)
+        (.forEach (.-arr xs)
+          #(f (-val %) (-key %))))))
 
   IWithMeta
   (-with-meta [coll meta] (HashMap. meta count hashobj __hash))
@@ -12813,6 +12851,8 @@ reduces them without incurring seq initialization"
   (-pr-writer [coll writer opts]
     (print-map coll pr-writer writer opts)))
 
+(es6-iterable HashMap)
+
 (set! (. HashMap -EMPTY) (HashMap. nil 0 (js-obj) empty-unordered-hash))
 
 (set! (. HashMap -fromArrays) (fn [ks vs]
@@ -12835,6 +12875,19 @@ reduces them without incurring seq initialization"
   Object
   (toString [coll]
     (pr-str* coll))
+  (keys [coll]
+    (es6-iterator (-seq coll)))
+  (entries [coll]
+    (es6-set-entries-iterator (-seq coll)))
+  (values [coll]
+    (es6-iterator (-seq coll)))
+  (has [coll k]
+    (contains? coll k))
+  (forEach [coll f]
+    (let [xs (-seq hash-map)]
+      (when (some? xs)
+        (.forEach (.-arr xs)
+          #(f (-val %) (-key %))))))
 
   IWithMeta
   (-with-meta [coll meta] (Set. meta hash-map __hash))
@@ -12910,6 +12963,8 @@ reduces them without incurring seq initialization"
 
   IPrintWithWriter
   (-pr-writer [coll writer opts] (pr-sequential-writer writer pr-writer "#{" " " "}" opts coll)))
+
+(es6-iterable Set)
 
 (set! (. Set -EMPTY) (Set. nil (. HashMap -EMPTY) empty-unordered-hash))
 
