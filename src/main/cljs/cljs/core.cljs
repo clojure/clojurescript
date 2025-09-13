@@ -10376,6 +10376,8 @@ reduces them without incurring seq initialization"
        (implements? IMeta obj)
        (not (nil? (meta obj)))))
 
+(declare Vector)
+
 (defn- simple-map-entry [k v]
   (reify
     ICounted
