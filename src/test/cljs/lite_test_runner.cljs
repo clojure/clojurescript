@@ -117,7 +117,7 @@
   'cljs.recur-test
   'cljs.array-access-test
   'cljs.inference-test
-  'cljs.walk-test ;; not sure here
+  'cljs.walk-test
   'cljs.repl-test
   #_'cljs.extend-to-native-test ;; this one breaks a bunchof things
   'cljs.var-test
