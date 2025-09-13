@@ -12503,6 +12503,15 @@ reduces them without incurring seq initialization"
           i
           (recur (+ i incr)))))))
 
+(deftype ObjMapIterator [strkeys strobj ^:mutable i]
+  Object
+  (hasNext [_]
+    (< i (alength strkeys)))
+  (next [_]
+    (let [k (aget strkeys i)]
+      (set! i (inc i))
+      (simple-map-entry (obj-map-key->keyword k) (unchecked-get strobj k)))))
+
 (deftype ObjMap [meta strkeys strobj ^:mutable __hash]
   Object
   (toString [coll]
@@ -12616,6 +12625,16 @@ reduces them without incurring seq initialization"
               @init
               (recur (rest keys) init)))
           init))))
+
+  IIterable
+  (-iterator [coll]
+    (ObjMapIterator. strkeys strobj 0))
+
+  IReduce
+  (-reduce [coll f]
+    (iter-reduce coll f))
+  (-reduce [coll f start]
+    (iter-reduce coll f start))
 
   IMap
   (-dissoc [coll k]
@@ -12846,6 +12865,26 @@ reduces them without incurring seq initialization"
       (if (some? xs)
         (-iterator xs)
         (nil-iter))))
+
+  IKVReduce
+  (-kv-reduce [coll f init]
+    (let [hashes (.sort (js-keys hashobj))
+          ilen   (alength hashes)]
+      (loop [i 0 init init]
+        (if (< i ilen)
+          (let [bckt (unchecked-get hashobj (aget hashes i))
+                jlen (alength bckt)
+                init (loop [j 0 init init]
+                       (if (< j jlen)
+                         (let [init (f init (aget bckt j) (aget bckt (inc j)))]
+                           (if (reduced? init)
+                             init
+                             (recur (+ j 2) init)))
+                         init))]
+            (if (reduced? init)
+              @init
+              (recur (inc i) init)))
+          init))))
 
   IPrintWithWriter
   (-pr-writer [coll writer opts]
