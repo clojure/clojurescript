@@ -87,7 +87,7 @@
   'cljs.ns-test
   'clojure.set-test
   'clojure.string-test
-  #_'clojure.data-test ;; 1 failure #object[Error Error: No item 1 in vector of length 1]
+  'clojure.data-test
   'clojure.datafy-test
   'clojure.edn-test
   'clojure.walk-test

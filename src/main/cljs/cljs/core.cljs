@@ -12372,7 +12372,7 @@ reduces them without incurring seq initialization"
   ILookup
   (-lookup [coll k]
     (when (number? k)
-      (-nth coll k)))
+      (-nth coll k nil)))
   (-lookup [coll k not-found]
     (if (number? k)
       (-nth coll k not-found)
@@ -12424,9 +12424,9 @@ reduces them without incurring seq initialization"
 
   IFn
   (-invoke [coll k]
-    (-lookup coll k))
-  (-invoke [coll k not-found]
-    (-lookup coll k not-found))
+    (if (number? k)
+      (-nth coll k)
+      (throw (js/Error. "Key must be integer"))))
 
   IEditableCollection
   (-as-transient [coll]
