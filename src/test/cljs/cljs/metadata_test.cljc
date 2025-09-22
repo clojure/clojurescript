@@ -109,11 +109,15 @@
         (seq-interface-tests (seq []))
         (seq-interface-tests (rseq [])))
       (testing "Medium"
-        (seq-interface-tests (seq [0 1 2 3]))
-        (seq-interface-tests (rseq [0 1 2 3])))
+        (testing "seq"
+          (seq-interface-tests (seq [0 1 2 3])))
+        (testing "rseq"
+          (seq-interface-tests (rseq [0 1 2 3]))))
       (testing "Large"
-        (seq-interface-tests (seq (vec (range 100))))
-        (seq-interface-tests (rseq (vec (range 100))))))
+        (testing "seq"
+          (seq-interface-tests (seq (vec (range 100)))))
+        (testing "rseq"
+          (seq-interface-tests (rseq (vec (range 100)))))))
 
     (testing "PersistentHashSet"
       (testing "Empty"
