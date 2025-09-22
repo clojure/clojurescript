@@ -12274,6 +12274,15 @@ reduces them without incurring seq initialization"
 
 ;;; Vector
 
+(deftype VectorIterator [arr ^:mutable i]
+  Object
+  (hasNext [_]
+    (< i (alength arr)))
+  (next [_]
+    (let [x (aget arr i)]
+      (set! i (inc i))
+      x)))
+
 (deftype Vector [meta array ^:mutable __hash]
   Object
   (toString [coll]
@@ -12437,6 +12446,10 @@ reduces them without incurring seq initialization"
     (-conj coll val))
   (-persistent! [coll]
     coll)
+
+  IIterable
+  (-iterator [coll]
+    (VectorIterator. array 0))
 
   IPrintWithWriter
   (-pr-writer [coll writer opts] (pr-sequential-writer writer pr-writer "[" " " "]" opts coll)))
