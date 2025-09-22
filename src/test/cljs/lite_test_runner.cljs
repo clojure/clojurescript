@@ -80,7 +80,7 @@
   'cljs.seqs-test
   'cljs.hashing-test
   'cljs.interop-test ;; ES6 stuff
-  #_'cljs.iterator-test
+  'cljs.iterator-test
   'cljs.reader-test
   'cljs.binding-test
   'cljs.parse-test

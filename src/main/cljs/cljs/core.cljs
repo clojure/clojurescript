@@ -13015,6 +13015,13 @@ reduces them without incurring seq initialization"
   (-invoke [coll k not-found]
     (-lookup coll k not-found))
 
+  IIterable
+  (-iterator [coll]
+    (let [xs (-seq coll)]
+      (if (some? xs)
+        (-iterator xs)
+        (nil-iter))))
+
   IPrintWithWriter
   (-pr-writer [coll writer opts] (pr-sequential-writer writer pr-writer "#{" " " "}" opts coll)))
 
