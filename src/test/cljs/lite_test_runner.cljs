@@ -49,7 +49,7 @@
             ;; [cljs.hash-map-test]
             ;; [cljs.map-entry-test]
             ;; [cljs.metadata-test]
-            ;; [cljs.npm-deps-test]
+            [cljs.npm-deps-test]
             [cljs.other-functions-test]
             [cljs.predicates-test]
             ;; [cljs.tagged-literals-test]
@@ -108,7 +108,7 @@
   'cljs.spec.test-test
   'cljs.clojure-alias-test
   #_'cljs.metadata-test ;; another RSeq one
-  #_'cljs.npm-deps-test
+  'cljs.npm-deps-test
   'cljs.other-functions-test
   'cljs.predicates-test
   #_'cljs.tagged-literals-test ;; duplicate keys in ObjMap/HashMap
