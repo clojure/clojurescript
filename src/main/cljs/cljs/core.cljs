@@ -3614,7 +3614,13 @@ reduces them without incurring seq initialization"
   (-conj [coll o] (cons o coll))
 
   IEmptyableCollection
-  (-empty [coll] (-with-meta (.-EMPTY List) meta))
+  (-empty [coll]
+    ;; MAYBE FIXME: :lite-mode testing uncovered a very old bug, empty on seq
+    ;; should discared the metadata, we change the behavior in LITE_MODE for now
+    ;; to avoid a breaking change
+    (if-not ^boolean LITE_MODE
+      (-with-meta (.-EMPTY List) meta)
+      (.-EMPTY List)))
 
   ISequential
   IEquiv
@@ -6528,7 +6534,7 @@ reduces them without incurring seq initialization"
   ICounted
   (-count [coll] count))
 
-(set! (.-EMPTY PersistentQueue) (PersistentQueue. nil 0 nil [] empty-ordered-hash))
+(set! (.-EMPTY PersistentQueue) (PersistentQueue. nil 0 nil (.-EMPTY PersistentVector) empty-ordered-hash))
 
 (es6-iterable PersistentQueue)
 

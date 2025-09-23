@@ -40,7 +40,11 @@
       (testing "lazy seq"
         (is (seq? e-lazy-seq))
         (is (empty? e-lazy-seq))
-        (is (= {:b :c} (meta e-lazy-seq)))))
+        ;; MAYBE FIXME: this is a bad test, discovered from :lite-mode work
+        (if-not ^boolean LITE_MODE
+          (is (= {:b :c} (meta e-lazy-seq)))
+          ;; LITE_MODE has the correct behavior
+          (is (nil? (meta e-lazy-seq))))))
     (let [e-list (empty '^{:b :c} (1 2 3))]
       (testing "list"
         (is (seq? e-list))

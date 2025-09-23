@@ -48,7 +48,7 @@
             [cljs.clojure-alias-test]
             ;; [cljs.hash-map-test]
             ;; [cljs.map-entry-test]
-            ;; [cljs.metadata-test]
+            [cljs.metadata-test]
             [cljs.npm-deps-test]
             [cljs.other-functions-test]
             [cljs.predicates-test]
@@ -107,7 +107,7 @@
   'cljs.specials-test
   'cljs.spec.test-test
   'cljs.clojure-alias-test
-  #_'cljs.metadata-test ;; another RSeq one
+  'cljs.metadata-test
   'cljs.npm-deps-test
   'cljs.other-functions-test
   'cljs.predicates-test
