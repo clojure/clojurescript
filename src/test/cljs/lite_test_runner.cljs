@@ -96,7 +96,7 @@
   'cljs.letfn-test
   'foo.ns-shadow-test
   'cljs.top-level
-  'cljs.reducers-test ;; missing IReduce, IKVReduce
+  'cljs.reducers-test
   'cljs.keyword-test
   'cljs.import-test
   'cljs.ns-test.foo
