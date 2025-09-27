@@ -52,7 +52,7 @@
             [cljs.npm-deps-test]
             [cljs.other-functions-test]
             [cljs.predicates-test]
-            ;; [cljs.tagged-literals-test]
+            [cljs.tagged-literals-test]
             [cljs.test-test]
             [static.core-test]
             [cljs.recur-test]
@@ -111,7 +111,7 @@
   'cljs.npm-deps-test
   'cljs.other-functions-test
   'cljs.predicates-test
-  #_'cljs.tagged-literals-test ;; duplicate keys in ObjMap/HashMap
+  'cljs.tagged-literals-test
   'cljs.test-test
   'static.core-test
   'cljs.recur-test
