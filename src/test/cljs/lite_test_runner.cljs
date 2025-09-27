@@ -60,9 +60,9 @@
             [cljs.inference-test]
             [cljs.walk-test]
             [cljs.repl-test]
-            ;; [cljs.extend-to-native-test]
-            [cljs.var-test]
-            [cljs.lite-collections-test]))
+            [cljs.lite-collections-test]
+            [cljs.extend-to-native-test]
+            [cljs.var-test]))
 
 (set! *print-newline* false)
 
@@ -79,6 +79,7 @@
   'cljs.new-new-test
   'cljs.seqs-test
   'cljs.hashing-test
+  'cljs.core-test
   'cljs.interop-test ;; ES6 stuff
   'cljs.iterator-test
   'cljs.reader-test
@@ -119,8 +120,7 @@
   'cljs.inference-test
   'cljs.walk-test
   'cljs.repl-test
-  #_'cljs.extend-to-native-test ;; this one breaks a bunchof things
-  'cljs.var-test
-  'cljs.core-test
   'cljs.lite-collections-test
+  'cljs.extend-to-native-test ;; this one breaks a bunchof things
+  'cljs.var-test
   )
