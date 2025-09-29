@@ -104,7 +104,7 @@
   'cljs.syntax-quote-test
   'cljs.pprint
   'cljs.pprint-test
-  #_'cljs.spec-test ;; this one is strange
+  'cljs.spec-test
   'cljs.specials-test
   'cljs.spec.test-test
   'cljs.clojure-alias-test
@@ -121,6 +121,6 @@
   'cljs.walk-test
   'cljs.repl-test
   'cljs.lite-collections-test
-  'cljs.extend-to-native-test ;; this one breaks a bunchof things
+  'cljs.extend-to-native-test
   'cljs.var-test
   )
