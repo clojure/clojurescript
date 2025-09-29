@@ -10427,7 +10427,12 @@ reduces them without incurring seq initialization"
       (case x
         0 (simple-map-entry 0 k)
         1 (simple-map-entry 1 v)
-        nil))))
+        nil))
+    IFn
+    (-invoke [coll k]
+      (-nth coll k))
+    (-invoke [coll k not-found]
+      (-nth coll k not-found))))
 
 (defn- pr-writer-impl
   [obj writer opts]
