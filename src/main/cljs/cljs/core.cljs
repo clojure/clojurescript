@@ -12664,10 +12664,10 @@ reduces them without incurring seq initialization"
 
   IFind
   (-find [coll k]
-    (let [k (if-not (keyword? k) k (keyword->obj-map-key k))]
-      (when (and (string? k)
-                 (not (nil? (scan-array 1 k strkeys))))
-        (MapEntry. k (unchecked-get strobj k) nil))))
+    (let [k' (if-not (keyword? k) k (keyword->obj-map-key k))]
+      (when (and (string? k')
+                 (not (nil? (scan-array 1 k' strkeys))))
+        (MapEntry. k (unchecked-get strobj k') nil))))
 
   IKVReduce
   (-kv-reduce [coll f init]
