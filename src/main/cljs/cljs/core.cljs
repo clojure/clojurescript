@@ -12385,11 +12385,11 @@ reduces them without incurring seq initialization"
   IIndexed
   (-nth [coll n]
     (if (and (<= 0 n) (< n (alength array)))
-      (aget array n)
+      (aget array (int n))
       (throw (js/Error. (str "No item " n " in vector of length " (alength array))))))
   (-nth [coll n not-found]
     (if (and (<= 0 n) (< n (alength array)))
-      (aget array n)
+      (aget array (int n))
       not-found))
 
   ILookup
