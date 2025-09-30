@@ -12436,6 +12436,13 @@ reduces them without incurring seq initialization"
               (recur (inc i) init)))
           init))))
 
+  IDrop
+  (-drop [v n]
+    (let [cnt (alength array)]
+      (if (< n cnt)
+        (prim-seq array n)
+        nil)))
+
   IComparable
   (-compare [x y]
     (if (vector? y)

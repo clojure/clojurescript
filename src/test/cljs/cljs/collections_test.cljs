@@ -193,8 +193,10 @@
     (is (not (counted? (range))))
     (is (counted? (range 0 10 1)))
     (is (not (counted? (range 0.1 10 1))))
-    (is (chunked-seq? (range 0 10 1)))
-    (is (chunked-seq? (range 0.1 10 1)))
+    ;; no chunked seqs in :lite-mode
+    (when-not ^boolean LITE_MODE
+      (is (chunked-seq? (range 0 10 1)))
+      (is (chunked-seq? (range 0.1 10 1))))
     (is (= (range 0.5 8 1.2) '(0.5 1.7 2.9 4.1 5.3 6.5 7.7)))
     (is (= (range 0.5 -4 -2) '(0.5 -1.5 -3.5)))
     (testing "IDrop"
