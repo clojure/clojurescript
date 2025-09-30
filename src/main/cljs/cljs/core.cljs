@@ -12330,7 +12330,10 @@ reduces them without incurring seq initialization"
             -1)))))
 
   IWithMeta
-  (-with-meta [coll meta] (Vector. meta array __hash))
+  (-with-meta [coll new-meta]
+    (if (identical? new-meta meta)
+      coll
+      (Vector. new-meta array __hash)))
 
   ICloneable
   (-clone [coll] (Vector. meta array __hash))
@@ -12464,6 +12467,19 @@ reduces them without incurring seq initialization"
     (-conj coll val))
   (-persistent! [coll]
     coll)
+
+  ITransientAssociative
+  (-assoc! [tcoll key val]
+    (-assoc-n! tcoll key val))
+
+  ITransientVector
+  (-assoc-n! [tcoll key val]
+    (if (number? key)
+      (-assoc-n tcoll key val)
+      (throw (js/Error. "Vector's key for assoc! must be a number."))))
+
+  (-pop! [tcoll]
+    (-pop tcoll))
 
   IIterable
   (-iterator [coll]
@@ -12962,7 +12978,10 @@ reduces them without incurring seq initialization"
           #(f (-val %) (-key %))))))
 
   IWithMeta
-  (-with-meta [coll meta] (Set. meta hash-map __hash))
+  (-with-meta [coll new-meta]
+    (if (identical? new-meta meta)
+      coll
+      (Set. new-meta hash-map __hash)))
 
   IMeta
   (-meta [coll] meta)

@@ -1019,8 +1019,9 @@
 
 (deftest test-cljs-2128
   (testing "Subvec iteration"
-    (testing "Subvec over PersistentVector uses RangedIterator"
-      (is (instance? RangedIterator (-iterator (subvec [0 1 2 3] 1 3)))))
+    (when-not ^boolean LITE_MODE
+      (testing "Subvec over PersistentVector uses RangedIterator"
+        (is (instance? RangedIterator (-iterator (subvec [0 1 2 3] 1 3))))))
     (testing "Subvec over other vectors uses naive SeqIter"
       (is (instance? SeqIter (-iterator (subvec (->CustomVectorThing [0 1 2 3]) 1 3))))))
   (testing "Subvec reduce"
