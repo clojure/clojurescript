@@ -12991,7 +12991,7 @@ reduces them without incurring seq initialization"
 
   ICollection
   (-conj [coll o]
-    (Set. meta (assoc hash-map o nil) nil))
+    (Set. meta (assoc hash-map o o) nil))
 
   IEmptyableCollection
   (-empty [coll] (with-meta (. Set -EMPTY) meta))
@@ -13025,7 +13025,7 @@ reduces them without incurring seq initialization"
     (-lookup coll v nil))
   (-lookup [coll v not-found]
     (if (-contains-key? hash-map v)
-      v
+      (-lookup hash-map v)
       not-found))
 
   ISet

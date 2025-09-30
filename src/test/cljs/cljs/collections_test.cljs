@@ -1127,9 +1127,12 @@
               (next (chunk-cons (chunk b) nil))))))
 
 (deftest test-cljs-3124
-  (let [t (assoc! (transient []) 0 1)]
-    (persistent! t)
-    (is (= :fail (try (get t :a :not-found) (catch js/Error e :fail))))))
+  ;; Doesn't work under :lite-mode because there are not
+  ;; separate transient types for now
+  (when-not ^boolean LITE_MODE
+    (let [t (assoc! (transient []) 0 1)]
+      (persistent! t)
+      (is (= :fail (try (get t :a :not-found) (catch js/Error e :fail)))))))
 
 (deftest test-cljs-3317
   (testing "persistent vector invoke matches clojure"

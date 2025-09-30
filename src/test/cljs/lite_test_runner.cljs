@@ -14,7 +14,7 @@
             [cljs.new-new-test]
             [cljs.printing-test]
             [cljs.seqs-test]
-            ;; [cljs.collections-test]
+            [cljs.collections-test]
             [cljs.hashing-test]
             [cljs.core-test]
             ;; [cljs.chunked-seq] ;; doesn't exist in :lite-mode
@@ -78,6 +78,7 @@
   'cljs.printing-test
   'cljs.new-new-test
   'cljs.seqs-test
+  'cljs.collections-test
   'cljs.hashing-test
   'cljs.core-test
   'cljs.interop-test ;; ES6 stuff
