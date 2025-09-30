@@ -759,6 +759,22 @@
     (build/build (build/inputs (io/file inputs "trivial/core4.cljs")) opts cenv)
     (is (< (.length out-file) 32768))))
 
+(deftest lite-mode-vector-code-size-ratchet
+  (testing ":lite-mode + :elide-to-string, should cut output size for [] in 1/2"
+    (let [out (.getPath (io/file (test/tmp-dir) "trivial-output-vector-test-out"))
+          out-file (io/file out "main.js")
+          {:keys [inputs opts]} {:inputs (str (io/file "src" "test" "cljs_build"))
+                                 :opts {:main 'trivial.core4
+                                        :output-dir out
+                                        :output-to (.getPath out-file)
+                                        :lite-mode true
+                                        :elide-to-string true
+                                        :optimizations :advanced}}
+          cenv (env/default-compiler-env)]
+      (test/delete-out-files out)
+      (build/build (build/inputs (io/file inputs "trivial/core4.cljs")) opts cenv)
+      (is (< (.length out-file) 16384)))))
+
 (deftest trivial-output-size-map
   (let [out (.getPath (io/file (test/tmp-dir) "trivial-output-map-test-out"))
         out-file (io/file out "main.js")
@@ -771,6 +787,22 @@
     (test/delete-out-files out)
     (build/build (build/inputs (io/file inputs "trivial/core5.cljs")) opts cenv)
     (is (< (.length out-file) 92160))))
+
+(deftest lite-mode-map-code-size-ratchet
+  (testing ":lite-mode + :elide-to-string, should cut output size for {} in 1/3"
+   (let [out (.getPath (io/file (test/tmp-dir) "trivial-output-map-test-out"))
+         out-file (io/file out "main.js")
+         {:keys [inputs opts]} {:inputs (str (io/file "src" "test" "cljs_build"))
+                                :opts {:main 'trivial.core5
+                                       :output-dir out
+                                       :output-to (.getPath out-file)
+                                       :lite-mode true
+                                       :elide-to-string true
+                                       :optimizations :advanced}}
+         cenv (env/default-compiler-env)]
+     (test/delete-out-files out)
+     (build/build (build/inputs (io/file inputs "trivial/core5.cljs")) opts cenv)
+     (is (< (.length out-file) 32768)))))
 
 (deftest cljs-3255-nil-inputs-build
   (let [out (.getPath (io/file (test/tmp-dir) "3255-test-out"))
