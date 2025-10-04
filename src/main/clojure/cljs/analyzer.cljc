@@ -16,6 +16,7 @@
   #?(:clj  (:require [cljs.analyzer.impl :as impl]
                      [cljs.analyzer.impl.namespaces :as nses]
                      [cljs.analyzer.passes.and-or :as and-or]
+                     [cljs.analyzer.passes.lite :as lite]
                      [cljs.env :as env :refer [ensure]]
                      [cljs.externs :as externs]
                      [cljs.js-deps :as deps]
@@ -30,6 +31,7 @@
      :cljs (:require [cljs.analyzer.impl :as impl]
                      [cljs.analyzer.impl.namespaces :as nses]
                      [cljs.analyzer.passes.and-or :as and-or]
+                     [cljs.analyzer.passes.lite :as lite]
                      [cljs.env :as env]
                      [cljs.reader :as edn]
                      [cljs.tagged-literals :as tags]
@@ -491,6 +493,12 @@
 
 (def ^:dynamic *cljs-warning-handlers*
   [default-warning-handler])
+
+(defn lite-mode? []
+  (get-in @env/*compiler* [:options :lite-mode]))
+
+(defn elide-to-string? []
+  (get-in @env/*compiler* [:options :elide-to-string]))
 
 #?(:clj
    (defmacro with-warning-handlers [handlers & body]
@@ -1214,9 +1222,12 @@
 
 (defmethod resolve* :goog-module
   [env sym full-ns current-ns]
-  {:name (symbol (str current-ns) (str (munge-goog-module-lib full-ns) "." (name sym)))
-   :ns current-ns
-   :op :var})
+  (let [sym-ast (gets @env/*compiler* ::namespaces full-ns :defs (symbol (name sym)))]
+    (merge sym-ast
+      {:name (symbol (str current-ns) (str (munge-goog-module-lib full-ns) "." (name sym)))
+       :ns   current-ns
+       :op   :var
+       :unaliased-name (symbol (str full-ns) (name sym))})))
 
 (defmethod resolve* :global
   [env sym full-ns current-ns]
@@ -3887,15 +3898,15 @@
         bind-args? (and HO-invoke?
                         (not (all-values? args)))]
     (when ^boolean fn-var?
-      (let [{^boolean variadic :variadic? :keys [max-fixed-arity method-params name ns macro]} (:info fexpr)]
-        ;; don't warn about invalid arity when when compiling a macros namespace
+      (let [{^boolean variadic :variadic? :keys [max-fixed-arity method-params name unaliased-name ns macro]} (:info fexpr)]
+        ;; don't warn about invalid arity when compiling a macros namespace
         ;; that requires itself, as that code is not meant to be executed in the
         ;; `$macros` ns - António Monteiro
         (when (and #?(:cljs (not (and (gstring/endsWith (str cur-ns) "$macros")
                                       (symbol-identical? cur-ns ns)
                                       (true? macro))))
                    (invalid-arity? argc method-params variadic max-fixed-arity))
-          (warning :fn-arity env {:name name :argc argc}))))
+          (warning :fn-arity env {:name (or unaliased-name name) :argc argc}))))
     (when (and kw? (not (or (== 1 argc) (== 2 argc))))
       (warning :fn-arity env {:name (first form) :argc argc}))
     (let [deprecated? (-> fexpr :info :deprecated)
@@ -3946,7 +3957,10 @@
                       {:op :host-field
                        :env (:env expr)
                        :form (list '. prefix field)
-                       :target (desugar-dotted-expr (-> expr
+                       ;; goog.module vars get converted to the form of
+                       ;; current.ns/goog$module.theDef, we need to dissoc
+                       ;; actual extern var info so we get something well-formed
+                       :target (desugar-dotted-expr (-> (dissoc expr :info)
                                                         (assoc :name prefix
                                                                :form prefix)
                                                         (dissoc :tag)
@@ -3954,6 +3968,9 @@
                                                         (assoc-in [:env :context] :expr)))
                        :field field
                        :tag (:tag expr)
+                       ;; in the case of goog.module var if there is :info,
+                       ;; we need to adopt it now as this is where :ret-tag info lives
+                       :info (:info expr)
                        :children [:target]})
                     expr)
     ;:var
@@ -4063,8 +4080,10 @@
           (if (and (some? nsym) (symbol? nsym))
             (.findInternedVar ^clojure.lang.Namespace
               #?(:clj (find-ns nsym) :cljs (find-macros-ns nsym)) sym)
-            (.findInternedVar ^clojure.lang.Namespace
-              #?(:clj (find-ns 'cljs.core) :cljs (find-macros-ns impl/CLJS_CORE_MACROS_SYM)) sym)))))))
+            ;; can't be done as compiler pass because macros get to run first
+            (when-not (and (lite-mode?) (= 'vector sym))
+              (.findInternedVar ^clojure.lang.Namespace
+                #?(:clj (find-ns 'cljs.core) :cljs (find-macros-ns impl/CLJS_CORE_MACROS_SYM)) sym))))))))
 
 (defn get-expander
   "Given a sym, a symbol identifying a macro, and env, an analysis environment
@@ -4443,10 +4462,8 @@
      :cljs [infer-type and-or/optimize check-invoke-arg-types]))
 
 (defn analyze* [env form name opts]
-  (let [passes *passes*
-        passes (if (nil? passes)
-                 default-passes
-                 passes)
+  (let [passes (cond-> (or *passes* default-passes)
+                 (lite-mode?) (conj lite/use-lite-types))
         form   (if (instance? LazySeq form)
                  (if (seq form) form ())
                  form)

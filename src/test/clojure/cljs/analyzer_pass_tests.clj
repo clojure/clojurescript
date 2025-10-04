@@ -178,8 +178,27 @@
                                  (map (fn [x] x) s))))]))))]
       (is (empty? (re-seq #"or_" code))))))
 
+(deftest test-lite-mode-pass
+  (let [aenv (assoc (ana/empty-env) :context :expr)
+        env  (env/default-compiler-env {:lite-mode true})]
+    (let [ast (env/with-compiler-env env
+                (comp/with-core-cljs {}
+                  (fn []
+                    (analyze aenv 'cljs.core/vec))))]
+     (is (= 'cljs.core/simple-vec
+             (-> ast :name)
+             (-> ast :info :name))))
+    (let [ast (env/with-compiler-env env
+                (comp/with-core-cljs {}
+                  (fn []
+                    (analyze aenv 'cljs.core/vector))))]
+      (is (= 'cljs.core/simple-vector
+             (-> ast :name)
+             (-> ast :info :name))))))
+
 (comment
   (test/run-tests)
 
   (require '[clojure.pprint :refer [pprint]])
+
   )

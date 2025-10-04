@@ -142,7 +142,7 @@
            ss (map rf (string/split ss #"\."))
            ss (string/join "." ss)
            ms #?(:clj (clojure.lang.Compiler/munge ss)
-                 :cljs (#'cljs.core/munge-str ss))]
+                 :cljs (munge-str ss))]
        (if (symbol? s)
          (symbol ms)
          ms)))))
@@ -522,6 +522,27 @@
     (and (every? #(= (:op %) :const) keys)
          (= (count (into #{} keys)) (count keys)))))
 
+(defn obj-map-key [x]
+  (if (keyword? x)
+    (str \" "\\uFDD0" \'
+      (if (namespace x)
+        (str (namespace x) "/") "")
+      (name x)
+      \")
+    (str \" x \")))
+
+(defn emit-obj-map [str-keys vals comma-sep distinct-keys?]
+  (if (zero? (count str-keys))
+    (emits "cljs.core.ObjMap.EMPTY")
+    (emits "cljs.core.ObjMap.fromObject([" (comma-sep str-keys) "], {"
+      (comma-sep (map (fn [k v] (str k ":" (emit-str v))) str-keys vals))
+      "})")))
+
+(defn emit-lite-map [keys vals comma-sep distinct-keys?]
+  (if (zero? (count keys))
+    (emits "cljs.core.HashMap.EMPTY")
+    (emits "cljs.core.HashMap.fromArrays([" (comma-sep keys) "], [" (comma-sep vals) "])")))
+
 (defn emit-map [keys vals comma-sep distinct-keys?]
   (cond
     (zero? (count keys))
@@ -544,9 +565,14 @@
       "])")))
 
 (defmethod emit* :map
-  [{:keys [env keys vals]}]
+  [{:keys [env form keys vals]}]
   (emit-wrap env
-    (emit-map keys vals comma-sep distinct-keys?)))
+    (if (ana/lite-mode?)
+      (let [form-keys (clojure.core/keys form)]
+        (if (every? #(or (string? %) (keyword? %)) form-keys)
+          (emit-obj-map (map obj-map-key form-keys) vals comma-sep distinct-keys?)
+          (emit-lite-map keys vals comma-sep distinct-keys?)))
+      (emit-map keys vals comma-sep distinct-keys?))))
 
 (defn emit-list [items comma-sep]
   (if (empty? items)
@@ -562,10 +588,17 @@
           ", 5, cljs.core.PersistentVector.EMPTY_NODE, ["  (comma-sep items) "], null)")
         (emits "cljs.core.PersistentVector.fromArray([" (comma-sep items) "], true)")))))
 
+(defn emit-lite-vector [items comma-sep]
+  (if (empty? items)
+    (emits "cljs.core.Vector.EMPTY")
+    (emits "new cljs.core.Vector(null, [" (comma-sep items) "], null)")))
+
 (defmethod emit* :vector
   [{:keys [items env]}]
   (emit-wrap env
-    (emit-vector items comma-sep)))
+    (if (ana/lite-mode?)
+      (emit-lite-vector items comma-sep)
+      (emit-vector items comma-sep))))
 
 (defn distinct-constants? [items]
   (let [items (map ana/unwrap-quote items)]
@@ -583,10 +616,17 @@
 
     :else (emits "cljs.core.PersistentHashSet.createAsIfByAssoc([" (comma-sep items) "])")))
 
+(defn emit-lite-set [items comma-sep distinct-constants?]
+  (if (empty? items)
+    (emits "cljs.core.Set.EMPTY")
+    (emits "cljs.core.simple_set([" (comma-sep items) "])")))
+
 (defmethod emit* :set
   [{:keys [items env]}]
   (emit-wrap env
-    (emit-set items comma-sep distinct-constants?)))
+    (if (ana/lite-mode?)
+      (emit-lite-set items comma-sep distinct-constants?)
+      (emit-set items comma-sep distinct-constants?))))
 
 (defn emit-js-object [items emit-js-object-val]
   (emits "({")

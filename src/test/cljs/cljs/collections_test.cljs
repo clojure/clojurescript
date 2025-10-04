@@ -9,20 +9,17 @@
 (ns cljs.collections-test
   (:refer-clojure :exclude [iter])
   (:require [cljs.test :refer-macros [deftest testing is are run-tests]]
-            [clojure.test.check :as tc]
             [clojure.test.check.clojure-test :refer-macros [defspec]]
             [clojure.test.check.generators :as gen]
-            [clojure.test.check.properties :as prop :include-macros true]
-            [clojure.string :as s]
-            [clojure.set :as set]))
+            [clojure.test.check.properties :as prop :include-macros true]))
 
 (deftest test-map-operations
   (testing "Test basic map collection operations"
     (is (= {:a :b} (get {[1 2 3] {:a :b}, 4 5} [1 2 3])))
     (is (not (= {:a :b :c nil} {:a :b :d nil})))
     (is (= {:a :b} (dissoc {:a :b :c :d} :c)))
-    (is (= (hash-map :foo 5)
-          (assoc (cljs.core.ObjMap. nil (array) (js-obj)) :foo 5))))
+    #_(is (= (hash-map :foo 5)
+           (assoc (ObjMap. nil (array) (js-obj)) :foo 5))))
   (testing "Testing assoc dissoc"
     (is (= {1 2 3 4} (assoc {} 1 2 3 4)))
     (is (= {1 2} (assoc {} 1 2)))
@@ -196,8 +193,10 @@
     (is (not (counted? (range))))
     (is (counted? (range 0 10 1)))
     (is (not (counted? (range 0.1 10 1))))
-    (is (chunked-seq? (range 0 10 1)))
-    (is (chunked-seq? (range 0.1 10 1)))
+    ;; no chunked seqs in :lite-mode
+    (when-not ^boolean LITE_MODE
+      (is (chunked-seq? (range 0 10 1)))
+      (is (chunked-seq? (range 0.1 10 1))))
     (is (= (range 0.5 8 1.2) '(0.5 1.7 2.9 4.1 5.3 6.5 7.7)))
     (is (= (range 0.5 -4 -2) '(0.5 -1.5 -3.5)))
     (testing "IDrop"
@@ -879,12 +878,6 @@
 
 (deftest test-461
   ;; CLJS-461: automatic map conversions
-  (loop [i 0 m (with-meta {} {:foo :bar}) result []]
-    (if (<= i (+ cljs.core.ObjMap.HASHMAP_THRESHOLD 2))
-      (recur (inc i) (assoc m (str i) i) (conj result (meta m)))
-      (let [n (inc (+ cljs.core.ObjMap.HASHMAP_THRESHOLD 2))
-            expected (repeat n {:foo :bar})]
-        (is (= result expected)))))
   (loop [i 0 m (with-meta {-1 :quux} {:foo :bar}) result []]
     (if (<= i (+ cljs.core.PersistentArrayMap.HASHMAP_THRESHOLD 2))
       (recur (inc i) (assoc m i i) (conj result (meta m)))
@@ -1026,8 +1019,9 @@
 
 (deftest test-cljs-2128
   (testing "Subvec iteration"
-    (testing "Subvec over PersistentVector uses RangedIterator"
-      (is (instance? RangedIterator (-iterator (subvec [0 1 2 3] 1 3)))))
+    (when-not ^boolean LITE_MODE
+      (testing "Subvec over PersistentVector uses RangedIterator"
+        (is (instance? RangedIterator (-iterator (subvec [0 1 2 3] 1 3))))))
     (testing "Subvec over other vectors uses naive SeqIter"
       (is (instance? SeqIter (-iterator (subvec (->CustomVectorThing [0 1 2 3]) 1 3))))))
   (testing "Subvec reduce"
@@ -1133,9 +1127,12 @@
               (next (chunk-cons (chunk b) nil))))))
 
 (deftest test-cljs-3124
-  (let [t (assoc! (transient []) 0 1)]
-    (persistent! t)
-    (is (= :fail (try (get t :a :not-found) (catch js/Error e :fail))))))
+  ;; Doesn't work under :lite-mode because there are not
+  ;; separate transient types for now
+  (when-not ^boolean LITE_MODE
+    (let [t (assoc! (transient []) 0 1)]
+      (persistent! t)
+      (is (= :fail (try (get t :a :not-found) (catch js/Error e :fail)))))))
 
 (deftest test-cljs-3317
   (testing "persistent vector invoke matches clojure"
@@ -1162,6 +1159,62 @@
 (deftest test-cljs-3240-overflow-regress
   (let [things (zipmap (range 15000) (repeat 0))]
     (is (zero? (count (filter #(-> % key string?) things))))))
+
+(deftest test-obj-map
+  (let [a (obj-map)]
+    (is (empty? a))
+    (is (zero? (count a))))
+  (let [b (obj-map :a 1)]
+    (is (not (empty? b)))
+    (is (== 1 (count b))))
+  (let [c (obj-map :a 1 :b 2 :c 3)]
+    (is (== 3 (count c)))
+    (is (= 1 (get c :a)))
+    (is (= 1 (:a c)))
+    (is (every? keyword? (keys c)))
+    (is (= (set [:a :b :c]) (set (keys c)))))
+  (is (= (obj-map :a 1 :b 2 :c 3)
+         (obj-map :a 1 :b 2 :c 3)))
+  (is (= (obj-map :a 1 :b 2)
+         (into (obj-map) [[:a 1] [:b 2]])))
+  (is (= (merge-with +
+           (obj-map :a 1 :b 2)
+           (obj-map :a 1 :b 2))
+         (into (obj-map) [[:a 2] [:b 4]])))
+  (is (= (transient (obj-map :a 1 :b 2))
+         (obj-map :a 1 :b 2))))
+
+(deftest test-simple-hash-map
+  (let [a (simple-hash-map)]
+    (is (empty? a))
+    (is (zero? (count a))))
+  (let [b (simple-hash-map :a 1)]
+    (is (not (empty? b)))
+    (is (== 1 (count b))))
+  (let [c (simple-hash-map :a 1 :b 2 :c 3)]
+    (is (== 3 (count c)))
+    (is (= 1 (get c :a)))
+    (is (= 1 (:a c)))
+    (is (every? keyword? (keys c)))
+    (is (= (set [:a :b :c]) (set (keys c)))))
+  (is (= (simple-hash-map :a 1 :b 2 :c 3)
+        (simple-hash-map :a 1 :b 2 :c 3)))
+  (is (= (simple-hash-map :a 1 :b 2)
+        (into (simple-hash-map) [[:a 1] [:b 2]])))
+  (is (= (merge-with +
+           (simple-hash-map :a 1 :b 2)
+           (simple-hash-map :a 1 :b 2))
+        (into (simple-hash-map) [[:a 2] [:b 4]])))
+  (is (= (transient (simple-hash-map :a 1 :b 2))
+         (simple-hash-map :a 1 :b 2))))
+
+(deftest test-simple-set
+  (is (= #{1 2 3} #{1 2 3}))
+  (is (= 3 (count #{1 2 3})))
+  (let [x #{1 2 3}]
+    (is (every? #(contains? x %) [1 2 3])))
+  (is (= (simple-set [[3 4] [1 2] [5 6]])
+         (into #{} [[3 4] [1 2] [5 6]]))))
 
 (comment
 

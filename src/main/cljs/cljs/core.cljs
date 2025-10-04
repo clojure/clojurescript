@@ -53,6 +53,11 @@
   , and \"global\" supported. "}
   *global* "default")
 
+(goog-define
+  ^{:doc "Boolean flag for LITE_MODE"
+    :jsdoc ["@type {boolean}"]}
+  LITE_MODE false)
+
 (def
   ^{:dynamic true
     :doc "Var bound to the current namespace. Only used for bootstrapping."
@@ -1763,7 +1768,7 @@ reduces them without incurring seq initialization"
   (indexOf [coll x start]
     (-indexOf coll x start))
   (lastIndexOf [coll x]
-    (-lastIndexOf coll x (count coll)))
+    (-lastIndexOf coll x (-count coll)))
   (lastIndexOf [coll x start]
     (-lastIndexOf coll x start))
 
@@ -2070,7 +2075,7 @@ reduces them without incurring seq initialization"
      (-assoc coll k v)
      (if-not (nil? coll)
        (-assoc coll k v)
-       (array-map k v))))
+       {k v})))
   ([coll k v & kvs]
      (let [ret (assoc coll k v)]
        (if kvs
@@ -2262,7 +2267,10 @@ reduces them without incurring seq initialization"
 
 (defn chunked-seq?
   "Return true if x satisfies IChunkedSeq."
-  [x] (implements? IChunkedSeq x))
+  [x]
+  (if-not ^boolean LITE_MODE
+    (implements? IChunkedSeq x)
+    false))
 
 ;;;;;;;;;;;;;;;;;;;; js primitives ;;;;;;;;;;;;
 (defn js-obj
@@ -3606,7 +3614,13 @@ reduces them without incurring seq initialization"
   (-conj [coll o] (cons o coll))
 
   IEmptyableCollection
-  (-empty [coll] (-with-meta (.-EMPTY List) meta))
+  (-empty [coll]
+    ;; MAYBE FIXME: :lite-mode testing uncovered a very old bug, empty on seq
+    ;; should discared the metadata, we change the behavior in LITE_MODE for now
+    ;; to avoid a breaking change
+    (if-not ^boolean LITE_MODE
+      (-with-meta (.-EMPTY List) meta)
+      (.-EMPTY List)))
 
   ISequential
   IEquiv
@@ -6520,7 +6534,7 @@ reduces them without incurring seq initialization"
   ICounted
   (-count [coll] count))
 
-(set! (.-EMPTY PersistentQueue) (PersistentQueue. nil 0 nil [] empty-ordered-hash))
+(set! (.-EMPTY PersistentQueue) (PersistentQueue. nil 0 nil (.-EMPTY PersistentVector) empty-ordered-hash))
 
 (es6-iterable PersistentQueue)
 
@@ -6551,172 +6565,6 @@ reduces them without incurring seq initialization"
             (fn [xkv]
               (= (get y (first xkv) never-equiv) (second xkv)))
             x))))))
-
-
-(defn- scan-array [incr k array]
-  (let [len (alength array)]
-    (loop [i 0]
-      (when (< i len)
-        (if (identical? k (aget array i))
-          i
-          (recur (+ i incr)))))))
-
-; The keys field is an array of all keys of this map, in no particular
-; order. Any string, keyword, or symbol key is used as a property name
-; to store the value in strobj.  If a key is assoc'ed when that same
-; key already exists in strobj, the old value is overwritten. If a
-; non-string key is assoc'ed, return a HashMap object instead.
-
-(defn- obj-map-compare-keys [a b]
-  (let [a (hash a)
-        b (hash b)]
-    (cond
-     (< a b) -1
-     (> a b) 1
-     :else 0)))
-
-(defn- obj-map->hash-map [m k v]
-  (let [ks  (.-keys m)
-        len (alength ks)
-        so  (.-strobj m)
-        mm  (meta m)]
-    (loop [i   0
-           out (transient (.-EMPTY PersistentHashMap))]
-      (if (< i len)
-        (let [k (aget ks i)]
-          (recur (inc i) (assoc! out k (gobject/get so k))))
-        (-with-meta (persistent! (assoc! out k v)) mm)))))
-
-;;; ObjMap - DEPRECATED
-
-(defn- obj-clone [obj ks]
-  (let [new-obj (js-obj)
-        l (alength ks)]
-    (loop [i 0]
-      (when (< i l)
-        (let [k (aget ks i)]
-          (gobject/set new-obj k (gobject/get obj k))
-          (recur (inc i)))))
-    new-obj))
-
-(deftype ObjMap [meta keys strobj update-count ^:mutable __hash]
-  Object
-  (toString [coll]
-    (pr-str* coll))
-  (equiv [this other]
-    (-equiv this other))
-
-  IWithMeta
-  (-with-meta [coll new-meta]
-    (if (identical? new-meta meta)
-      coll
-      (ObjMap. new-meta keys strobj update-count __hash)))
-
-  IMeta
-  (-meta [coll] meta)
-
-  ICollection
-  (-conj [coll entry]
-    (if (vector? entry)
-      (-assoc coll (-nth entry 0) (-nth entry 1))
-      (reduce -conj
-              coll
-              entry)))
-
-  IEmptyableCollection
-  (-empty [coll] (-with-meta (.-EMPTY ObjMap) meta))
-
-  IEquiv
-  (-equiv [coll other] (equiv-map coll other))
-
-  IHash
-  (-hash [coll] (caching-hash coll hash-unordered-coll __hash))
-
-  ISeqable
-  (-seq [coll]
-    (when (pos? (alength keys))
-      (map #(vector % (unchecked-get strobj %))
-           (.sort keys obj-map-compare-keys))))
-
-  ICounted
-  (-count [coll] (alength keys))
-
-  ILookup
-  (-lookup [coll k] (-lookup coll k nil))
-  (-lookup [coll k not-found]
-    (if (and (string? k)
-             (not (nil? (scan-array 1 k keys))))
-      (unchecked-get strobj k)
-      not-found))
-
-  IAssociative
-  (-assoc [coll k v]
-    (if (string? k)
-        (if (or (> update-count (.-HASHMAP_THRESHOLD ObjMap))
-                (>= (alength keys) (.-HASHMAP_THRESHOLD ObjMap)))
-          (obj-map->hash-map coll k v)
-          (if-not (nil? (scan-array 1 k keys))
-            (let [new-strobj (obj-clone strobj keys)]
-              (gobject/set new-strobj k v)
-              (ObjMap. meta keys new-strobj (inc update-count) nil)) ; overwrite
-            (let [new-strobj (obj-clone strobj keys) ; append
-                  new-keys (aclone keys)]
-              (gobject/set new-strobj k v)
-              (.push new-keys k)
-              (ObjMap. meta new-keys new-strobj (inc update-count) nil))))
-        ;; non-string key. game over.
-        (obj-map->hash-map coll k v)))
-  (-contains-key? [coll k]
-    (if (and (string? k)
-             (not (nil? (scan-array 1 k keys))))
-      true
-      false))
-
-  IFind
-  (-find [coll k]
-    (when (and (string? k)
-            (not (nil? (scan-array 1 k keys))))
-      (MapEntry. k (unchecked-get strobj k) nil)))
-
-  IKVReduce
-  (-kv-reduce [coll f init]
-    (let [len (alength keys)]
-      (loop [keys (.sort keys obj-map-compare-keys)
-             init init]
-        (if (seq keys)
-          (let [k (first keys)
-                init (f init k (unchecked-get strobj k))]
-            (if (reduced? init)
-              @init
-              (recur (rest keys) init)))
-          init))))
-
-  IMap
-  (-dissoc [coll k]
-    (if (and (string? k)
-             (not (nil? (scan-array 1 k keys))))
-      (let [new-keys (aclone keys)
-            new-strobj (obj-clone strobj keys)]
-        (.splice new-keys (scan-array 1 k new-keys) 1)
-        (js-delete new-strobj k)
-        (ObjMap. meta new-keys new-strobj (inc update-count) nil))
-      coll)) ; key not found, return coll unchanged
-
-  IFn
-  (-invoke [coll k]
-    (-lookup coll k))
-  (-invoke [coll k not-found]
-    (-lookup coll k not-found))
-
-  IEditableCollection
-  (-as-transient [coll]
-    (transient (into (hash-map) coll))))
-
-(set! (.-EMPTY ObjMap) (ObjMap. nil (array) (js-obj) 0 empty-unordered-hash))
-
-(set! (.-HASHMAP_THRESHOLD ObjMap) 8)
-
-(set! (.-fromObject ObjMap) (fn [ks obj] (ObjMap. nil ks obj 0 nil)))
 
 ;; Record Iterator
 (deftype RecordIter [^:mutable i record base-count fields ext-map-iter]
@@ -9191,19 +9039,6 @@ reduces them without incurring seq initialization"
     (.createAsIfByAssoc PersistentArrayMap (to-array s))
     (if (seq s) (first s) (.-EMPTY PersistentArrayMap))))
 
-(defn obj-map
-  "keyval => key val
-  Returns a new object map with supplied mappings."
-  [& keyvals]
-  (let [ks  (array)
-        obj (js-obj)]
-    (loop [kvs (seq keyvals)]
-      (if kvs
-        (do (.push ks (first kvs))
-            (gobject/set obj (first kvs) (second kvs))
-            (recur (nnext kvs)))
-        (.fromObject ObjMap ks obj)))))
-
 (defn sorted-map
   "keyval => key val
   Returns a new sorted map with supplied mappings."
@@ -10509,8 +10344,10 @@ reduces them without incurring seq initialization"
         (-write writer end)))))
 
 (defn write-all [writer & ss]
-  (doseq [s ss]
-    (-write writer s)))
+  (loop [ss (seq ss)]
+    (when-not (nil? ss)
+      (-write writer (first ss))
+      (recur (next ss)))))
 
 (defn string-print [x]
   (when (nil? *print-fn*)
@@ -10545,13 +10382,7 @@ reduces them without incurring seq initialization"
        (implements? IMeta obj)
        (not (nil? (meta obj)))))
 
-(defn- pr-map-entry [k v]
-  (reify
-    IMapEntry
-    (-key [_] k)
-    (-val [_] v)
-    ISeqable
-    (-seq [_] (IndexedSeq. #js [k v] 0 nil))))
+(declare Vector)
 
 (defn- pr-writer-impl
   [obj writer opts]
@@ -10591,9 +10422,10 @@ reduces them without incurring seq initialization"
             (.map
               (js-keys obj)
               (fn [k]
-                (pr-map-entry
+                (MapEntry.
                   (cond-> k (some? (.match k #"^[A-Za-z_\*\+\?!\-'][\w\*\+\?!\-']*$")) keyword)
-                  (unchecked-get obj k))))
+                  (unchecked-get obj k)
+                  nil)))
             pr-writer writer opts))
 
         (array? obj)
@@ -10660,9 +10492,11 @@ reduces them without incurring seq initialization"
 
 (defn pr-seq-writer [objs writer opts]
   (pr-writer (first objs) writer opts)
-  (doseq [obj (next objs)]
-    (-write writer " ")
-    (pr-writer obj writer opts)))
+  (loop [objs (next objs)]
+    (when-not (nil? objs)
+      (-write writer " ")
+      (pr-writer (first objs) writer opts)
+      (recur (next objs)))))
 
 (defn- pr-sb-with-opts [objs opts]
   (let [sb (StringBuffer.)
@@ -10772,10 +10606,10 @@ reduces them without incurring seq initialization"
           (when (or (keyword? k) (symbol? k))
             (if ns
               (when (= ns (namespace k))
-                (.push lm (pr-map-entry (strip-ns k) v))
+                (.push lm (MapEntry. (strip-ns k) v nil))
                 (recur ns entries))
               (when-let [new-ns (namespace k)]
-                (.push lm (pr-map-entry (strip-ns k) v))
+                (.push lm (MapEntry. (strip-ns k) v nil))
                 (recur new-ns entries))))
           #js [ns lm])))))
 
@@ -10854,10 +10688,6 @@ reduces them without incurring seq initialization"
 
   MapEntry
   (-pr-writer [coll writer opts] (pr-sequential-writer writer pr-writer "[" " " "]" opts coll))
-
-  ObjMap
-  (-pr-writer [coll writer opts]
-    (print-map coll pr-writer writer opts))
 
   KeySeq
   (-pr-writer [coll writer opts] (pr-sequential-writer writer pr-writer "(" " " ")" opts coll))
@@ -12057,7 +11887,9 @@ reduces them without incurring seq initialization"
             (str_ ret "|\\$"))))))
   DEMUNGE_PATTERN)
 
-(defn- ^string munge-str [name]
+(defn ^string munge-str
+  "Munge string `name` without considering `..` or JavaScript reserved keywords."
+  [name]
   (let [sb (StringBuffer.)]
     (loop [i 0]
       (if (< i (. name -length))
@@ -12069,7 +11901,13 @@ reduces them without incurring seq initialization"
           (recur (inc i)))))
     (.toString sb)))
 
-(defn munge [name]
+(defn munge
+  "Munge symbol or string `name` for safe use in JavaScript.
+
+  - Replaces '..' with '_DOT__DOT_'.
+  - Appends '$' to JavaScript reserved keywords.
+  - Returns a symbol if `name` was a symbol, otherwise a string."
+  [name]
   (let [name' (munge-str (str_ name))
         name' (cond
                 (identical? name' "..") "_DOT__DOT_"
@@ -12178,9 +12016,7 @@ reduces them without incurring seq initialization"
   Object
   (findInternedVar [this sym]
     (let [k (munge (str_ sym))]
-      ;; FIXME: this shouldn't need ^boolean due to GCL library analysis,
-      ;; but not currently working
-      (when ^boolean (gobject/containsKey obj k)
+      (when (gobject/containsKey obj k)
         (let [var-sym (symbol (str_ name) (str_ sym))
               var-meta {:ns this}]
           (Var. (ns-lookup obj k) var-sym var-meta)))))
@@ -12402,3 +12238,801 @@ reduces them without incurring seq initialization"
     (identical? "window" *global*) (set! goog/global js/window)
     (identical? "self" *global*) (set! goog/global js/self)
     (identical? "global" *global*) (set! goog/global js/global)))
+
+;; -----------------------------------------------------------------------------
+;; Original 2011 Copy-on-Write Types
+
+;;; Vector
+
+(deftype VectorIterator [arr ^:mutable i]
+  Object
+  (hasNext [_]
+    (< i (alength arr)))
+  (next [_]
+    (let [x (aget arr i)]
+      (set! i (inc i))
+      x)))
+
+(deftype Vector [meta array ^:mutable __hash]
+  Object
+  (toString [coll]
+    (pr-str* coll))
+  (equiv [coll other]
+    (-equiv coll other))
+  (indexOf [coll x start]
+    (let [start (if (nil? start) 0 start)
+          len   (-count coll)]
+      (if (>= start len)
+        -1
+        (loop [idx (cond
+                     (pos? start) start
+                     (neg? start) (max 0 (+ start len))
+                     :else start)]
+          (if (< idx len)
+            (if (= (-nth coll idx) x)
+              idx
+              (recur (inc idx)))
+            -1)))))
+  (lastIndexOf [coll x start]
+    (let [start (if (nil? start) (alength array) start)
+          len   (-count coll)]
+      (if (zero? len)
+        -1
+        (loop [idx (cond
+                     (pos? start) (min (dec len) start)
+                     (neg? start) (+ len start)
+                     :else start)]
+          (if (>= idx 0)
+            (if (= (-nth coll idx) x)
+              idx
+              (recur (dec idx)))
+            -1)))))
+
+  IWithMeta
+  (-with-meta [coll new-meta]
+    (if (identical? new-meta meta)
+      coll
+      (Vector. new-meta array __hash)))
+
+  ICloneable
+  (-clone [coll] (Vector. meta array __hash))
+
+  IMeta
+  (-meta [coll] meta)
+
+  IStack
+  (-peek [coll]
+    (let [count (alength array)]
+      (when (> count 0)
+        (aget array (dec count)))))
+  (-pop [coll]
+    (if (> (alength array) 0)
+      (let [new-array (aclone array)]
+        (. new-array (pop))
+        (Vector. meta new-array nil))
+      (throw (js/Error. "Can't pop empty vector"))))
+
+  ICollection
+  (-conj [coll o]
+    (let [new-array (aclone array)]
+      (.push new-array o)
+      (Vector. meta new-array nil)))
+
+  IEmptyableCollection
+  (-empty [coll] (with-meta (. Vector -EMPTY) meta))
+
+  ISequential
+  IEquiv
+  (-equiv [coll other] (equiv-sequential coll other))
+
+  IHash
+  (-hash [coll] (hash-ordered-coll coll))
+
+  ISeqable
+  (-seq [coll]
+    (when (> (alength array) 0)
+      (let [vector-seq
+             (fn vector-seq [i]
+               (lazy-seq
+                 (when (< i (alength array))
+                   (cons (aget array i) (vector-seq (inc i))))))]
+        (vector-seq 0))))
+
+  ICounted
+  (-count [coll] (alength array))
+
+  IIndexed
+  (-nth [coll n]
+    (if (and (<= 0 n) (< n (alength array)))
+      (aget array (int n))
+      (throw (js/Error. (str "No item " n " in vector of length " (alength array))))))
+  (-nth [coll n not-found]
+    (if (and (<= 0 n) (< n (alength array)))
+      (aget array (int n))
+      not-found))
+
+  ILookup
+  (-lookup [coll k]
+    (when (number? k)
+      (-nth coll k nil)))
+  (-lookup [coll k not-found]
+    (if (number? k)
+      (-nth coll k not-found)
+      not-found))
+
+  IAssociative
+  (-assoc [coll k v]
+    (if (number? k)
+      (let [new-array (aclone array)]
+        (aset new-array k v)
+        (Vector. meta new-array nil))
+      (throw (js/Error. "Vector's key for assoc must be a number."))))
+  (-contains-key? [coll k]
+    (if (integer? k)
+      (and (<= 0 k) (< k (alength array)))
+      false))
+
+  IVector
+  (-assoc-n [coll n val] (-assoc coll n val))
+
+  IReversible
+  (-rseq [coll]
+    (let [cnt (alength array)]
+      (when (pos? cnt)
+        (RSeq. coll (dec cnt) nil))))
+
+  IReduce
+  (-reduce [v f]
+    (array-reduce array f))
+  (-reduce [v f start]
+    (array-reduce array f start))
+
+  IKVReduce
+  (-kv-reduce [v f init]
+    (let [len (alength array)]
+      (loop [i 0 init init]
+        (if (< i len)
+          (let [init (f init i (aget array i))]
+            (if (reduced? init)
+              @init
+              (recur (inc i) init)))
+          init))))
+
+  IDrop
+  (-drop [v n]
+    (let [cnt (alength array)]
+      (if (< n cnt)
+        (prim-seq array n)
+        nil)))
+
+  IComparable
+  (-compare [x y]
+    (if (vector? y)
+      (compare-indexed x y)
+      (throw (js/Error. "Cannot compare with Vector"))))
+
+  IFn
+  (-invoke [coll k]
+    (if (number? k)
+      (-nth coll k)
+      (throw (js/Error. "Key must be integer"))))
+
+  IEditableCollection
+  (-as-transient [coll]
+    coll)
+
+  ITransientCollection
+  (-conj! [coll val]
+    (-conj coll val))
+  (-persistent! [coll]
+    coll)
+
+  ITransientAssociative
+  (-assoc! [tcoll key val]
+    (-assoc-n! tcoll key val))
+
+  ITransientVector
+  (-assoc-n! [tcoll key val]
+    (if (number? key)
+      (-assoc-n tcoll key val)
+      (throw (js/Error. "Vector's key for assoc! must be a number."))))
+
+  (-pop! [tcoll]
+    (-pop tcoll))
+
+  IIterable
+  (-iterator [coll]
+    (VectorIterator. array 0))
+
+  IPrintWithWriter
+  (-pr-writer [coll writer opts] (pr-sequential-writer writer pr-writer "[" " " "]" opts coll)))
+
+(es6-iterable PersistentVector)
+
+(set! (. Vector -EMPTY) (Vector. nil (array) nil))
+
+(set! (. Vector -fromArray) (fn [xs] (Vector. nil xs nil)))
+
+(defn simple-vector
+  [& args]
+  (if (and (instance? IndexedSeq args) (zero? (.-i args)))
+    (.fromArray Vector (aclone (.-arr args)))
+    (Vector. nil (into-array args) nil)))
+
+(defn simple-vec
+  [coll]
+  (cond
+    (map-entry? coll)
+    [(key coll) (val coll)]
+
+    (vector? coll)
+    (with-meta coll nil)
+
+    (array? coll)
+    (.fromArray Vector coll)
+
+    :else
+    (into [] coll)))
+
+; The keys field is an array of all keys of this map, in no particular
+; order. Any string, keyword, or symbol key is used as a property name
+; to store the value in strobj.  If a key is assoc'ed when that same
+; key already exists in strobj, the old value is overwritten. If a
+; non-string key is assoc'ed, return a HashMap object instead.
+
+(defn- obj-map-compare-keys [a b]
+  (let [a (hash a)
+        b (hash b)]
+    (cond
+      (< a b) -1
+      (> a b) 1
+      :else 0)))
+
+(defn- obj-clone [obj ks]
+  (let [new-obj (js-obj)
+        l (alength ks)]
+    (loop [i 0]
+      (when (< i l)
+        (let [k (aget ks i)]
+          (gobject/set new-obj k (gobject/get obj k))
+          (recur (inc i)))))
+    new-obj))
+
+(declare simple-hash-map HashMap)
+
+(defn- keyword->obj-map-key
+  [k]
+  (str "\uFDD0" "'" (. k -fqn)))
+
+(defn- obj-map-key->keyword
+  [k]
+  (if (.startsWith k "\uFDD0")
+    (keyword (.substring k 2 (. k -length)))
+    k))
+
+(defn- scan-array [incr k array]
+  (let [len (alength array)]
+    (loop [i 0]
+      (when (< i len)
+        (if (identical? k (aget array i))
+          i
+          (recur (+ i incr)))))))
+
+(deftype ObjMapIterator [strkeys strobj ^:mutable i]
+  Object
+  (hasNext [_]
+    (< i (alength strkeys)))
+  (next [_]
+    (let [k (aget strkeys i)]
+      (set! i (inc i))
+      (MapEntry. (obj-map-key->keyword k) (unchecked-get strobj k) nil))))
+
+(deftype ObjMap [meta strkeys strobj ^:mutable __hash]
+  Object
+  (toString [coll]
+    (pr-str* coll))
+  (keys [coll]
+    (es6-iterator
+      (prim-seq
+        (.map (.sort strkeys obj-map-compare-keys)
+          obj-map-key->keyword))))
+  (entries [coll]
+    (es6-entries-iterator (-seq coll)))
+  (values [coll]
+    (es6-iterator
+      (prim-seq
+        (.map (.sort strkeys obj-map-compare-keys)
+          #(unchecked-get strobj %)))))
+  (has [coll k]
+    (contains? coll k))
+  (get [coll k not-found]
+    (-lookup coll k not-found))
+  (forEach [coll f]
+    (.forEach (.sort strkeys obj-map-compare-keys)
+      #(f (unchecked-get strobj %) (obj-map-key->keyword %))))
+
+  IWithMeta
+  (-with-meta [coll meta] (ObjMap. meta strkeys strobj __hash))
+
+  IMeta
+  (-meta [coll] meta)
+
+  ICloneable
+  (-clone [coll] (ObjMap. meta strkeys strobj __hash))
+
+  ICollection
+  (-conj [coll entry]
+    (if (vector? entry)
+      (-assoc coll (-nth entry 0) (-nth entry 1))
+      (reduce -conj coll entry)))
+
+  IEmptyableCollection
+  (-empty [coll] (-with-meta (. ObjMap -EMPTY) meta))
+
+  IEquiv
+  (-equiv [coll other] (equiv-map coll other))
+
+  IHash
+  (-hash [coll] (caching-hash coll hash-unordered-coll __hash))
+
+  ISeqable
+  (-seq [coll]
+    (when (pos? (alength strkeys))
+      (prim-seq
+        (.map (.sort strkeys obj-map-compare-keys)
+          #(MapEntry. (obj-map-key->keyword %) (unchecked-get strobj %) nil)))))
+
+  ICounted
+  (-count [coll] (alength strkeys))
+
+  ILookup
+  (-lookup [coll k] (-lookup coll k nil))
+  (-lookup [coll k not-found]
+    (let [k (if-not (keyword? k) k (keyword->obj-map-key k))]
+      (if (and (string? k)
+               (not (nil? (scan-array 1 k strkeys))))
+        (unchecked-get strobj k)
+        not-found)))
+
+  IAssociative
+  (-assoc [coll k v]
+    (let [k (if-not (keyword? k) k (keyword->obj-map-key k))]
+      (if (string? k)
+        (if-not (nil? (scan-array 1 k strkeys))
+          (let [new-strobj (obj-clone strobj strkeys)]
+            (gobject/set new-strobj k v)
+            (ObjMap. meta strkeys new-strobj nil))             ;overwrite
+          (let [new-strobj (obj-clone strobj strkeys)          ; append
+                new-keys (aclone strkeys)]
+            (gobject/set new-strobj k v)
+            (.push new-keys k)
+            (ObjMap. meta new-keys new-strobj nil)))
+        ; non-string key. game over.
+        (-with-meta
+          (-kv-reduce coll
+            (fn [ret k v]
+              (-assoc ret k v))
+            (simple-hash-map k v))
+          meta))))
+  (-contains-key? [coll k]
+    (let [k (if-not (keyword? k) k (keyword->obj-map-key k))]
+      (if (and (string? k)
+               (not (nil? (scan-array 1 k strkeys))))
+        true
+        false)))
+
+  IFind
+  (-find [coll k]
+    (let [k' (if-not (keyword? k) k (keyword->obj-map-key k))]
+      (when (and (string? k')
+                 (not (nil? (scan-array 1 k' strkeys))))
+        (MapEntry. k (unchecked-get strobj k') nil))))
+
+  IKVReduce
+  (-kv-reduce [coll f init]
+    (let [len (alength strkeys)]
+      (loop [keys (.sort strkeys obj-map-compare-keys)
+             init init]
+        (if (seq keys)
+          (let [k (first keys)
+                init (f init (obj-map-key->keyword k) (unchecked-get strobj k))]
+            (if (reduced? init)
+              @init
+              (recur (rest keys) init)))
+          init))))
+
+  IIterable
+  (-iterator [coll]
+    (ObjMapIterator. strkeys strobj 0))
+
+  IReduce
+  (-reduce [coll f]
+    (iter-reduce coll f))
+  (-reduce [coll f start]
+    (iter-reduce coll f start))
+
+  IMap
+  (-dissoc [coll k]
+    (let [k (if-not (keyword? k) k (keyword->obj-map-key k))]
+      (if (and (string? k)
+               (not (nil? (scan-array 1 k strkeys))))
+        (let [new-keys (aclone strkeys)
+              new-strobj (obj-clone strobj strkeys)]
+          (.splice new-keys (scan-array 1 k new-keys) 1)
+          (js-delete new-strobj k)
+          (ObjMap. meta new-keys new-strobj nil))
+        coll))) ; key not found, return coll unchanged
+
+  IFn
+  (-invoke [coll k]
+    (-lookup coll k))
+  (-invoke [coll k not-found]
+    (-lookup coll k not-found))
+
+  IEditableCollection
+  (-as-transient [coll]
+    coll)
+
+  ITransientCollection
+  (-conj! [coll val]
+    (-conj coll val))
+  (-persistent! [coll]
+    coll)
+
+  ITransientAssociative
+  (-assoc! [coll key val]
+    (-assoc coll key val))
+
+  ITransientMap
+  (-dissoc! [coll key]
+    (-dissoc coll key))
+
+  IPrintWithWriter
+  (-pr-writer [coll writer opts]
+    (print-map coll pr-writer writer opts)))
+
+(es6-iterable ObjMap)
+
+(set! (. ObjMap -EMPTY) (ObjMap. nil (array) (js-obj) empty-unordered-hash))
+
+(set! (. ObjMap -fromObject) (fn [ks obj] (ObjMap. nil ks obj nil)))
+
+(defn obj-map
+  "keyval => key val
+  Returns a new object map with supplied mappings."
+  [& keyvals]
+  (let [ks  (array)
+        obj (js-obj)]
+    (loop [kvs (seq keyvals)]
+      (if kvs
+        (let [k (-> kvs first keyword->obj-map-key)]
+          (.push ks k)
+          (gobject/set obj k (second kvs))
+          (recur (nnext kvs)))
+        (.fromObject ObjMap ks obj)))))
+
+(defn- scan-array-equiv [incr k array]
+  (let [len (alength array)]
+    (loop [i 0]
+      (when (< i len)
+        (if (= k (aget array i))
+          i
+          (recur (+ i incr)))))))
+
+; The keys field is an array of all keys of this map, in no particular
+; order. Each key is hashed and the result used as a property name of
+; hashobj. Each values in hashobj is actually a bucket in order to handle hash
+; collisions. A bucket is an array of alternating keys (not their hashes) and
+; vals.
+(deftype HashMap [meta count hashobj ^:mutable __hash]
+  Object
+  (toString [coll]
+    (pr-str* coll))
+  (keys [coll]
+    (es6-iterator (map #(-key %) (-seq coll))))
+  (entries [coll]
+    (es6-entries-iterator (-seq coll)))
+  (values [coll]
+    (es6-iterator (map #(-val %) (-key coll))))
+  (has [coll k]
+    (contains? coll k))
+  (get [coll k not-found]
+    (-lookup coll k not-found))
+  (forEach [coll f]
+    (let [xs (-seq coll)]
+      (when-not (nil? xs)
+        (.forEach (.-arr xs)
+          #(f (-val %) (-key %))))))
+
+  IWithMeta
+  (-with-meta [coll meta] (HashMap. meta count hashobj __hash))
+
+  IMeta
+  (-meta [coll] meta)
+
+  ICloneable
+  (-clone [coll] (HashMap. meta count hashobj __hash))
+
+  ICollection
+  (-conj [coll entry]
+    (if (vector? entry)
+      (-assoc coll (-nth entry 0) (-nth entry 1))
+      (reduce -conj coll entry)))
+
+  IEmptyableCollection
+  (-empty [coll] (with-meta (. HashMap -EMPTY) meta))
+
+  IEquiv
+  (-equiv [coll other] (equiv-map coll other))
+
+  IHash
+  (-hash [coll] (caching-hash coll hash-unordered-coll __hash))
+
+  ISeqable
+  (-seq [coll]
+    (when (pos? count)
+      (let [hashes (.sort (js-keys hashobj))
+            cnt    (alength hashes)
+            arr    (array)]
+        (loop [i 0]
+          (if (< i cnt)
+            (let [bckt (unchecked-get hashobj (aget hashes i))
+                  len  (alength bckt)]
+              (loop [j 0]
+                (when (< j len)
+                  (do
+                    (.push arr (MapEntry. (aget bckt j) (aget bckt (inc j)) nil))
+                    (recur (+ j 2)))))
+              (recur (inc i)))
+            (prim-seq arr))))))
+
+  ICounted
+  (-count [coll] count)
+
+  ILookup
+  (-lookup [coll k] (-lookup coll k nil))
+  (-lookup [coll k not-found]
+    (let [bucket (unchecked-get hashobj (hash k))
+          i (when bucket (scan-array-equiv 2 k bucket))]
+      (if (some? i)
+        (aget bucket (inc i))
+        not-found)))
+
+  IAssociative
+  (-assoc [coll k v]
+    (let [h (hash k)
+          bucket (unchecked-get hashobj h)]
+      (if (some? bucket)
+        (let [new-bucket (aclone bucket)
+              new-hashobj (gobject/clone hashobj)
+              i (scan-array-equiv 2 k new-bucket)]
+          (aset new-hashobj h new-bucket)
+          (if (some? i)
+            (do
+              ; found key, replace
+              (aset new-bucket (inc i) v)
+              (HashMap. meta count new-hashobj nil))
+            (do
+              ; did not find key, append
+              (.push new-bucket k v)
+              (HashMap. meta (inc count) new-hashobj nil))))
+        (let [new-hashobj (gobject/clone hashobj)]
+          ; did not find bucket
+          (unchecked-set new-hashobj h (array k v))
+          (HashMap. meta (inc count) new-hashobj nil)))))
+  (-contains-key? [coll k]
+    (let [bucket (unchecked-get hashobj (hash k))
+          i (when bucket (scan-array-equiv 2 k bucket))]
+      (if (some? i)
+        true
+        false)))
+
+  IMap
+  (-dissoc [coll k]
+    (let [h (hash k)
+          bucket (unchecked-get hashobj h)
+          i (when bucket (scan-array-equiv 2 k bucket))]
+      (if (some? i)
+        (let [new-hashobj (gobject/clone hashobj)]
+          (if (> 3 (alength bucket))
+            (js-delete new-hashobj h)
+            (let [new-bucket (aclone bucket)]
+              (.splice new-bucket i 2)
+              (unchecked-set new-hashobj h new-bucket)))
+          (HashMap. meta (dec count) new-hashobj nil))
+        ; key not found, return coll unchanged
+        coll)))
+
+  IFn
+  (-invoke [coll k]
+    (-lookup coll k))
+  (-invoke [coll k not-found]
+    (-lookup coll k not-found))
+
+  IEditableCollection
+  (-as-transient [coll]
+    coll)
+
+  ITransientCollection
+  (-conj! [coll val]
+    (-conj coll val))
+  (-persistent! [coll]
+    coll)
+
+  ITransientAssociative
+  (-assoc! [coll key val]
+    (-assoc coll key val))
+
+  ITransientMap
+  (-dissoc! [coll key]
+    (-dissoc coll key))
+
+  IIterable
+  (-iterator [coll]
+    (let [xs (-seq coll)]
+      (if (some? xs)
+        (-iterator xs)
+        (nil-iter))))
+
+  IKVReduce
+  (-kv-reduce [coll f init]
+    (let [hashes (.sort (js-keys hashobj))
+          ilen   (alength hashes)]
+      (loop [i 0 init init]
+        (if (< i ilen)
+          (let [bckt (unchecked-get hashobj (aget hashes i))
+                jlen (alength bckt)
+                init (loop [j 0 init init]
+                       (if (< j jlen)
+                         (let [init (f init (aget bckt j) (aget bckt (inc j)))]
+                           (if (reduced? init)
+                             init
+                             (recur (+ j 2) init)))
+                         init))]
+            (if (reduced? init)
+              @init
+              (recur (inc i) init)))
+          init))))
+
+  IPrintWithWriter
+  (-pr-writer [coll writer opts]
+    (print-map coll pr-writer writer opts)))
+
+(es6-iterable HashMap)
+
+(set! (. HashMap -EMPTY) (HashMap. nil 0 (js-obj) empty-unordered-hash))
+
+(set! (. HashMap -fromArrays) (fn [ks vs]
+  (let [len (.-length ks)]
+    (loop [i 0, out (. HashMap -EMPTY)]
+      (if (< i len)
+        (recur (inc i) (assoc out (aget ks i) (aget vs i)))
+        out)))))
+
+(defn simple-hash-map
+  "keyval => key val
+  Returns a new hash map with supplied mappings."
+  [& keyvals]
+  (loop [in (seq keyvals), out (. HashMap -EMPTY)]
+    (if in
+      (recur (nnext in) (-assoc out (first in) (second in)))
+      out)))
+
+(deftype Set [meta hash-map ^:mutable __hash]
+  Object
+  (toString [coll]
+    (pr-str* coll))
+  (keys [coll]
+    (es6-iterator (-seq coll)))
+  (entries [coll]
+    (es6-set-entries-iterator (-seq coll)))
+  (values [coll]
+    (es6-iterator (-seq coll)))
+  (has [coll k]
+    (contains? coll k))
+  (forEach [coll f]
+    (let [xs (-seq hash-map)]
+      (when (some? xs)
+        (.forEach (.-arr xs)
+          #(f (-val %) (-key %))))))
+
+  IWithMeta
+  (-with-meta [coll new-meta]
+    (if (identical? new-meta meta)
+      coll
+      (Set. new-meta hash-map __hash)))
+
+  IMeta
+  (-meta [coll] meta)
+
+  ICloneable
+  (-clone [coll] (Set. meta hash-map __hash))
+
+  ICollection
+  (-conj [coll o]
+    (Set. meta (assoc hash-map o o) nil))
+
+  IEmptyableCollection
+  (-empty [coll] (with-meta (. Set -EMPTY) meta))
+
+  IEquiv
+  (-equiv [coll other]
+    (and
+     (set? other)
+     (= (-count coll) (count other))
+     (every? #(contains? coll %)
+             other)))
+
+  IHash
+  (-hash [coll] (caching-hash coll hash-unordered-coll __hash))
+
+  ISeqable
+  (-seq [coll]
+    (let [xs (-seq hash-map)]
+      (when (some? xs)
+        (prim-seq (.map (.-arr xs) (fn [kv] (-key kv)))))))
+
+  ICounted
+  (-count [coll]
+    (let [xs (-seq coll)]
+      (if (some? xs)
+        (-count xs)
+        0)))
+
+  ILookup
+  (-lookup [coll v]
+    (-lookup coll v nil))
+  (-lookup [coll v not-found]
+    (if (-contains-key? hash-map v)
+      (-lookup hash-map v)
+      not-found))
+
+  ISet
+  (-disjoin [coll v]
+    (Set. meta (-dissoc hash-map v) nil))
+
+  IEditableCollection
+  (-as-transient [coll]
+    coll)
+
+  ITransientCollection
+  (-conj! [coll val]
+    (-conj coll val))
+  (-persistent! [coll]
+    coll)
+
+  ITransientSet
+  (-disjoin! [coll key]
+    (-disjoin coll key))
+
+  IFn
+  (-invoke [coll k]
+    (-lookup coll k))
+  (-invoke [coll k not-found]
+    (-lookup coll k not-found))
+
+  IIterable
+  (-iterator [coll]
+    (let [xs (-seq coll)]
+      (if (some? xs)
+        (-iterator xs)
+        (nil-iter))))
+
+  IPrintWithWriter
+  (-pr-writer [coll writer opts] (pr-sequential-writer writer pr-writer "#{" " " "}" opts coll)))
+
+(es6-iterable Set)
+
+(set! (. Set -EMPTY) (Set. nil (. HashMap -EMPTY) empty-unordered-hash))
+
+(defn simple-set
+  [coll]
+  (if (set? coll)
+    (-with-meta coll nil)
+    (let [in (seq coll)]
+      (if (nil? in)
+        #{}
+        (loop [in in out (. Set -EMPTY)]
+          (if-not (nil? in)
+            (recur (next in) (-conj out (first in)))
+            out))))))
