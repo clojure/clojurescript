@@ -16,6 +16,7 @@
   #?(:clj  (:require [cljs.analyzer.impl :as impl]
                      [cljs.analyzer.impl.namespaces :as nses]
                      [cljs.analyzer.passes.and-or :as and-or]
+                     [cljs.analyzer.passes.lite :as lite]
                      [cljs.env :as env :refer [ensure]]
                      [cljs.externs :as externs]
                      [cljs.js-deps :as deps]
@@ -30,6 +31,7 @@
      :cljs (:require [cljs.analyzer.impl :as impl]
                      [cljs.analyzer.impl.namespaces :as nses]
                      [cljs.analyzer.passes.and-or :as and-or]
+                     [cljs.analyzer.passes.lite :as lite]
                      [cljs.env :as env]
                      [cljs.reader :as edn]
                      [cljs.tagged-literals :as tags]
@@ -491,6 +493,12 @@
 
 (def ^:dynamic *cljs-warning-handlers*
   [default-warning-handler])
+
+(defn lite-mode? []
+  (get-in @env/*compiler* [:options :lite-mode]))
+
+(defn elide-to-string? []
+  (get-in @env/*compiler* [:options :elide-to-string]))
 
 #?(:clj
    (defmacro with-warning-handlers [handlers & body]
@@ -4072,8 +4080,10 @@
           (if (and (some? nsym) (symbol? nsym))
             (.findInternedVar ^clojure.lang.Namespace
               #?(:clj (find-ns nsym) :cljs (find-macros-ns nsym)) sym)
-            (.findInternedVar ^clojure.lang.Namespace
-              #?(:clj (find-ns 'cljs.core) :cljs (find-macros-ns impl/CLJS_CORE_MACROS_SYM)) sym)))))))
+            ;; can't be done as compiler pass because macros get to run first
+            (when-not (and (lite-mode?) (= 'vector sym))
+              (.findInternedVar ^clojure.lang.Namespace
+                #?(:clj (find-ns 'cljs.core) :cljs (find-macros-ns impl/CLJS_CORE_MACROS_SYM)) sym))))))))
 
 (defn get-expander
   "Given a sym, a symbol identifying a macro, and env, an analysis environment
@@ -4452,10 +4462,8 @@
      :cljs [infer-type and-or/optimize check-invoke-arg-types]))
 
 (defn analyze* [env form name opts]
-  (let [passes *passes*
-        passes (if (nil? passes)
-                 default-passes
-                 passes)
+  (let [passes (cond-> (or *passes* default-passes)
+                 (lite-mode?) (conj lite/use-lite-types))
         form   (if (instance? LazySeq form)
                  (if (seq form) form ())
                  form)

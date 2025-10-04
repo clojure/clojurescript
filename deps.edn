@@ -19,6 +19,8 @@
                                       "-e" "(cljs.test-runner/-main)"]}
   :runtime.test.build    {:extra-paths ["src/test/cljs"]
                           :main-opts ["-m" "cljs.main" "-co" "resources/test.edn" "-c"]}
+  :lite.test.build       {:extra-paths ["src/test/cljs"]
+                          :main-opts ["-m" "cljs.main" "-co" "resources/lite_test.edn" "-c"]}
   :selfhost.test.build   {:extra-paths ["src/test/self"]
                           :main-opts ["-m" "cljs.main" "-co" "resources/self_host_test.edn" "-c"]}
   :selfparity.test.build {:extra-paths ["src/test/self"]
