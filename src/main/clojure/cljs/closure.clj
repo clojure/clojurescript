@@ -211,7 +211,8 @@
     :watch :watch-error-fn :watch-fn :install-deps :process-shim :rename-prefix :rename-prefix-namespace
     :closure-variable-map-in :closure-property-map-in :closure-variable-map-out :closure-property-map-out
     :stable-names :ignore-js-module-exts :opts-cache :aot-cache :elide-strict :fingerprint :spec-skip-macros
-    :nodejs-rt :target-fn :deps-cmd :bundle-cmd :global-goog-object&array :node-modules-dirs})
+    :nodejs-rt :target-fn :deps-cmd :bundle-cmd :global-goog-object&array :node-modules-dirs :lite-mode
+    :elide-to-string})
 
 (def string->charset
   {"iso-8859-1" StandardCharsets/ISO_8859_1
@@ -2518,6 +2519,10 @@
           :emit-constants emit-constants
           :cache-analysis-format (:cache-analysis-format opts :transit))
         (update-in [:preamble] #(into (or % []) ["cljs/imul.js"])))
+
+      (:lite-mode opts)
+      (assoc-in [:closure-defines (str (comp/munge 'cljs.core/LITE_MODE))]
+        (:lite-mode opts))
 
       (:target opts)
       (assoc-in [:closure-defines (str (comp/munge 'cljs.core/*target*))]

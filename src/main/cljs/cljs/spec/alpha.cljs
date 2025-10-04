@@ -148,6 +148,10 @@
   (specize* ([s] (spec-impl s s nil nil))
             ([s form] (spec-impl form s nil nil)))
 
+  Set
+  (specize* ([s] (spec-impl s s nil nil))
+            ([s form] (spec-impl form s nil nil)))
+
   default
   (specize*
     ([o]

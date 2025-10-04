@@ -51,28 +51,29 @@
 (defmethod get-comparator PersistentTreeSet
   [o] (get-comparator (.-tree-map o)))
 
-(deftest walk
-  "Checks that walk returns the correct result and type of collection"
-  (let [colls ['(1 2 3)
-               [1 2 3]
-               #{1 2 3}
-               (sorted-set-by > 1 2 3)
-               {:a 1, :b 2, :c 3}
-               (sorted-map-by > 1 10, 2 20, 3 30)
-               (->Foo 1 2 3)
-               (map->Foo {:a 1 :b 2 :c 3 :extra 4})]]
-    (doseq [c colls]
-      (let [walked (w/walk identity identity c)]
-        (is (= c walked))
-        ;;(is (= (type c) (type walked)))
-        (if (map? c)
-          (is (= (w/walk #(update-in % [1] inc) #(reduce + (vals %)) c)
-                (reduce + (map (comp inc val) c))))
-          (is (= (w/walk inc #(reduce + %) c)
-                (reduce + (map inc c)))))
-        (when (or (instance? PersistentTreeMap c)
-                  (instance? PersistentTreeSet c))
-          (is (= (get-comparator c) (get-comparator walked))))))))
+(deftest test-walk
+  (testing "Test that walk returns the correct result\n"
+    (let [colls ['(1 2 3)
+                 [1 2 3]
+                 #{1 2 3}
+                 (sorted-set-by > 1 2 3)
+                 {:a 1, :b 2, :c 3}
+                 (sorted-map-by > 1 10, 2 20, 3 30)
+                 (->Foo 1 2 3)
+                 (map->Foo {:a 1 :b 2 :c 3 :extra 4})]]
+      (doseq [c colls]
+        (testing (str "Walking ... " c)
+          (let [walked (w/walk identity identity c)]
+            (is (= c walked))
+            ;;(is (= (type c) (type walked)))
+            (if (map? c)
+              (is (= (w/walk #(update-in % [1] inc) #(reduce + (vals %)) c)
+                     (reduce + (map (comp inc val) c))))
+              (is (= (w/walk inc #(reduce + %) c)
+                     (reduce + (map inc c)))))
+            (when (or (instance? PersistentTreeMap c)
+                      (instance? PersistentTreeSet c))
+              (is (= (get-comparator c) (get-comparator walked))))))))))
 
 (deftest walk-mapentry
   "Checks that walk preserves the MapEntry type. See CLJS-2909."
