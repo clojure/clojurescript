@@ -10384,56 +10384,6 @@ reduces them without incurring seq initialization"
 
 (declare Vector)
 
-(defn- simple-map-entry [k v]
-  (reify
-    ICounted
-    (-count [coll] 2)
-    IHash
-    (-hash [coll] (hash-ordered-coll [k v]))
-    ISequential
-    IEquiv
-    (-equiv [coll other] (equiv-sequential coll other))
-    IVector
-    (-assoc-n [_ n x]
-      (case n
-        0 (simple-map-entry x v)
-        1 (simple-map-entry k x)
-        (throw (js/Error. "Index out of bounds"))))
-    IAssociative
-    (-assoc [node k v]
-      (-assoc-n node k v))
-    (-contains-key? [node k]
-      (or (== k 0) (== k 1)))
-    ICollection
-    (-conj [coll x]
-      (if ^boolean LITE_MODE
-        (Vector. nil #js [k v x] nil)
-        [k v x]))
-    IMapEntry
-    (-key [_] k)
-    (-val [_] v)
-    ISeqable
-    (-seq [_] (IndexedSeq. #js [k v] 0 nil))
-    IIndexed
-    (-nth [_ i]
-      (case i, 0 k, 1 v, (throw (js/Error. "Index out of bounds"))))
-    (-nth [_ i not-found]
-      (case i, 0 k, 1 v, not-found))
-    ILookup
-    (-lookup [coll k] (-nth coll k nil))
-    (-lookup [coll k not-found] (-nth coll k not-found))
-    IFind
-    (-find [node x]
-      (case x
-        0 (simple-map-entry 0 k)
-        1 (simple-map-entry 1 v)
-        nil))
-    IFn
-    (-invoke [coll k]
-      (-nth coll k))
-    (-invoke [coll k not-found]
-      (-nth coll k not-found))))
-
 (defn- pr-writer-impl
   [obj writer opts]
   (cond
@@ -10472,9 +10422,10 @@ reduces them without incurring seq initialization"
             (.map
               (js-keys obj)
               (fn [k]
-                (simple-map-entry
+                (MapEntry.
                   (cond-> k (some? (.match k #"^[A-Za-z_\*\+\?!\-'][\w\*\+\?!\-']*$")) keyword)
-                  (unchecked-get obj k))))
+                  (unchecked-get obj k)
+                  nil)))
             pr-writer writer opts))
 
         (array? obj)
@@ -10655,10 +10606,10 @@ reduces them without incurring seq initialization"
           (when (or (keyword? k) (symbol? k))
             (if ns
               (when (= ns (namespace k))
-                (.push lm (simple-map-entry (strip-ns k) v))
+                (.push lm (MapEntry. (strip-ns k) v nil))
                 (recur ns entries))
               (when-let [new-ns (namespace k)]
-                (.push lm (simple-map-entry (strip-ns k) v))
+                (.push lm (MapEntry. (strip-ns k) v nil))
                 (recur new-ns entries))))
           #js [ns lm])))))
 
@@ -12566,7 +12517,7 @@ reduces them without incurring seq initialization"
   (next [_]
     (let [k (aget strkeys i)]
       (set! i (inc i))
-      (simple-map-entry (obj-map-key->keyword k) (unchecked-get strobj k)))))
+      (MapEntry. (obj-map-key->keyword k) (unchecked-get strobj k) nil))))
 
 (deftype ObjMap [meta strkeys strobj ^:mutable __hash]
   Object
@@ -12621,7 +12572,7 @@ reduces them without incurring seq initialization"
     (when (pos? (alength strkeys))
       (prim-seq
         (.map (.sort strkeys obj-map-compare-keys)
-          #(simple-map-entry (obj-map-key->keyword %) (unchecked-get strobj %))))))
+          #(MapEntry. (obj-map-key->keyword %) (unchecked-get strobj %) nil)))))
 
   ICounted
   (-count [coll] (alength strkeys))
@@ -12822,7 +12773,7 @@ reduces them without incurring seq initialization"
               (loop [j 0]
                 (when (< j len)
                   (do
-                    (.push arr (simple-map-entry (aget bckt j) (aget bckt (inc j))))
+                    (.push arr (MapEntry. (aget bckt j) (aget bckt (inc j)) nil))
                     (recur (+ j 2)))))
               (recur (inc i)))
             (prim-seq arr))))))

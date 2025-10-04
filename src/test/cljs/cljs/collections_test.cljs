@@ -1216,12 +1216,6 @@
   (is (= (simple-set [[3 4] [1 2] [5 6]])
          (into #{} [[3 4] [1 2] [5 6]]))))
 
-(deftest test-simple-map-entry
-  (is (= (simple-map-entry :foo 1)
-         (MapEntry. :foo 1 nil)))
-  (is (= (hash (simple-map-entry :foo 1))
-         (hash (MapEntry. :foo 1 nil)))))
-
 (comment
 
   (run-tests)
