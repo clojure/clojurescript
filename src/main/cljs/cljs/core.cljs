@@ -11887,7 +11887,9 @@ reduces them without incurring seq initialization"
             (str_ ret "|\\$"))))))
   DEMUNGE_PATTERN)
 
-(defn- ^string munge-str [name]
+(defn ^string munge-str
+  "Munge string `name` without considering `..` or JavaScript reserved keywords."
+  [name]
   (let [sb (StringBuffer.)]
     (loop [i 0]
       (if (< i (. name -length))
@@ -11899,7 +11901,13 @@ reduces them without incurring seq initialization"
           (recur (inc i)))))
     (.toString sb)))
 
-(defn munge [name]
+(defn munge
+  "Munge symbol or string `name` for safe use in JavaScript.
+
+  - Replaces '..' with '_DOT__DOT_'.
+  - Appends '$' to JavaScript reserved keywords.
+  - Returns a symbol if `name` was a symbol, otherwise a string."
+  [name]
   (let [name' (munge-str (str_ name))
         name' (cond
                 (identical? name' "..") "_DOT__DOT_"
