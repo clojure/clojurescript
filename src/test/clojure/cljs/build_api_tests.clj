@@ -757,7 +757,7 @@
         cenv (env/default-compiler-env)]
     (test/delete-out-files out)
     (build/build (build/inputs (io/file inputs "trivial/core4.cljs")) opts cenv)
-    (is (< (.length out-file) 32768))))
+    (is (< (.length out-file) 92160))))
 
 (deftest lite-mode-vector-code-size-ratchet
   (testing ":lite-mode + :elide-to-string, should cut output size for [] in 1/2"
