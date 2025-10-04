@@ -1140,7 +1140,7 @@
   (is (= "function$" (munge "function"))))
 
 (deftest test-munge-str
-  (is (= "function$" (munge-str "function"))))
+  (is (= "function" (munge-str "function"))))
 
 (defprotocol IFooBar
   (a-method [t]))
