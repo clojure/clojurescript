@@ -1136,7 +1136,11 @@
   (is (= "_DOT__DOT_" (munge "..")))
   (is (= "abstract$" (munge "abstract")))
   (is (= 'abc (munge 'abc)))
-  (is (= "toString" (munge "toString"))))
+  (is (= "toString" (munge "toString")))
+  (is (= "function$" (munge "function"))))
+
+(deftest test-munge-str
+  (is (= "function$" (munge-str "function"))))
 
 (defprotocol IFooBar
   (a-method [t]))
