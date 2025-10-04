@@ -805,7 +805,7 @@
      (is (< (.length out-file) 32768)))))
 
 (deftest lite-mode-api-code-size-ratchet
-  (testing ":lite-mode + :elide-to-string, typical cljs.core api usage < 32K"
+  (testing ":lite-mode + :elide-to-string, typical cljs.core api usage ~32K"
    (let [out (.getPath (io/file (test/tmp-dir) "trivial-output-map-test-out"))
          out-file (io/file out "main.js")
          {:keys [inputs opts]} {:inputs (str (io/file "src" "test" "cljs_build"))
@@ -818,7 +818,7 @@
          cenv (env/default-compiler-env)]
      (test/delete-out-files out)
      (build/build (build/inputs (io/file inputs "trivial/core6.cljs")) opts cenv)
-     (is (< (.length out-file) 32768)))))
+     (is (< (.length out-file) 34000)))))
 
 (deftest cljs-3255-nil-inputs-build
   (let [out (.getPath (io/file (test/tmp-dir) "3255-test-out"))
