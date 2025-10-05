@@ -3063,14 +3063,17 @@
 
       (== cnt 1)
       (let [[_ & {:keys [only rename] :as parsed-spec}] (first xs)
-            err-str "Only (:refer-global :only [names]) and optionally `:rename {from to}` specs supported"]
+            only-set (set only)
+            err-str "Only (:refer-global :only [names]) and optionally `:rename {from to}` specs supported.
+ :rename symbols must be present in :only"]
         (when-not (or (empty? only)
                       (and (vector? only)
                            (every? symbol only)))
           (throw (error env err-str)))
         (when-not (or (empty? rename)
                       (and (map? rename)
-                           (every? symbol (mapcat identity rename))))
+                           (every? symbol (mapcat identity rename))
+                           (every? only-set (keys rename))))
           (throw (error env (str err-str (pr-str parsed-spec)))))
         (when-not (every? #{:only :rename} (keys parsed-spec))
           (throw (error env (str err-str (pr-str parsed-spec)))))
