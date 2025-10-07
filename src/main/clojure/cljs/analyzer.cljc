@@ -3083,9 +3083,53 @@
                           [new-name (symbol "js" (str orig))]))
                    rename)}))))
 
-#_(defn parse-global-require-spec
+(defn parse-global-require-spec
   [env deps aliases spec]
-  )
+  (if (or (symbol? spec) (string? spec))
+    (recur env deps aliases [spec])
+    (do
+      (basic-validate-ns-spec env false spec)
+      (let [[lib & opts] spec
+            {alias :as referred :refer renamed :rename
+             :or {alias (if (string? lib)
+                          (symbol (munge lib))
+                          lib)}}
+            (apply hash-map opts)
+            referred-without-renamed (seq (remove (set (keys renamed)) referred))
+            [rk uk renk] [:require :use :rename]]
+        (when-not (or (symbol? alias) (nil? alias))
+          (throw
+            (error env
+              (parse-ns-error-msg spec
+                ":as must be followed by a symbol in :require / :require-macros"))))
+        (when (some? alias)
+          (let [lib' ((:fns @aliases) alias)]
+            (when (and (some? lib') (not= lib lib'))
+              (throw (error env (parse-ns-error-msg spec ":as alias must be unique"))))
+            (when (= alias 'js)
+              (when-not (= lib (get-in @aliases [:fns 'js])) ; warn only once
+                (warning :js-used-as-alias env {:spec spec})))
+            (swap! aliases update-in [:fns] conj [alias lib])))
+        (when-not (or (and (sequential? referred)
+                           (every? symbol? referred))
+                      (nil? referred))
+          (throw
+            (error env
+              (parse-ns-error-msg spec
+                ":refer must be followed by a sequence of symbols in :require / :require-macros"))))
+        (swap! deps conj lib)
+        (merge
+          (when (some? alias)
+            {rk (merge {alias lib} {lib lib})})
+          (when (some? referred-without-renamed)
+            {uk (apply hash-map (interleave referred-without-renamed (repeat lib)))})
+          (when (some? renamed)
+            {renk (reduce (fn [m [original renamed]]
+                            (when-not (some #{original} referred)
+                              (throw (error env
+                                       (str "Renamed symbol " original " not referred"))))
+                            (assoc m renamed (symbol (str lib) (str original))))
+                    {} renamed)}))))))
 
 (defn parse-require-spec [env macros? deps aliases spec]
   (if (or (symbol? spec) (string? spec))
