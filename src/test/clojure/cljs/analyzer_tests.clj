@@ -171,7 +171,7 @@
           (analyze ns-env '(ns foo.bar (:unless [])))
           (catch Exception e
             (.getMessage (.getCause e))))
-        "Only :refer-clojure, :require, :require-macros, :use, :use-macros, and :import libspecs supported. Got (:unless []) instead."))
+        "Only :refer-clojure, :require, :require-macros, :use, :use-macros, :require-global and :import libspecs supported. Got (:unless []) instead."))
   (is (.startsWith
         (try
           (analyze ns-env '(ns foo.bar (:require baz.woz) (:require noz.goz)))
