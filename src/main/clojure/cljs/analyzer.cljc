@@ -3082,7 +3082,8 @@
                    (map (fn [[orig new-name]]
                           [new-name (symbol "js" (str orig))]))
                    rename)}))))
-(defn js-lib [lib]
+
+(defn global-lib [lib]
   (symbol "js" (str lib)))
 
 (defn parse-global-require-spec
@@ -3121,9 +3122,9 @@
                 ":refer must be followed by a sequence of symbols in :require / :require-macros"))))
         (merge
           (when (some? alias)
-            {rk (merge {alias (js-lib lib)} {lib (js-lib lib)})})
+            {rk (merge {alias (global-lib lib)} {lib (global-lib lib)})})
           (when (some? referred-without-renamed)
-            {uk (apply hash-map (interleave referred-without-renamed (repeat (js-lib lib))))})
+            {uk (apply hash-map (interleave referred-without-renamed (repeat (global-lib lib))))})
           (when (some? renamed)
             {renk (reduce (fn [m [original renamed]]
                             (when-not (some #{original} referred)
