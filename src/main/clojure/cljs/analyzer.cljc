@@ -3082,6 +3082,8 @@
                    (map (fn [[orig new-name]]
                           [new-name (symbol "js" (str orig))]))
                    rename)}))))
+(defn js-lib [lib]
+  (symbol "js" (str lib)))
 
 (defn parse-global-require-spec
   [env aliases spec]
@@ -3119,15 +3121,15 @@
                 ":refer must be followed by a sequence of symbols in :require / :require-macros"))))
         (merge
           (when (some? alias)
-            {rk (merge {alias lib} {lib lib})})
+            {rk (merge {alias (js-lib lib)} {lib (js-lib lib)})})
           (when (some? referred-without-renamed)
-            {uk (apply hash-map (interleave referred-without-renamed (repeat lib)))})
+            {uk (apply hash-map (interleave referred-without-renamed (repeat (js-lib lib))))})
           (when (some? renamed)
             {renk (reduce (fn [m [original renamed]]
                             (when-not (some #{original} referred)
                               (throw (error env
                                        (str "Renamed symbol " original " not referred"))))
-                            (assoc m renamed (symbol (str lib) (str original))))
+                            (assoc m renamed (symbol "js " (str (str lib) "." (str original)))))
                     {} renamed)}))))))
 
 (defn parse-require-spec [env macros? deps aliases spec]
@@ -3432,8 +3434,7 @@
                         :use-macros     (comp (partial parse-require-spec env true deps aliases)
                                           (partial use->require env))
                         :import         (partial parse-import-spec env deps)
-                        ;:require-global #(parse-global-require-spec env deps aliases %)
-                        }
+                        :require-global #(parse-global-require-spec env aliases %)}
           valid-forms  (atom #{:use :use-macros :require :require-macros :import})
           reload       (atom {:use nil :require nil :use-macros nil :require-macros nil})
           reloads      (atom {})
@@ -3442,8 +3443,8 @@
            rename-macros :rename-macros imports :import :as params}
           (reduce
             (fn [m [k & libs :as libspec]]
-              (when-not (#{:use :use-macros :require :require-macros :import} k)
-                (throw (error env (str "Only :refer-clojure, :require, :require-macros, :use, :use-macros, and :import libspecs supported. Got " libspec " instead."))))
+              (when-not (#{:use :use-macros :require :require-macros :require-global :import} k)
+                (throw (error env (str "Only :refer-clojure, :require, :require-macros, :use, :use-macros, :require-global and :import libspecs supported. Got " libspec " instead."))))
               (when-not (@valid-forms k)
                 (throw (error env (str "Only one " k " form is allowed per namespace definition"))))
               (swap! valid-forms disj k)

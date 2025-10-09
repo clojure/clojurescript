@@ -394,6 +394,14 @@
            '{:use {Date js Symbol js}
              :rename {JSSymbol js/Symbol}}))))
 
+(deftest test-parse-require-global
+  (let [parsed (ana/parse-global-require-spec {} (atom {:fns {}})
+                '[React :refer [createElement] :as react])]
+    (is (= parsed
+           '{:require {react js/React
+                       React js/React}
+             :use {createElement js/React}}))))
+
 (deftest test-cljs-1785-js-shadowed-by-local
   (let [ws (atom [])]
     (ana/with-warning-handlers [(collecting-warning-handler ws)]
