@@ -3129,7 +3129,7 @@
                             (when-not (some #{original} referred)
                               (throw (error env
                                        (str "Renamed symbol " original " not referred"))))
-                            (assoc m renamed (symbol "js " (str (str lib) "." (str original)))))
+                            (assoc m renamed (symbol "js" (str (str lib) "." (str original)))))
                     {} renamed)}))))))
 
 (defn parse-require-spec [env macros? deps aliases spec]

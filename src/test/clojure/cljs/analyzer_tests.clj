@@ -398,9 +398,15 @@
   (let [parsed (ana/parse-global-require-spec {} (atom {:fns {}})
                 '[React :refer [createElement] :as react])]
     (is (= parsed
-           '{:require {react js/React
-                       React js/React}
-             :use {createElement js/React}}))))
+          '{:require {react js/React
+                      React js/React}
+            :use  {createElement js/React}})))
+  (let [parsed (ana/parse-global-require-spec {} (atom {:fns {}})
+                '[React :refer [createElement] :rename {createElement create} :as react])]
+    (is (= parsed
+          '{:require {react js/React
+                      React js/React}
+            :rename  {create js/React.createElement}}))))
 
 (deftest test-cljs-1785-js-shadowed-by-local
   (let [ws (atom [])]
