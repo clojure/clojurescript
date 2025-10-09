@@ -3084,9 +3084,9 @@
                    rename)}))))
 
 (defn parse-global-require-spec
-  [env deps aliases spec]
+  [env aliases spec]
   (if (or (symbol? spec) (string? spec))
-    (recur env deps aliases [spec])
+    (recur env aliases [spec])
     (do
       (basic-validate-ns-spec env false spec)
       (let [[lib & opts] spec
@@ -3117,7 +3117,6 @@
             (error env
               (parse-ns-error-msg spec
                 ":refer must be followed by a sequence of symbols in :require / :require-macros"))))
-        (swap! deps conj lib)
         (merge
           (when (some? alias)
             {rk (merge {alias lib} {lib lib})})
