@@ -3436,7 +3436,7 @@
                                           (partial use->require env))
                         :import         (partial parse-import-spec env deps)
                         :require-global #(parse-global-require-spec env aliases %)}
-          valid-forms  (atom #{:use :use-macros :require :require-macros :import})
+          valid-forms  (atom #{:use :use-macros :require :require-macros :require-global :import})
           reload       (atom {:use nil :require nil :use-macros nil :require-macros nil})
           reloads      (atom {})
           {uses :use requires :require renames :rename

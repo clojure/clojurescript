@@ -1574,3 +1574,15 @@
                            (:refer-global :only [Date] :rename {Date MyDate}))))]
       (= (:renames parsed-ns)
          '{MyDate js/Date}))))
+
+(deftest test-require-global
+  (binding [ana/*cljs-ns* ana/*cljs-ns*]
+    (let [parsed-ns (env/with-compiler-env test-cenv
+                      (analyze test-env
+                        '(ns foo.core
+                           (:require-global [React :as react :refer [createElement]]))))]
+      (is (= (:requires parsed-ns)
+             '{React js/React
+               react js/React}))
+      (is (= (:uses parsed-ns)
+             '{createElement js/React})))))
