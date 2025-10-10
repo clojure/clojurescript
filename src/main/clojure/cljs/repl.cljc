@@ -259,6 +259,7 @@
    (->> requires
      distinct
      (remove ana/global-ns?)
+     (remove ana/external-dep?)
      (mapcat #(load-namespace repl-env % opts))
      doall)))
 
@@ -656,7 +657,7 @@
 (defn- wrap-fn [form]
   (cond
     (and (seq? form)
-         (#{'ns 'require 'require-macros 'refer-global
+         (#{'ns 'require 'require-macros 'refer-global 'require-global
             'use 'use-macros 'import 'refer-clojure} (first form)))
     identity
 

@@ -3128,6 +3128,13 @@
   [& args]
   `(~'ns* ~(cons :refer-global args)))
 
+(core/defmacro require-global
+  "Require libraries in the global JS environment.
+
+  (require-global '[SomeLib :as lib :refer [foo]])"
+  [& args]
+  `(~'ns* ~(cons :require-global args)))
+
 ;; INTERNAL - do not use, only for Node.js
 (core/defmacro load-file* [f]
   `(goog/nodeGlobalRequire ~f))

@@ -3551,7 +3551,8 @@
                                         (partial use->require env))
                       :use-macros     (comp (partial parse-require-spec env true deps aliases)
                                         (partial use->require env))
-                      :import         (partial parse-import-spec env deps)}
+                      :import         (partial parse-import-spec env deps)
+                      :require-global #(parse-global-require-spec env env/*compiler* deps aliases %)}
         reload       (atom {:use nil :require nil :use-macros nil :require-macros nil})
         reloads      (atom {})
         {uses :use requires :require renames :rename
