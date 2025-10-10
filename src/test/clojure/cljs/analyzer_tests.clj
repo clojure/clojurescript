@@ -395,18 +395,23 @@
              :rename {JSSymbol js/Symbol}}))))
 
 (deftest test-parse-require-global
-  (let [parsed (ana/parse-global-require-spec {} (atom {:fns {}})
-                '[React :refer [createElement] :as react])]
+  (let [cenv   (atom {})
+        deps   (atom [])
+        parsed (ana/parse-global-require-spec {} cenv deps (atom {:fns {}}) 
+                 '[React :refer [createElement] :as react])]
+    (println (pr-str @cenv) (pr-str @deps))
     (is (= parsed
-          '{:require {react js/React
-                      React js/React}
-            :use  {createElement js/React}})))
-  (let [parsed (ana/parse-global-require-spec {} (atom {:fns {}})
-                '[React :refer [createElement] :rename {createElement create} :as react])]
+          '{:require {react React
+                      React React}
+            :use  {createElement React}})))
+  (let [cenv   (atom {})
+        deps   (atom [])
+        parsed (ana/parse-global-require-spec {} cenv deps (atom {:fns {}})
+                 '[React :refer [createElement] :rename {createElement create} :as react])]
     (is (= parsed
-          '{:require {react js/React
-                      React js/React}
-            :rename  {create js/React.createElement}}))))
+          '{:require {react React
+                      React React}
+            :rename  {create React/createElement}}))))
 
 (deftest test-cljs-1785-js-shadowed-by-local
   (let [ws (atom [])]
@@ -1582,7 +1587,7 @@
                         '(ns foo.core
                            (:require-global [React :as react :refer [createElement]]))))]
       (is (= (:requires parsed-ns)
-             '{React js/React
-               react js/React}))
+             '{React React
+               react React}))
       (is (= (:uses parsed-ns)
-             '{createElement js/React})))))
+             '{createElement React})))))

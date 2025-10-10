@@ -2781,6 +2781,17 @@
            (if (and (.exists cljcf) (.isFile cljcf))
              cljcf))))))
 
+(defn external-dep?
+  "Returns true if the library is an :external? foreign dep. This means no source is provided
+  for the library, i.e. it will be provided by some script tag on the page, or loaded by some
+  other means into the JS execution environment."
+  #?(:cljs {:tag boolean})
+  [dep]
+  (let [js-index (:js-dependency-index @env/*compiler*)]
+    (if-some [[_ {:keys [foreign external?]}] (find js-index (name (-> dep lib&sublib first)))]
+      (and foreign external?)
+      false)))
+
 (defn foreign-dep?
   #?(:cljs {:tag boolean})
   [dep]
@@ -3083,13 +3094,10 @@
                           [new-name (symbol "js" (str orig))]))
                    rename)}))))
 
-(defn global-lib [lib]
-  (symbol "js" (str lib)))
-
 (defn parse-global-require-spec
-  [env aliases spec]
+  [env cenv deps aliases spec]
   (if (or (symbol? spec) (string? spec))
-    (recur env aliases [spec])
+    (recur env cenv deps aliases [spec])
     (do
       (basic-validate-ns-spec env false spec)
       (let [[lib & opts] spec
@@ -3120,18 +3128,25 @@
             (error env
               (parse-ns-error-msg spec
                 ":refer must be followed by a sequence of symbols in :require / :require-macros"))))
-        (merge
-          (when (some? alias)
-            {rk (merge {alias (global-lib lib)} {lib (global-lib lib)})})
-          (when (some? referred-without-renamed)
-            {uk (apply hash-map (interleave referred-without-renamed (repeat (global-lib lib))))})
-          (when (some? renamed)
-            {renk (reduce (fn [m [original renamed]]
-                            (when-not (some #{original} referred)
-                              (throw (error env
-                                       (str "Renamed symbol " original " not referred"))))
-                            (assoc m renamed (symbol "js" (str (str lib) "." (str original)))))
-                    {} renamed)}))))))
+        (swap! deps conj lib)
+        (let [ret (merge
+                    (when (some? alias)
+                      {rk (merge {alias lib} {lib lib})})
+                    (when (some? referred-without-renamed)
+                      {uk (apply hash-map (interleave referred-without-renamed (repeat lib)))})
+                    (when (some? renamed)
+                      {renk (reduce (fn [m [original renamed]]
+                                      (when-not (some #{original} referred)
+                                        (throw (error env
+                                                 (str "Renamed symbol " original " not referred"))))
+                                      (assoc m renamed (symbol (str lib) (str original))))
+                              {} renamed)}))]
+          (swap! cenv assoc-in [:js-dependency-index (str lib)]
+            {:external?      true
+             :foreign        true
+             :provides       [(str lib)]
+             :global-exports {lib lib}})
+          ret)))))
 
 (defn parse-require-spec [env macros? deps aliases spec]
   (if (or (symbol? spec) (string? spec))
@@ -3435,7 +3450,7 @@
                         :use-macros     (comp (partial parse-require-spec env true deps aliases)
                                           (partial use->require env))
                         :import         (partial parse-import-spec env deps)
-                        :require-global #(parse-global-require-spec env aliases %)}
+                        :require-global #(parse-global-require-spec env env/*compiler* deps aliases %)}
           valid-forms  (atom #{:use :use-macros :require :require-macros :require-global :import})
           reload       (atom {:use nil :require nil :use-macros nil :require-macros nil})
           reloads      (atom {})

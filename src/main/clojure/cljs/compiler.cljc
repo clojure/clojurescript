@@ -1367,7 +1367,10 @@
                          escape-string
                          wrap-in-double-quotes)
                        ");"))
-                   (emitln "goog.require('" (munge lib) "');"))))]
+                   (if-not (ana/external-dep? lib)
+                     (emitln "goog.require('" (munge lib) "');")
+                     ;; TODO: validate the lib exists
+                     ))))]
             :cljs
             [(and (ana/foreign-dep? lib)
                   (not (keyword-identical? optimizations :none)))

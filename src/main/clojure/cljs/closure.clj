@@ -1127,13 +1127,17 @@
   (let [requires    (set (mapcat deps/-requires inputs))
         required-js (js-dependencies opts requires)]
     (concat
-      (map
-        (fn [{:keys [foreign url file provides requires] :as js-map}]
-          (let [url (or url (io/resource file))]
-            (merge
-              (javascript-file foreign url provides requires)
-              js-map)))
-        required-js)
+      (->> required-js
+        ;; :foreign-libs which declare :external? have no sources (they are included
+        ;; on the page via some script tag we'll never see). :require-global libs are
+        ;; implicit :foreign-libs where :external? is true
+        (remove :external?)
+        (map
+          (fn [{:keys [foreign url file provides requires] :as js-map}]
+            (let [url (or url (io/resource file))]
+              (merge
+                (javascript-file foreign url provides requires)
+                js-map)))))
       (when (-> @env/*compiler* :options :emit-constants)
         [(constants-javascript-file opts)])
       inputs)))
