@@ -171,7 +171,7 @@
           (analyze ns-env '(ns foo.bar (:unless [])))
           (catch Exception e
             (.getMessage (.getCause e))))
-        "Only :refer-clojure, :require, :require-macros, :use, :use-macros, and :import libspecs supported. Got (:unless []) instead."))
+        "Only :refer-clojure, :require, :require-macros, :use, :use-macros, :require-global and :import libspecs supported. Got (:unless []) instead."))
   (is (.startsWith
         (try
           (analyze ns-env '(ns foo.bar (:require baz.woz) (:require noz.goz)))
@@ -387,6 +387,32 @@
             :renames  {map clj-map}}))
     (is (set? (:excludes parsed)))))
 
+(deftest test-parse-global-refer
+  (let [parsed (ana/parse-global-refer-spec {}
+                '((:refer-global :only [Date Symbol] :rename {Symbol JSSymbol})))]
+    (is (= parsed
+           '{:use {Date js Symbol js}
+             :rename {JSSymbol js/Symbol}}))))
+
+(deftest test-parse-require-global
+  (let [cenv   (atom {})
+        deps   (atom [])
+        parsed (ana/parse-global-require-spec {} cenv deps (atom {:fns {}}) 
+                 '[React :refer [createElement] :as react])]
+    (println (pr-str @cenv) (pr-str @deps))
+    (is (= parsed
+          '{:require {react React
+                      React React}
+            :use  {createElement React}})))
+  (let [cenv   (atom {})
+        deps   (atom [])
+        parsed (ana/parse-global-require-spec {} cenv deps (atom {:fns {}})
+                 '[React :refer [createElement] :rename {createElement create} :as react])]
+    (is (= parsed
+          '{:require {react React
+                      React React}
+            :rename  {create React/createElement}}))))
+
 (deftest test-cljs-1785-js-shadowed-by-local
   (let [ws (atom [])]
     (ana/with-warning-handlers [(collecting-warning-handler ws)]
@@ -546,6 +572,14 @@
           '(fn [] (require '[clojure.set :as set])))
         (analyze test-env
           '(map #(require '[clojure.set :as set]) [1 2]))))))
+
+(deftest test-analyze-refer-global
+  (testing "refer-global macro expr return expected AST"
+    (binding [ana/*cljs-ns* ana/*cljs-ns*
+              ana/*cljs-warnings* nil]
+      (let [test-env (ana/empty-env)]
+        (is (= (-> (analyze test-env '(refer-global :only '[Date])) :uses vals set)
+              '#{js}))))))
 
 (deftest test-gen-user-ns
   ;; note: can't use `with-redefs` because direct-linking is enabled
@@ -1533,3 +1567,27 @@
             (ana/gen-constant-id '+)))
   (is (not= (ana/gen-constant-id 'foo.bar)
             (ana/gen-constant-id 'foo$bar))))
+
+;; -----------------------------------------------------------------------------
+;; :refer-global / :require-global ns parsing tests
+
+(deftest test-refer-global
+  (binding [ana/*cljs-ns* ana/*cljs-ns*]
+    (let [parsed-ns (env/with-compiler-env test-cenv
+                      (analyze test-env
+                        '(ns foo.core
+                           (:refer-global :only [Date] :rename {Date MyDate}))))]
+      (= (:renames parsed-ns)
+         '{MyDate js/Date}))))
+
+(deftest test-require-global
+  (binding [ana/*cljs-ns* ana/*cljs-ns*]
+    (let [parsed-ns (env/with-compiler-env test-cenv
+                      (analyze test-env
+                        '(ns foo.core
+                           (:require-global [React :as react :refer [createElement]]))))]
+      (is (= (:requires parsed-ns)
+             '{React React
+               react React}))
+      (is (= (:uses parsed-ns)
+             '{createElement React})))))
