@@ -1608,7 +1608,11 @@
          "], ["
          ;; even under Node.js where runtime require is possible
          ;; this is necessary - see CLJS-2151
-         (ns-list (cond->> (deps/-requires input)
+         (ns-list (cond->>
+                      ;; remove external? foreign deps - they are already loaded
+                      ;; in the environment, there is nothing to do.
+                      ;; :require-global is the typical case here
+                      (remove ana/external-dep? (deps/-requires input))
                     ;; under Node.js we emit native `require`s for these
                     (= :nodejs (:target opts))
                     (filter (complement ana/node-module-dep?))))
