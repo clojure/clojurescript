@@ -24,6 +24,10 @@
   (is (= (simple-set [(MapEntry. 1 2 nil)])
          (set [(MapEntry. 1 2 nil)]))))
 
+(deftest test-obj-map-clj->js
+  (= 1 (aget (clj->js (obj-map :x 1)) "x"))
+  (= 1 (aget (clj->js {:x 1}) "x")))
+
 (comment
 
   (require '[cljs.lite-collections-test] :reload)
