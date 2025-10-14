@@ -737,6 +737,27 @@
   (is (= #{1 2} (hash-set 1 2 2)))
   (is (= #{1 2} (apply hash-set [1 2 2]))))
 
+(deftest test-ordered-set
+  (is (= #{1 2} (sorted-set 1 2 2)))
+  (is (= [1 2 3] (seq (sorted-set 2 3 1))))
+  (is (= #{1 2} (apply sorted-set [1 2 2]))))
+
+(deftest test-3454-conj
+  (is (= #{1 2 3} (conj #{1 2} 3)))
+  (is (= #{1 2 3} (conj (sorted-set 1 2) 3)))
+  (let [s #{1 2}
+        ss (sorted-set 1 2)]
+    (is (identical? s (conj s 2)))
+    (is (identical? ss (conj ss 2)))))
+
+(deftest test-3454-disj
+  (is (= #{1 2} (disj #{1 2 3} 3)))
+  (is (= #{1 2} (disj (sorted-set 1 2 3) 3)))
+  (let [s #{1 2}
+        ss (sorted-set 1 2)]
+    (is (identical? s (disj s 3)))
+    (is (identical? ss (disj ss 3)))))
+
 (deftest test-585
   (is (= (last (map identity (into [] (range 32)))) 31))
   (is (= (into #{} (range 32))
