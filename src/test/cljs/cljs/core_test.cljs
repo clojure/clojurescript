@@ -1957,3 +1957,11 @@
   (is (= "1two:threefour#{:five}[:six]#{:seven}{:eight :nine}"
          (apply cljs.core/str_ 1 ["two" :three 'four #{:five} [:six] #{:seven} {:eight :nine}])))
   (is (= "1234" (apply cljs.core/str_ 1 2 [3 4]))))
+
+(deftest test-cljs-3452
+  (let [obj #js {:valueOf (fn [] "dude")
+                 :toString (fn [] "correct")}
+        str-fn (fn [x y]
+                 (str x obj y "\"foobar\"" 1 :foo nil))]
+    (testing "object is stringified using toString"
+      (is (= "correct6\"foobar\"1:foo" (str-fn nil (+ 1 2 3)))))))

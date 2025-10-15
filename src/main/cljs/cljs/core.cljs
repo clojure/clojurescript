@@ -3110,7 +3110,7 @@ reduces them without incurring seq initialization"
   ([] "")
   ([x] (if (nil? x)
          ""
-         (.join #js [x] "")))
+         (.toString x)))
   ([x & ys]
    (loop [sb (StringBuffer. (str x)) more ys]
      (if more
