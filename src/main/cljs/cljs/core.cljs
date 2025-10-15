@@ -6002,6 +6002,10 @@ reduces them without incurring seq initialization"
   (-empty [coll]
     ())
 
+  ICounted
+  (-count [coll]
+    (- (-count vec) (+ i off)))
+
   IChunkedSeq
   (-chunked-first [coll]
     (array-chunk node off))
