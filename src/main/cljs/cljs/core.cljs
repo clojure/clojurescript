@@ -5677,6 +5677,37 @@ reduces them without incurring seq initialization"
 (defprotocol APersistentVector
   "Marker protocol")
 
+(defn- ^boolean pv-arr-range-eq
+  [a off-a b off-b len]
+  (loop [j 0]
+    (if (< j len)
+      (let [x (aget a (+ off-a j))
+            y (aget b (+ off-b j))]
+        (if (= x y)
+          (recur (unchecked-inc j))
+          false))
+      true)))
+
+(defn- ^boolean pv-range-eq*
+  [a ia b ib cnt-a]
+  (loop [ra cnt-a
+         ia ia
+         ib ib]
+    (if (zero? ra)
+      true
+      (let [arr-a (unchecked-array-for a ia)
+            arr-b (unchecked-array-for b ib)
+            off-a (bit-and ia 0x1f)
+            off-b (bit-and ib 0x1f)
+            rem-a (- 32 off-a)
+            rem-b (- 32 off-b)
+            m (min rem-a rem-b)
+            len (min ra m)]
+        (if (or (identical? arr-a arr-b)
+                (pv-arr-range-eq arr-a off-a arr-b off-b len))
+          (recur (- ra len) (+ ia len) (+ ib len))
+          false)))))
+
 (deftype PersistentVector [meta cnt shift root tail ^:mutable __hash]
   Object
   (toString [coll]
@@ -5747,7 +5778,8 @@ reduces them without incurring seq initialization"
   ISequential
   IEquiv
   (-equiv [coll other]
-    (if (instance? PersistentVector other)
+    (cond
+      (instance? PersistentVector other)
       (if (== cnt (count other))
         (let [me-iter  (-iterator coll)
               you-iter (-iterator other)]
@@ -5760,6 +5792,17 @@ reduces them without incurring seq initialization"
                   false))
               true)))
         false)
+
+      (and (instance? ChunkedSeq other)
+           (instance? PersistentVector (.-vec other)))
+      (let [v (.-vec other)
+            iother (+ (.-i other) (.-off other))
+            ra (- (.-cnt v) iother)]
+        (if (== cnt ra)
+          (pv-range-eq* coll 0 v iother cnt)
+          false))
+
+      :else
       (equiv-sequential coll other)))
 
   IHash
@@ -5960,7 +6003,10 @@ reduces them without incurring seq initialization"
 
   ISequential
   IEquiv
-  (-equiv [coll other] (equiv-sequential coll other))
+  (-equiv [coll other]
+    (if (instance? PersistentVector other)
+      (-equiv other coll)
+      (equiv-sequential coll other)))
 
   ASeq
   ISeq
