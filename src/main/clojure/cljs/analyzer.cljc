@@ -2840,8 +2840,9 @@
                             (error-message :undeclared-ns {:ns-sym dep :js-provide (name dep)}))))))))))))
 
 (defn global-ns? [x]
-  (or (= 'js x)
-      (= "js" (namespace x))))
+  (and (symbol? x)
+       (or (= 'js x)
+           (= "js" (namespace x)))))
 
 (defn missing-use? [lib sym cenv]
   ;; ignore globals referred via :refer-global
