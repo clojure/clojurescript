@@ -9308,7 +9308,10 @@ reduces them without incurring seq initialization"
 
   ICollection
   (-conj [coll o]
-    (PersistentHashSet. meta (assoc hash-map o nil) nil))
+    (let [m (-assoc hash-map o nil)]
+      (if (identical? m hash-map)
+        coll
+        (PersistentHashSet. meta m nil))))
 
   IEmptyableCollection
   (-empty [coll] (-with-meta (.-EMPTY PersistentHashSet) meta))
@@ -9345,7 +9348,10 @@ reduces them without incurring seq initialization"
 
   ISet
   (-disjoin [coll v]
-    (PersistentHashSet. meta (-dissoc hash-map v) nil))
+    (let [m (-dissoc hash-map v)]
+      (if (identical? m hash-map)
+        coll
+        (PersistentHashSet. meta m nil))))
 
   IFn
   (-invoke [coll k]
@@ -9463,7 +9469,10 @@ reduces them without incurring seq initialization"
 
   ICollection
   (-conj [coll o]
-    (PersistentTreeSet. meta (assoc tree-map o nil) nil))
+    (let [m (-assoc tree-map o nil)]
+      (if (identical? m tree-map)
+        coll
+        (PersistentTreeSet. meta m nil))))
 
   IEmptyableCollection
   (-empty [coll] (PersistentTreeSet. meta (-empty tree-map) 0))
@@ -9517,7 +9526,10 @@ reduces them without incurring seq initialization"
 
   ISet
   (-disjoin [coll v]
-    (PersistentTreeSet. meta (dissoc tree-map v) nil))
+    (let [m (-dissoc tree-map v)]
+      (if (identical? m tree-map)
+        coll
+        (PersistentTreeSet. meta m nil))))
 
   IFn
   (-invoke [coll k]
@@ -13002,7 +13014,10 @@ reduces them without incurring seq initialization"
 
   ISet
   (-disjoin [coll v]
-    (Set. meta (-dissoc hash-map v) nil))
+    (let [new-hash-map (-dissoc hash-map v)]
+      (if (identical? new-hash-map hash-map)
+        coll
+        (Set. meta new-hash-map nil))))
 
   IEditableCollection
   (-as-transient [coll]
