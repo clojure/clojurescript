@@ -12605,17 +12605,17 @@ reduces them without incurring seq initialization"
         (if-not (nil? (scan-array 1 k strkeys))
           (if (identical? v (gobject/get strobj k))
             coll
-            ;; overwrite
+            ; overwrite
             (let [new-strobj (obj-clone strobj strkeys)]
               (gobject/set new-strobj k v)
               (ObjMap. meta strkeys new-strobj nil))) 
-          ;; append
+          ; append
           (let [new-strobj (obj-clone strobj strkeys) 
                 new-keys (aclone strkeys)]
             (gobject/set new-strobj k v)
             (.push new-keys k)
             (ObjMap. meta new-keys new-strobj nil)))
-        ;; non-string key. game over.
+        ; non-string key. game over.
         (-with-meta
           (-kv-reduce coll
             (fn [ret k v]
