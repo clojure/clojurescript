@@ -28,6 +28,14 @@
   (= 1 (aget (clj->js (obj-map :x 1)) "x"))
   (= 1 (aget (clj->js {:x 1}) "x")))
 
+(deftest test-unchanged-identical?
+  (let [m (obj-map :foo 1)]
+    (identical? m (assoc m :foo 1)))
+  (let [m (simple-hash-map :foo 1)]
+    (identical? m (assoc m :foo 1)))
+  (let [s (simple-set [:foo])]
+    (identical? s (conj s :foo))))
+
 (comment
 
   (require '[cljs.lite-collections-test] :reload)
