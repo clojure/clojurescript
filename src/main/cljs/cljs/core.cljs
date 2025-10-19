@@ -13014,7 +13014,10 @@ reduces them without incurring seq initialization"
 
   ISet
   (-disjoin [coll v]
-    (Set. meta (-dissoc hash-map v) nil))
+    (let [new-hash-map (-dissoc hash-map v)]
+      (if (identical? new-hash-map hash-map)
+        coll
+        (Set. meta new-hash-map nil))))
 
   IEditableCollection
   (-as-transient [coll]
