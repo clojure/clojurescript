@@ -3110,7 +3110,7 @@ reduces them without incurring seq initialization"
   ([] "")
   ([x] (if (nil? x)
          ""
-         (.join #js [x] "")))
+         (.toString x)))
   ([x & ys]
    (loop [sb (StringBuffer. (str x)) more ys]
      (if more
@@ -6001,6 +6001,10 @@ reduces them without incurring seq initialization"
   IEmptyableCollection
   (-empty [coll]
     ())
+
+  ICounted
+  (-count [coll]
+    (- (-count vec) (+ i off)))
 
   IChunkedSeq
   (-chunked-first [coll]
@@ -12611,10 +12615,14 @@ reduces them without incurring seq initialization"
     (let [k (if-not (keyword? k) k (keyword->obj-map-key k))]
       (if (string? k)
         (if-not (nil? (scan-array 1 k strkeys))
-          (let [new-strobj (obj-clone strobj strkeys)]
-            (gobject/set new-strobj k v)
-            (ObjMap. meta strkeys new-strobj nil))             ;overwrite
-          (let [new-strobj (obj-clone strobj strkeys)          ; append
+          (if (identical? v (gobject/get strobj k))
+            coll
+            ; overwrite
+            (let [new-strobj (obj-clone strobj strkeys)]
+              (gobject/set new-strobj k v)
+              (ObjMap. meta strkeys new-strobj nil))) 
+          ; append
+          (let [new-strobj (obj-clone strobj strkeys) 
                 new-keys (aclone strkeys)]
             (gobject/set new-strobj k v)
             (.push new-keys k)
@@ -12820,10 +12828,12 @@ reduces them without incurring seq initialization"
               i (scan-array-equiv 2 k new-bucket)]
           (aset new-hashobj h new-bucket)
           (if (some? i)
-            (do
-              ; found key, replace
-              (aset new-bucket (inc i) v)
-              (HashMap. meta count new-hashobj nil))
+            (if (identical? v (aget new-bucket (inc i)))
+              coll
+              (do
+                ; found key, replace
+                (aset new-bucket (inc i) v)
+                (HashMap. meta count new-hashobj nil)))
             (do
               ; did not find key, append
               (.push new-bucket k v)
@@ -12962,7 +12972,10 @@ reduces them without incurring seq initialization"
 
   ICollection
   (-conj [coll o]
-    (Set. meta (assoc hash-map o o) nil))
+    (let [new-hash-map (assoc hash-map o o)]
+      (if (identical? new-hash-map hash-map)
+        coll
+        (Set. meta new-hash-map nil))))
 
   IEmptyableCollection
   (-empty [coll] (with-meta (. Set -EMPTY) meta))
