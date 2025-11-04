@@ -941,6 +941,24 @@
       (test/delete-node-modules)
       (test/delete-out-files out))))
 
+(deftest test-cljs-3452-str-optimizations
+  (testing "Test that uses compile time optimizations from str macro"
+    (let [out (.getPath (io/file (test/tmp-dir) "cljs-3452-str-optimizations-out"))]
+      (test/delete-out-files out)
+      (let [{:keys [inputs opts]} {:inputs (str (io/file "src" "test" "cljs_build"))
+                                   :opts {:main 'cljs-3452-str-optimizations.core
+                                          :output-dir out
+                                          :optimizations :none
+                                          :closure-warnings {:check-types :off}}}
+            cenv (env/default-compiler-env)]
+        (build/build (build/inputs (io/file inputs "cljs_3452_str_optimizations/core.cljs")) opts cenv))
+      (let [source (slurp (io/file out "cljs_3452_str_optimizations/core.js"))]
+        (testing "only seven string concats, compile time nil is ignored"
+          (is (= 7 (count (re-seq #"[\+]" source)))))
+        (testing "only two 1-arity str calls, compile time constants are optimized"
+          (is (= 2 (count (re-seq #"\$1\(.*?\)" source))))))
+      (test/delete-out-files out))))
+
 #_(deftest test-advanced-source-maps
   (testing "Test that the `sources` of the final merged source map matches the
   one in the original Closure Compiler generated advanced source map"

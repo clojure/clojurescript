@@ -12,7 +12,7 @@
                             defprotocol defrecord defstruct deftype delay destructure doseq dosync dotimes doto
                             extend-protocol extend-type fn for future gen-class gen-interface
                             if-let if-not import io! lazy-cat lazy-seq let letfn locking loop
-                            memfn ns or proxy proxy-super pvalues refer-clojure reify sync time
+                            memfn ns or proxy proxy-super pvalues reify sync time
                             when when-first when-let when-not while with-bindings with-in-str
                             with-loading-context with-local-vars with-open with-out-str with-precision with-redefs
                             satisfies? identical? true? false? number? nil? instance? symbol? keyword? string? str get
@@ -866,23 +866,29 @@
                             (apply core/str))]
      (string-expr (list* 'js* (core/str "[" strs "].join('')") x ys)))))
 
+(core/defn- compile-time-constant? [x]
+  (core/or
+   (core/string? x)
+   (core/keyword? x)
+   (core/boolean? x)
+   (core/number? x)))
+
 ;; TODO: should probably be a compiler pass to avoid the code duplication
 (core/defmacro str
-  ([] "")
-  ([x]
-   (if (typed-expr? &env x '#{string})
-     x
-     (string-expr (core/list 'js* "cljs.core.str.cljs$core$IFn$_invoke$arity$1(~{})" x))))
-  ([x & ys]
-   (core/let [interpolate (core/fn [x]
-                            (if (typed-expr? &env x '#{string clj-nil})
-                              "~{}"
-                              "cljs.core.str.cljs$core$IFn$_invoke$arity$1(~{})"))
-              strs        (core/->> (core/list* x ys)
-                            (map interpolate)
-                            (interpose ",")
-                            (apply core/str))]
-     (string-expr (list* 'js* (core/str "[" strs "].join('')") x ys)))))
+  [& xs]
+  (core/let [interpolate (core/fn [x]
+                           (core/cond
+                             (typed-expr? &env x '#{clj-nil})
+                             nil
+                             (compile-time-constant? x)
+                             ["+~{}" x]
+                             :else
+                             ;; Note: can't assume non-nil despite tag here, so we go through str 1-arity
+                             ["+cljs.core.str.cljs$core$IFn$_invoke$arity$1(~{})" x]))
+             strs+args (keep interpolate xs)
+             strs (string/join (map first strs+args))
+             args (map second strs+args)]
+    (string-expr (list* 'js* (core/str "(\"\"" strs ")") args))))
 
 (core/defn- bool-expr [e]
   (vary-meta e assoc :tag 'boolean))
@@ -3120,6 +3126,20 @@
   to a symbol different from the var's name, in order to prevent clashes."
   [& args]
   `(~'ns* ~(cons :refer-clojure args)))
+
+(core/defmacro refer-global
+  "Refer global js vars. Supports renaming via :rename.
+
+  (refer-global :only '[Date Symbol] :rename '{Symbol Sym})"
+  [& args]
+  `(~'ns* ~(cons :refer-global args)))
+
+(core/defmacro require-global
+  "Require libraries in the global JS environment.
+
+  (require-global '[SomeLib :as lib :refer [foo]])"
+  [& args]
+  `(~'ns* ~(cons :require-global args)))
 
 ;; INTERNAL - do not use, only for Node.js
 (core/defmacro load-file* [f]

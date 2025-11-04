@@ -1312,19 +1312,24 @@
       (apply str
         (map #(str "['" % "']") xs)))))
 
-(defn emit-global-export [ns-name global-exports lib]
-  (let [[lib' sublib] (ana/lib&sublib lib)]
+(defn emit-global-export [ns-name global-exports lib opts]
+  (let [[lib' sublib] (ana/lib&sublib lib)
+        ref (str "goog.global"
+              ;; Convert object dot access to bracket access
+              (->> (string/split (name (or (get global-exports (symbol lib'))
+                                           (get global-exports (name lib'))))
+                     #"\.")
+                (map (fn [prop] (str "[\"" prop "\"]")))
+                (apply str)))]
+    (when (and (ana/external-dep? lib')
+               (= :none (:optimizations opts)))
+      (emitln
+        "if(!" ref ") throw new Error(\"External library, " lib' ", never provided\");"))
     (emitln
       (munge ns-name) "."
       (ana/munge-global-export lib)
-      " = goog.global"
-      ;; Convert object dot access to bracket access
-      (->> (string/split (name (or (get global-exports (symbol lib'))
-                                   (get global-exports (name lib'))))
-             #"\.")
-        (map (fn [prop]
-               (str "[\"" prop "\"]")))
-        (apply str))
+      " = "
+      ref
       (sublib-select sublib)
       ";")))
 
@@ -1367,7 +1372,10 @@
                          escape-string
                          wrap-in-double-quotes)
                        ");"))
-                   (emitln "goog.require('" (munge lib) "');"))))]
+                   (if-not (ana/external-dep? lib)
+                     (emitln "goog.require('" (munge lib) "');")
+                     ;; TODO: validate the lib exists
+                     ))))]
             :cljs
             [(and (ana/foreign-dep? lib)
                   (not (keyword-identical? optimizations :none)))
@@ -1406,7 +1414,7 @@
     ;; Global Exports
     (doseq [lib global-exports-libs]
       (let [{:keys [global-exports]} (get js-dependency-index (name (-> lib ana/lib&sublib first)))]
-        (emit-global-export ns-name global-exports lib)))
+        (emit-global-export ns-name global-exports lib options)))
     (when (-> libs meta :reload-all)
       (emitln "if(!COMPILED) " loaded-libs " = cljs.core.into(" loaded-libs-temp ", " loaded-libs ");"))))
 
