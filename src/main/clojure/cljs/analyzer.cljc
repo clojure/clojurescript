@@ -4832,7 +4832,7 @@
    (defn build-affecting-options [opts]
      (select-keys opts
        [:static-fns :fn-invoke-direct :optimize-constants :elide-asserts :target :nodejs-rt
-        :cache-key :checked-arrays :language-out :optimizations])))
+        :cache-key :checked-arrays :language-out :optimizations :lite-mode :elide-to-string])))
 
 #?(:clj
    (defn build-affecting-options-sha [path opts]
