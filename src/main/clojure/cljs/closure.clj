@@ -2525,8 +2525,10 @@
           :ups-foreign-libs (expand-libs foreign-libs)
           :ups-externs externs
           :emit-constants emit-constants
-          :cache-analysis-format (:cache-analysis-format opts :transit))
-        (update-in [:preamble] #(into (or % []) ["cljs/imul.js"])))
+          :cache-analysis-format (:cache-analysis-format opts :transit)))
+     
+      (not (:lite-mode opts))
+      (update-in [:preamble] #(into (or % []) ["cljs/imul.js"]))
 
       (:lite-mode opts)
       (assoc-in [:closure-defines (str (comp/munge 'cljs.core/LITE_MODE))]
