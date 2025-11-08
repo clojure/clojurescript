@@ -4129,13 +4129,21 @@ reduces them without incurring seq initialization"
 ;; CLJS-3200: used by destructure macro for maps to reduce amount of repeated code
 ;; placed here because it needs apply and hash-map (only declared at this point)
 (defn --destructure-map [gmap]
-  (if (implements? ISeq gmap)
-    (if (next gmap)
-      (.createAsIfByAssoc (if ^boolean LITE_MODE ObjMap PersistentArrayMap) (to-array gmap))
-      (if (seq gmap)
-        (first gmap)
-        {}))
-    gmap))
+  (if ^boolean LITE_MODE
+    (if (implements? ISeq gmap)
+      (if (next gmap)
+        (.createAsIfByAssoc ObjMap (to-array gmap))
+        (if (seq gmap)
+          (first gmap)
+          (.-EMPTY ObjMap)))
+      gmap)
+    (if (implements? ISeq gmap)
+      (if (next gmap)
+        (.createAsIfByAssoc PersistentArrayMap (to-array gmap))
+        (if (seq gmap)
+          (first gmap)
+          (.-EMPTY PersistentArrayMap)))
+      gmap)))
 
 (defn vary-meta
  "Returns an object of the same type and value as obj, with
@@ -9041,9 +9049,13 @@ reduces them without incurring seq initialization"
   "Builds a map from a seq as described in
   https://clojure.org/reference/special_forms#keyword-arguments"
   [s]
-  (if (next s)
-    (.createAsIfByAssoc (if ^boolean LITE_MODE ObjMap PersistentArrayMap) (to-array s))
-    (if (seq s) (first s) {})))
+  (if ^boolean LITE_MODE
+    (if (next s)
+      (.createAsIfByAssoc ObjMap (to-array s))
+      (if (seq s) (first s) (.-EMPTY ObjMap)))
+    (if (next s)
+      (.createAsIfByAssoc PersistentArrayMap (to-array s))
+      (if (seq s) (first s) (.-EMPTY PersistentArrayMap)))))
 
 (defn sorted-map
   "keyval => key val
@@ -12733,7 +12745,7 @@ reduces them without incurring seq initialization"
           (recur (nnext kvs)))
         (.fromObject ObjMap ks obj)))))
 
-(set! (.-createAsIfByAssoc ObjMap)
+(set! (. ObjMap -createAsIfByAssoc)
   (fn [init]
     ;; check trailing element
     (let [len           (alength init)
