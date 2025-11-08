@@ -1452,11 +1452,6 @@ itself (not its value) is returned. The reader macro #'x expands to (var x)."}})
               (keyword? name)
               `(cljs.repl/print-doc {:spec ~name :doc (cljs.spec.alpha/describe ~name)})
 
-              (= "js" (namespace name))
-              `(cljs.repl/print-doc
-                 (quote ~(merge (select-keys (ana-api/resolve-extern name) [:doc :arglists])
-                           {:name name})))
-
               (ana-api/find-ns name)
               `(cljs.repl/print-doc
                  (quote ~(select-keys (ana-api/find-ns name) [:name :doc])))
@@ -1464,8 +1459,14 @@ itself (not its value) is returned. The reader macro #'x expands to (var x)."}})
               (ana-api/resolve &env name)
               `(cljs.repl/print-doc
                  (quote ~(let [var (ana-api/resolve &env name)
-                               m (select-keys var
-                                   [:ns :name :doc :forms :arglists :macro :url])]
+                               ns  (-> var :name namespace)
+                               m   (cond-> var
+                                     (= "js" ns)
+                                     (-> :name ana-api/resolve-extern
+                                       (select-keys [:doc :arglists])
+                                       (merge {:name name}))
+                                     (not= "js" ns)
+                                     (select-keys [:ns :name :doc :forms :arglists :macro :url]))]
                            (cond-> (update-in m [:name] clojure.core/name)
                              (:protocol-symbol var)
                              (assoc :protocol true
