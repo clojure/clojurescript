@@ -958,3 +958,30 @@
         (testing "only two 1-arity str calls, compile time constants are optimized"
           (is (= 2 (count (re-seq #"\$1\(.*?\)" source))))))
       (test/delete-out-files out))))
+
+#_(deftest test-advanced-source-maps
+  (testing "Test that the `sources` of the final merged source map matches the
+  one in the original Closure Compiler generated advanced source map"
+    (let [out (.getPath (io/file (test/tmp-dir) "adv-src-map"))]
+      (test/delete-out-files out)
+      (test/delete-node-modules)
+      (let [{:keys [inputs opts]} {:inputs (str (io/file "src" "test" "cljs_build"))
+                                   :opts   {:main               'cljs-3346-as-alias.core
+                                            :output-to          (.getPath (io/file out "main.js"))
+                                            :source-map         (.getPath (io/file out "main.js.map"))
+                                            :output-dir         out
+                                            :optimizations      :advanced
+                                            :closure-source-map true}}
+            cenv (env/default-compiler-env)]
+        (build/build (build/inputs (io/file inputs "adv_src_map/core.cljs")) opts cenv))
+      (let [cljs-src-map    (->> (io/file out "main.js.map") slurp json/read-str)
+            closure-src-map (->> (io/file out "main.js.map.closure") slurp json/read-str)]
+        (println (get closure-src-map "sources"))
+        (println (get cljs-src-map "sources")))
+      (test/delete-out-files out))))
+
+#_(comment
+
+  (clojure.test/test-vars [#'test-advanced-source-maps])
+
+  )
