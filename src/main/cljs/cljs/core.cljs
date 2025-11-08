@@ -4129,10 +4129,10 @@ reduces them without incurring seq initialization"
 (defn --destructure-map [gmap]
   (if (implements? ISeq gmap)
     (if (next gmap)
-      (.createAsIfByAssoc PersistentArrayMap (to-array gmap))
+      (.createAsIfByAssoc (. {} -constructor) (to-array gmap))
       (if (seq gmap)
         (first gmap)
-        (.-EMPTY PersistentArrayMap)))
+        {}))
     gmap))
 
 (defn vary-meta
@@ -7126,7 +7126,7 @@ reduces them without incurring seq initialization"
   (fn [init]
     ;; check trailing element
     (let [len           (alength init)
-          has-trailing? (== 1 (bit-and len  1))]
+          has-trailing? (== 1 (bit-and len 1))]
       (if-not (or has-trailing? (pam-dupes? init))
         (PersistentArrayMap. nil (/ len 2) init nil)
         (.createAsIfByAssocComplexPath PersistentArrayMap init has-trailing?)))))
@@ -9040,8 +9040,8 @@ reduces them without incurring seq initialization"
   https://clojure.org/reference/special_forms#keyword-arguments"
   [s]
   (if (next s)
-    (.createAsIfByAssoc PersistentArrayMap (to-array s))
-    (if (seq s) (first s) (.-EMPTY PersistentArrayMap))))
+    (.createAsIfByAssoc (. {} -constructor) (to-array s))
+    (if (seq s) (first s) {})))
 
 (defn sorted-map
   "keyval => key val
@@ -12730,6 +12730,21 @@ reduces them without incurring seq initialization"
           (gobject/set obj k (second kvs))
           (recur (nnext kvs)))
         (.fromObject ObjMap ks obj)))))
+
+(set! (.-createAsIfByAssoc ObjMap)
+  (fn [init]
+    ;; check trailing element
+    (let [len           (alength init)
+          has-trailing? (== 1 (bit-and len 1))
+          init          (if has-trailing?
+                          (pam-grow-seed-array init
+                            (into {} (aget init (dec len))))
+                          init)
+          len           (alength init)]
+      (loop [i 0 ret {}]
+        (if (< i len)
+          (recur (+ i 2) (assoc ret (aget init i) (aget init (inc i))))
+          ret)))))
 
 (defn- scan-array-equiv [incr k array]
   (let [len (alength array)]
