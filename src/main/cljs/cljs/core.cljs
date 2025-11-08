@@ -4129,7 +4129,7 @@ reduces them without incurring seq initialization"
 (defn --destructure-map [gmap]
   (if (implements? ISeq gmap)
     (if (next gmap)
-      (.createAsIfByAssoc (. {} -constructor) (to-array gmap))
+      (.createAsIfByAssoc (if ^boolean LITE_MODE ObjMap PersistentArrayMap) (to-array gmap))
       (if (seq gmap)
         (first gmap)
         {}))
@@ -9040,7 +9040,7 @@ reduces them without incurring seq initialization"
   https://clojure.org/reference/special_forms#keyword-arguments"
   [s]
   (if (next s)
-    (.createAsIfByAssoc (. {} -constructor) (to-array s))
+    (.createAsIfByAssoc (if ^boolean LITE_MODE ObjMap PersistentArrayMap) (to-array s))
     (if (seq s) (first s) {})))
 
 (defn sorted-map
