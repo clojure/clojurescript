@@ -4124,6 +4124,8 @@ reduces them without incurring seq initialization"
 
 (set! *unchecked-if* false)
 
+(declare ObjMap)
+
 ;; CLJS-3200: used by destructure macro for maps to reduce amount of repeated code
 ;; placed here because it needs apply and hash-map (only declared at this point)
 (defn --destructure-map [gmap]
