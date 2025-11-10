@@ -12773,11 +12773,13 @@ reduces them without incurring seq initialization"
   (toString [coll]
     (pr-str* coll))
   (keys [coll]
-    (es6-iterator (map #(-key %) (-seq coll))))
+    (let [arr (. (-seq coll) -arr)]
+      (es6-iterator (prim-seq (.map arr -key (-seq coll))))))
   (entries [coll]
     (es6-entries-iterator (-seq coll)))
-  (values [coll]
-    (es6-iterator (map #(-val %) (-key coll))))
+  (keys [coll]
+    (let [arr (. (-seq coll) -arr)]
+      (es6-iterator (prim-seq (.map arr -val (-seq coll))))))
   (has [coll k]
     (contains? coll k))
   (get [coll k not-found]
