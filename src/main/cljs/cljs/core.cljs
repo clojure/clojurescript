@@ -12361,12 +12361,7 @@ reduces them without incurring seq initialization"
   ISeqable
   (-seq [coll]
     (when (> (alength array) 0)
-      (let [vector-seq
-             (fn vector-seq [i]
-               (lazy-seq
-                 (when (< i (alength array))
-                   (cons (aget array i) (vector-seq (inc i))))))]
-        (vector-seq 0))))
+      (prim-seq array)))
 
   ICounted
   (-count [coll] (alength array))
