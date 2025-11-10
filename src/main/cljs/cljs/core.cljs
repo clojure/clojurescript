@@ -12777,7 +12777,7 @@ reduces them without incurring seq initialization"
       (es6-iterator (prim-seq (.map arr -key (-seq coll))))))
   (entries [coll]
     (es6-entries-iterator (-seq coll)))
-  (keys [coll]
+  (vals [coll]
     (let [arr (. (-seq coll) -arr)]
       (es6-iterator (prim-seq (.map arr -val (-seq coll))))))
   (has [coll k]
