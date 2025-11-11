@@ -1989,7 +1989,7 @@
 
 (deftest test-cljs-3425
   (testing "Incorrect min/max handling of ##NaN"
-    (is (== ##NaN (min ##NaN 1)))
-    (is (== ##NaN (min 1 ##NaN)))
-    (is (== ##NaN (max ##NaN 1)))
-    (is (== ##NaN (max 1 ##NaN)))))
+    (is (NaN? (min ##NaN 1)))
+    (is (NaN? (min 1 ##NaN)))
+    (is (NaN? (max ##NaN 1)))
+    (is (NaN? (max 1 ##NaN)))))
