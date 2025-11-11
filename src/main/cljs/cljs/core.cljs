@@ -1608,7 +1608,7 @@ reduces them without incurring seq initialization"
        -1
        (loop [idx (cond
                     (pos? start) start
-                    (neg? start) (max 0 (+ start len))
+                    (neg? start) (unchecked-max 0 (+ start len))
                     :else start)]
          (if (< idx len)
            (if (= (nth coll idx) x)
@@ -1624,7 +1624,7 @@ reduces them without incurring seq initialization"
     (if (zero? len)
       -1
       (loop [idx (cond
-                   (pos? start) (min (dec len) start)
+                   (pos? start) (unchecked-min (dec len) start)
                    (neg? start) (+ len start)
                    :else start)]
         (if (>= idx 0)
@@ -1695,7 +1695,7 @@ reduces them without incurring seq initialization"
 
   ICounted
   (-count [_]
-    (max 0 (- (alength arr) i)))
+    (unchecked-max 0 (- (alength arr) i)))
 
   IIndexed
   (-nth [coll n]
@@ -2801,17 +2801,30 @@ reduces them without incurring seq initialization"
    :added "1.11.10"}
   [a] (Math/abs a))
 
+(defn NaN?
+  "Returns true if num is NaN, else false"
+  [val]
+  (js/isNaN val))
+
 (defn ^number max
   "Returns the greatest of the nums."
   ([x] x)
-  ([x y] (cljs.core/max x y))
+  ([x y]
+   (cond
+     (NaN? x) x
+     (NaN? y) y
+     :else (cljs.core/max x y)))
   ([x y & more]
    (reduce max (cljs.core/max x y) more)))
 
 (defn ^number min
   "Returns the least of the nums."
   ([x] x)
-  ([x y] (cljs.core/min x y))
+  ([x y]
+   (cond
+     (NaN? x) x
+     (NaN? y) y
+     :else (cljs.core/min x y)))
   ([x y & more]
    (reduce min (cljs.core/min x y) more)))
 
@@ -6156,7 +6169,7 @@ reduces them without incurring seq initialization"
     (let [v-pos (+ start n)]
       (if (or (neg? n) (<= (inc end) v-pos))
         (throw (js/Error. (str_ "Index " n " out of bounds [0," (-count coll) "]")))
-        (build-subvec meta (assoc v v-pos val) start (max end (inc v-pos)) nil))))
+        (build-subvec meta (assoc v v-pos val) start (unchecked-max end (inc v-pos)) nil))))
 
   IReduce
   (-reduce [coll f]
@@ -9924,7 +9937,7 @@ reduces them without incurring seq initialization"
 
   IChunkedSeq
   (-chunked-first [rng]
-    (IntegerRangeChunk. start step (min cnt 32)))
+    (IntegerRangeChunk. start step (unchecked-min cnt 32)))
   (-chunked-rest [rng]
     (if (<= cnt 32)
       ()
@@ -10326,7 +10339,7 @@ reduces them without incurring seq initialization"
       (cons match-vals
             (lazy-seq
              (let [post-idx (+ (.-index matches)
-                               (max 1 (.-length match-str)))]
+                               (unchecked-max 1 (.-length match-str)))]
                (when (<= post-idx (.-length s))
                  (re-seq* re (subs s post-idx)))))))))
 
@@ -12163,11 +12176,6 @@ reduces them without incurring seq initialization"
   [x]
   (instance? goog.Uri x))
 
-(defn NaN?
-  "Returns true if num is NaN, else false"
-  [val]
-  (js/isNaN val))
-
 (defn ^:private parsing-err
   "Construct message for parsing for non-string parsing error"
   [val]
@@ -12296,7 +12304,7 @@ reduces them without incurring seq initialization"
         -1
         (loop [idx (cond
                      (pos? start) start
-                     (neg? start) (max 0 (+ start len))
+                     (neg? start) (unchecked-max 0 (+ start len))
                      :else start)]
           (if (< idx len)
             (if (= (-nth coll idx) x)
@@ -12309,7 +12317,7 @@ reduces them without incurring seq initialization"
       (if (zero? len)
         -1
         (loop [idx (cond
-                     (pos? start) (min (dec len) start)
+                     (pos? start) (unchecked-min (dec len) start)
                      (neg? start) (+ len start)
                      :else start)]
           (if (>= idx 0)
