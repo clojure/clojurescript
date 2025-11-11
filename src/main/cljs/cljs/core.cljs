@@ -2813,7 +2813,8 @@ reduces them without incurring seq initialization"
    (cond
      (NaN? x) x
      (NaN? y) y
-     :else (cljs.core/max x y)))
+     (> x y) x
+     :else y))
   ([x y & more]
    (reduce max (cljs.core/max x y) more)))
 
@@ -2824,7 +2825,8 @@ reduces them without incurring seq initialization"
    (cond
      (NaN? x) x
      (NaN? y) y
-     :else (cljs.core/min x y)))
+     (< x y) x
+     :else y))
   ([x y & more]
    (reduce min (cljs.core/min x y) more)))
 
