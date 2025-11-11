@@ -1986,3 +1986,10 @@
                  (str x obj y "\"foobar\"" 1 :foo nil))]
     (testing "object is stringified using toString"
       (is (= "correct6\"foobar\"1:foo" (str-fn nil (+ 1 2 3)))))))
+
+(deftest test-cljs-3425
+  (testing "Incorrect min/max handling of ##NaN"
+    (is (== ##NaN (min ##NaN 1)))
+    (is (== ##NaN (min 1 ##NaN)))
+    (is (== ##NaN (max ##NaN 1)))
+    (is (== ##NaN (max 1 ##NaN)))))
