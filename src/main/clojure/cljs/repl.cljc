@@ -609,7 +609,9 @@
                          env/*compiler*)
                        (cljsc/compile src
                          (assoc opts
-                           :output-file (cljsc/src-file->target-file src)
+                           ;; need to set opts to nil here so that we don't 
+                           ;; double up output-dir
+                           :output-file (cljsc/src-file->target-file src nil)
                            :force true
                            :mode :interactive)))]
         ;; copy over the original source file if source maps enabled
