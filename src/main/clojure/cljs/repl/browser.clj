@@ -349,21 +349,27 @@
 (defn- waiting-to-connect-message [url]
   (print-str "Waiting for browser to connect to" url "..."))
 
-(defn- maybe-browse-url [base-url]
-  (try
-    (browse/browse-url (str base-url "?rel=" (System/currentTimeMillis)))
-    (catch Throwable t
-      (if-some [error-message (not-empty (.getMessage t))]
-        (println "Failed to launch a browser:\n" error-message "\n")
-        (println "Could not launch a browser.\n"))
-      (println "You can instead launch a non-browser REPL (Node or Nashorn).\n")
-      (println "You can disable automatic browser launch with this REPL option")
-      (println "  :launch-browser false")
-      (println "and you can specify the listen IP address with this REPL option")
-      (println "  :host \"127.0.0.1\"\n")
-      (println (waiting-to-connect-message base-url)))))
+(defn- maybe-browse-url
+  ([base-url]
+   (maybe-browse-url base-url false))
+  ([base-url new-window]
+   (try
+     (browse/browse-url
+       (cond-> base-url
+         new-window (str "?rel=" (System/currentTimeMillis))))
+     (catch Throwable t
+       (if-some [error-message (not-empty (.getMessage t))]
+         (println "Failed to launch a browser:\n" error-message "\n")
+         (println "Could not launch a browser.\n"))
+       (println "You can instead launch a non-browser REPL (Node or Nashorn).\n")
+       (println "You can disable automatic browser launch with this REPL option")
+       (println "  :launch-browser false")
+       (println "and you can specify the listen IP address with this REPL option")
+       (println "  :host \"127.0.0.1\"\n")
+       (println (waiting-to-connect-message base-url)))))
+)
 
-(defn setup [{:keys [working-dir launch-browser server-state] :as repl-env} {:keys [output-dir] :as opts}]
+(defn setup [{:keys [working-dir launch-browser new-window server-state] :as repl-env} {:keys [output-dir] :as opts}]
   (locking lock
     (when-not (:socket @server-state)
       (binding [browser-state (:browser-state repl-env)
@@ -391,7 +397,7 @@
         (server/start repl-env)
         (let [base-url (str "http://" (:host repl-env) ":" (:port repl-env))]
           (if launch-browser
-            (maybe-browse-url base-url)
+            (maybe-browse-url base-url new-window)
             (println (waiting-to-connect-message base-url)))))))
   (.put outs (thread-name) *out*)
   (swap! server-state update :listeners inc))
@@ -458,8 +464,9 @@
     {:host host
      :port port
      :launch-browser true
+     :new-window false
      :working-dir (->> [".repl" (util/clojurescript-version)]
-                       (remove empty?) (string/join "-"))
+                    (remove empty?) (string/join "-"))
      :static-dir (cond-> ["." "out/"] output-dir (conj output-dir))
      :preloaded-libs []
      :src "src/"
