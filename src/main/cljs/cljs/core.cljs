@@ -6762,14 +6762,16 @@ reduces them without incurring seq initialization"
 
   IIndexed
   (-nth [node n]
-    (cond (== n 0) key
-          (== n 1) val
-          :else    (throw (js/Error. "Index out of bounds"))))
+    (case n
+      0 key
+      1 val
+      (throw (js/Error. "Index out of bounds"))))
 
   (-nth [node n not-found]
-    (cond (== n 0) key
-          (== n 1) val
-          :else    not-found))
+    (case n
+      0 key
+      1 val
+      not-found))
 
   ILookup
   (-lookup [node k] (-nth node k nil))
@@ -6779,7 +6781,10 @@ reduces them without incurring seq initialization"
   (-assoc [node k v]
     (assoc [key val] k v))
   (-contains-key? [node k]
-    (or (== k 0) (== k 1)))
+    (case k
+      0 true
+      1 true
+      false))
 
   IFind
   (-find [node k]
