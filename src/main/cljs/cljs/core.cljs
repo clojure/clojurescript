@@ -1041,7 +1041,7 @@
     h))
 
 (defn hash-string [k]
-  (when (> string-hash-cache-count 255)
+  (when (> string-hash-cache-count 1024)
     (set! string-hash-cache (js-obj))
     (set! string-hash-cache-count 0))
   (if (nil? k)
