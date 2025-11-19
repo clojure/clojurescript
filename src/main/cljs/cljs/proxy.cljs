@@ -128,5 +128,8 @@
   (time
     (dotimes [i 1e7]
       (aget proxied-vec 1)))
+
+  (def proxied-deep (proxy [{:foo "Hello"}]))
+  (-> proxied-deep (aget 0) (unchecked-get "foo"))
   
 )
