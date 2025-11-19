@@ -1,21 +1,8 @@
 (ns cljs.proxy
-  (:refer-global :only [Proxy isNaN]))
+  (:refer-global :only [Proxy isNaN])
+  (:require [cljs.proxy.impl :refer [SimpleCache]]))
 
-(deftype SimpleCache [^:mutable obj ^:mutable cnt]
-  Object
-  (set [this k v]
-    (when (== cnt 1024)
-      (.clear this))
-    (unchecked-set obj k v)
-    (set! cnt (inc cnt))
-    v)
-  (get [this k]
-    (unchecked-get obj k))
-  (clear [this]
-    (set! obj #js {})
-    (set! cnt 0)))
-
-(defn write-through [f]
+(defn- write-through [f]
   (let [cache (SimpleCache. #js {} 0)]
     (fn [x]
       (let [v (.get cache x)] 
@@ -23,7 +10,8 @@
           v
           (.set cache x (f x)))))))
 
-(def desc
+(def ^{:private true}
+  desc
   #js {:configurable true
        :enumerable   true})
 
