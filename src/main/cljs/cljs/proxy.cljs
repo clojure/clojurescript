@@ -98,6 +98,8 @@
   (require '[goog.object :as gobj])
   (gobj/get proxied-map "foo")
   (gobj/get proxied-map "bar")
+  (gobj/getKeys proxied-map)
+  (.keys js/Object proxied-map)
   
   (time
     (dotimes [i 1e7]
