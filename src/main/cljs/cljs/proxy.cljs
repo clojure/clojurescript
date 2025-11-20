@@ -37,8 +37,8 @@
 
   Note key-fn is only used for proxied ClojureScript maps. This
   function should map strings to the appropriate key
-  representation. All maps proxied from the same ctor fn will share
-  the same key-fn cache."
+  representation. If unspecified, key-fn defaults to keyword. All maps
+  proxied from the same ctor fn will share the same key-fn cache."
   ([]
    (builder keyword))
   ([key-fn]
