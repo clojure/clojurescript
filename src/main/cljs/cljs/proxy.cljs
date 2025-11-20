@@ -29,7 +29,7 @@
     (def proxied-vec (proxy [1 2 3 4]))
     (aget proxied-vec 1) ;; => 2
 
-  Access patterns from JavaScript on these proxied values will lazily
+  Access patterns from JavaScript on these proxied values will lazily,
   recursively return further proxied values:
 
     (def nested-proxies (proxy [{:foo 1 :bar 2}]))
