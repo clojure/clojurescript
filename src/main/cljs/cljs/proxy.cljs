@@ -16,12 +16,29 @@
        :enumerable   true})
 
 (defn builder
-  "EXPERIMENTAL: Return a JavaScript Proxy ctor fn with the provided key-fn. You
-  can proxy ClojureScript map and vectors. Access pattern from JavaScript
-  will lazily wrap collection values in Proxy if needed. Note key-fn
-  is only used for proxied ClojureScript maps. This function should map
-  strings to the appropriate key representation. All maps proxied from the
-  same ctor fn will share the same key-fn cache."
+  "EXPERIMENTAL: Returns a JavaScript Proxy ctor fn with the provided
+  key-fn. Invoking the returned fn on ClojureScript maps and vectors
+  will returned proxied values that can be used transparently as
+  JavaScript objects and arrays:
+
+    (def proxy (builder))
+
+    (def proxied-map (proxy {:foo 1 :bar 2}))
+    (goog.object/get proxied-map \"foo\") ;; => 1
+
+    (def proxied-vec (proxy [1 2 3 4]))
+    (aget proxied-vec 1) ;; => 2
+
+  Access patterns from JavaScript on these proxied values will lazily
+  recursively return further proxied values:
+
+    (def nested-proxies (proxy [{:foo 1 :bar 2}]))
+    (-> nested-proxies (aget 0) (goog.object/get \"foo\")) ;; => 1
+
+  Note key-fn is only used for proxied ClojureScript maps. This
+  function should map strings to the appropriate key
+  representation. All maps proxied from the same ctor fn will share
+  the same key-fn cache."
   ([]
    (builder keyword))
   ([key-fn]
