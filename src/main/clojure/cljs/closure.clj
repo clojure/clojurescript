@@ -2532,8 +2532,12 @@
       (update-in [:preamble] #(into (or % []) ["cljs/imul.js"]))
 
       (:lite-mode opts)
-      (assoc-in [:closure-defines (str (comp/munge 'cljs.core/LITE_MODE))]
-        (:lite-mode opts))
+      (->
+        (assoc-in [:closure-defines (str (comp/munge 'cljs.core/LITE_MODE))]
+          (:lite-mode opts))
+        (merge
+          (when-not (contains? opts :elide-to-string)
+            {:elide-to-string true})))
 
       (:target opts)
       (assoc-in [:closure-defines (str (comp/munge 'cljs.core/*target*))]
