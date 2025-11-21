@@ -1313,6 +1313,10 @@
     {:name sym}
     lb))
 
+(defn qualified->dotted
+  [sym]
+  (symbol (str (namespace sym) "." (name sym))))
+
 (defn resolve-var
   "Resolve a var. Accepts a side-effecting confirm fn for producing
    warnings about unresolved vars."
@@ -1356,20 +1360,25 @@
            (some? lb) (assoc lb :op :local)
 
            (some? (namespace sym))
-           (let [ns      (namespace sym)
-                 ns      (if #?(:clj  (= "clojure.core" ns)
-                                :cljs (identical? "clojure.core" ns))
-                           "cljs.core"
-                           ns)
-                 full-ns (resolve-ns-alias env ns
-                           (or (and (js-module-exists? ns)
-                                    (gets @env/*compiler* :js-module-index ns :name))
-                             (symbol ns)))]
-             (when (some? confirm)
-               (when (not= current-ns full-ns)
-                 (confirm-ns env full-ns))
-               (confirm env full-ns (symbol (name sym))))
-             (resolve* env sym full-ns current-ns))
+           (let [ns (namespace sym)]
+             (if-let [resolved (and (nil? (resolve-ns-alias env ns nil))
+                                    (not (dotted-symbol? ns))
+                                    (resolve-var env (symbol ns) nil false)
+                                    (resolve-var env (qualified->dotted sym) nil false))]
+               resolved
+               (let [ns      (if #?(:clj  (= "clojure.core" ns)
+                                    :cljs (identical? "clojure.core" ns))
+                               "cljs.core"
+                               ns)
+                     full-ns (resolve-ns-alias env ns
+                               (or (and (js-module-exists? ns)
+                                        (gets @env/*compiler* :js-module-index ns :name))
+                                   (symbol ns)))]
+                 (when (some? confirm)
+                   (when (not= current-ns full-ns)
+                     (confirm-ns env full-ns))
+                   (confirm env full-ns (symbol (name sym))))
+                 (resolve* env sym full-ns current-ns))))
 
            (dotted-symbol? sym)
            (let [idx    (.indexOf s ".")
