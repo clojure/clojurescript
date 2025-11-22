@@ -4120,6 +4120,7 @@
             (select-keys lb [:name :local :arg-id :variadic? :init])))
         (let [sym-meta (meta sym)
               sym-ns (namespace sym)
+              sym-name (name sym)
               cur-ns (str (-> env :ns :name))
               ;; when compiling a macros namespace that requires itself, we need
               ;; to resolve calls to `my-ns.core/foo` to `my-ns.core$macros/foo`
@@ -4130,21 +4131,36 @@
                                    (not (gstring/endsWith sym-ns "$macros"))
                                    (= sym-ns (subs cur-ns 0 (- (count cur-ns) 7))))
                                (symbol (str sym-ns "$macros") (name sym))
-                               sym)])
-              info     (if-not (contains? sym-meta ::analyzed)
+                               sym)])]
+          (if (and sym-ns
+                   (nil? (resolve-ns-alias env sym-ns nil))
+                   (not= ".." sym-name) ;; special case `..` macro in self-hosted
+                   (or (= "new" sym-name)
+                       (string/starts-with? sym-name ".")))
+            (merge
+              {:op    :qualified-method
+               :env   env
+               :form  sym
+               :class (symbol sym-ns)}
+             (if (= "new" sym-name)
+               {:kind :new
+                :name (symbol sym-name)}
+               {:kind :method
+                :name (symbol (subs sym-name 1))}))
+            (let [info (if-not (contains? sym-meta ::analyzed)
                          (resolve-existing-var env sym)
                          (resolve-var env sym))]
-          (assert (:op info) (:op info))
-          (desugar-dotted-expr
-            (if-not (true? (:def-var env))
-              (merge
-                (assoc ret :info info)
-                (select-keys info [:op :name :ns :tag])
-                (when-let [const-expr (:const-expr info)]
-                  {:const-expr const-expr}))
-              (let [info (resolve-var env sym)]
-                (merge (assoc ret :op :var :info info)
-                       (select-keys info [:op :name :ns :tag]))))))))))
+              (assert (:op info) (:op info))
+              (desugar-dotted-expr
+                (if-not (true? (:def-var env))
+                  (merge
+                    (assoc ret :info info)
+                    (select-keys info [:op :name :ns :tag])
+                    (when-let [const-expr (:const-expr info)]
+                      {:const-expr const-expr}))
+                  (let [info (resolve-var env sym)]
+                    (merge (assoc ret :op :var :info info)
+                      (select-keys info [:op :name :ns :tag]))))))))))))
 
 (defn excluded?
   #?(:cljs {:tag boolean})

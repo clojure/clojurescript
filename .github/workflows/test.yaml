@@ -5,7 +5,7 @@ jobs:
   # Runtime Tests
   runtime-test:
     name: Runtime Tests
-    runs-on: macos-14
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
 
@@ -19,50 +19,37 @@ jobs:
           tools-deps: '1.10.1.763'
 
       - name: Cache maven
-        uses: actions/cache@v4
+        uses: actions/cache@v4.2.0
         env:
           cache-name: cache-maven
         with:
           path: ~/.m2
-          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/deps.edn') }}
+          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('deps.edn', '*/deps.edn') }}
           restore-keys: |
             ${{ runner.os }}-${{ env.cache-name }}-
 
       - name: Cache gitlibs
-        uses: actions/cache@v4
+        uses: actions/cache@v4.2.0
         env:
           cache-name: cache-gitlibs
         with:
           path: ~/.gitlibs
-          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/deps.edn') }}
+          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('deps.edn', '*/deps.edn') }}
           restore-keys: |
             ${{ runner.os }}-${{ env.cache-name }}-
-
-      # - name: Cache JSC
-      #   uses: actions/cache@v4
-      #   env:
-      #     cache-name: cache-jsc
-      #   with:
-      #     path: WebKit
-      #     key: ${{ runner.os }}-jsc
-      #     restore-keys: |
-      #       ${{ runner.os }}-jsc
 
       - name: Build tests
         run: clojure -M:runtime.test.build
 
-      # - name: Install JSC
-      #   run: ./ci/install_jsc.sh
-
       - name: Run tests
         run: |
-          /System/Library/Frameworks/JavaScriptCore.framework/Versions/A/Helpers/jsc builds/out-adv/core-advanced-test.js | tee test-out.txt
+          node builds/out-adv/core-advanced-test.js | tee test-out.txt
           grep -qxF '0 failures, 0 errors.' test-out.txt
 
   # Lite Tests
   lite-test:
     name: Lite Tests
-    runs-on: macos-14
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
 
@@ -76,44 +63,31 @@ jobs:
           tools-deps: '1.10.1.763'
 
       - name: Cache maven
-        uses: actions/cache@v4
+        uses: actions/cache@v4.2.0
         env:
           cache-name: cache-maven
         with:
           path: ~/.m2
-          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/deps.edn') }}
+          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('deps.edn', '*/deps.edn') }}
           restore-keys: |
             ${{ runner.os }}-${{ env.cache-name }}-
 
       - name: Cache gitlibs
-        uses: actions/cache@v4
+        uses: actions/cache@v4.2.0
         env:
           cache-name: cache-gitlibs
         with:
           path: ~/.gitlibs
-          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/deps.edn') }}
+          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('deps.edn', '*/deps.edn') }}
           restore-keys: |
             ${{ runner.os }}-${{ env.cache-name }}-
-
-      # - name: Cache JSC
-      #   uses: actions/cache@v4
-      #   env:
-      #     cache-name: cache-jsc
-      #   with:
-      #     path: WebKit
-      #     key: ${{ runner.os }}-jsc
-      #     restore-keys: |
-      #       ${{ runner.os }}-jsc
 
       - name: Build tests
         run: clojure -M:lite.test.build
 
-      # - name: Install JSC
-      #   run: ./ci/install_jsc.sh
-
       - name: Run tests
         run: |
-          /System/Library/Frameworks/JavaScriptCore.framework/Versions/A/Helpers/jsc builds/out-lite/lite-test.js | tee test-out.txt
+          node builds/out-lite/lite-test.js | tee test-out.txt
           grep -qxF '0 failures, 0 errors.' test-out.txt
 
     # Runtime Tests
@@ -145,7 +119,7 @@ jobs:
   # Self-host Tests
   self-host-test:
     name: Self-host Tests
-    runs-on: macos-14
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
 
@@ -159,22 +133,22 @@ jobs:
           tools-deps: '1.10.1.763'
 
       - name: Cache maven
-        uses: actions/cache@v4
+        uses: actions/cache@v4.2.0
         env:
           cache-name: cache-maven
         with:
           path: ~/.m2
-          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/deps.edn') }}
+          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('deps.edn', '*/deps.edn') }}
           restore-keys: |
             ${{ runner.os }}-${{ env.cache-name }}-
 
       - name: Cache gitlibs
-        uses: actions/cache@v4
+        uses: actions/cache@v4.2.0
         env:
           cache-name: cache-gitlibs
         with:
           path: ~/.gitlibs
-          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/deps.edn') }}
+          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('deps.edn', '*/deps.edn') }}
           restore-keys: |
             ${{ runner.os }}-${{ env.cache-name }}-
 
@@ -189,7 +163,7 @@ jobs:
   # Self-parity Tests
   self-parity-test:
     name: Self-parity Tests
-    runs-on: macos-14
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
 
@@ -203,22 +177,22 @@ jobs:
           tools-deps: '1.10.1.763'
 
       - name: Cache maven
-        uses: actions/cache@v4
+        uses: actions/cache@v4.2.0
         env:
           cache-name: cache-maven
         with:
           path: ~/.m2
-          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/deps.edn') }}
+          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('deps.edn', '*/deps.edn') }}
           restore-keys: |
             ${{ runner.os }}-${{ env.cache-name }}-
 
       - name: Cache gitlibs
-        uses: actions/cache@v4
+        uses: actions/cache@v4.2.0
         env:
           cache-name: cache-gitlibs
         with:
           path: ~/.gitlibs
-          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/deps.edn') }}
+          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('deps.edn', '*/deps.edn') }}
           restore-keys: |
             ${{ runner.os }}-${{ env.cache-name }}-
 
@@ -233,7 +207,7 @@ jobs:
   # Compiler Tests
   compiler-test:
     name: Compiler Tests
-    runs-on: macos-14
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
 
@@ -247,22 +221,22 @@ jobs:
           tools-deps: '1.10.1.763'
 
       - name: Cache maven
-        uses: actions/cache@v4
+        uses: actions/cache@v4.2.0
         env:
           cache-name: cache-maven
         with:
           path: ~/.m2
-          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/deps.edn') }}
+          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('deps.edn', '*/deps.edn') }}
           restore-keys: |
             ${{ runner.os }}-${{ env.cache-name }}-
 
       - name: Cache gitlibs
-        uses: actions/cache@v4
+        uses: actions/cache@v4.2.0
         env:
           cache-name: cache-gitlibs
         with:
           path: ~/.gitlibs
-          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/deps.edn') }}
+          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('deps.edn', '*/deps.edn') }}
           restore-keys: |
             ${{ runner.os }}-${{ env.cache-name }}-
 
@@ -292,7 +266,7 @@ jobs:
   # CLI Tests
   cli-test:
     name: CLI Tests
-    runs-on: macos-14
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
         with:
@@ -308,22 +282,22 @@ jobs:
           tools-deps: '1.10.1.763'
 
       - name: Cache maven
-        uses: actions/cache@v4
+        uses: actions/cache@v4.2.0
         env:
           cache-name: cache-maven
         with:
           path: ~/.m2
-          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/deps.edn') }}
+          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('deps.edn', '*/deps.edn') }}
           restore-keys: |
             ${{ runner.os }}-${{ env.cache-name }}-
 
       - name: Cache gitlibs
-        uses: actions/cache@v4
+        uses: actions/cache@v4.2.0
         env:
           cache-name: cache-gitlibs
         with:
           path: ~/.gitlibs
-          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/deps.edn') }}
+          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('deps.edn', '*/deps.edn') }}
           restore-keys: |
             ${{ runner.os }}-${{ env.cache-name }}-
 
