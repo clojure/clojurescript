@@ -24,7 +24,7 @@ jobs:
           cache-name: cache-maven
         with:
           path: ~/.m2
-          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/deps.edn') }}
+          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('deps.edn', '*/deps.edn') }}
           restore-keys: |
             ${{ runner.os }}-${{ env.cache-name }}-
 
@@ -34,7 +34,7 @@ jobs:
           cache-name: cache-gitlibs
         with:
           path: ~/.gitlibs
-          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/deps.edn') }}
+          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('deps.edn', '*/deps.edn') }}
           restore-keys: |
             ${{ runner.os }}-${{ env.cache-name }}-
 
@@ -81,7 +81,7 @@ jobs:
           cache-name: cache-maven
         with:
           path: ~/.m2
-          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/deps.edn') }}
+          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('deps.edn', '*/deps.edn') }}
           restore-keys: |
             ${{ runner.os }}-${{ env.cache-name }}-
 
@@ -91,7 +91,7 @@ jobs:
           cache-name: cache-gitlibs
         with:
           path: ~/.gitlibs
-          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/deps.edn') }}
+          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('deps.edn', '*/deps.edn') }}
           restore-keys: |
             ${{ runner.os }}-${{ env.cache-name }}-
 
@@ -164,7 +164,7 @@ jobs:
           cache-name: cache-maven
         with:
           path: ~/.m2
-          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/deps.edn') }}
+          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('deps.edn', '*/deps.edn') }}
           restore-keys: |
             ${{ runner.os }}-${{ env.cache-name }}-
 
@@ -174,7 +174,7 @@ jobs:
           cache-name: cache-gitlibs
         with:
           path: ~/.gitlibs
-          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/deps.edn') }}
+          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('deps.edn', '*/deps.edn') }}
           restore-keys: |
             ${{ runner.os }}-${{ env.cache-name }}-
 
@@ -208,7 +208,7 @@ jobs:
           cache-name: cache-maven
         with:
           path: ~/.m2
-          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/deps.edn') }}
+          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('deps.edn', '*/deps.edn') }}
           restore-keys: |
             ${{ runner.os }}-${{ env.cache-name }}-
 
@@ -218,7 +218,7 @@ jobs:
           cache-name: cache-gitlibs
         with:
           path: ~/.gitlibs
-          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/deps.edn') }}
+          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('deps.edn', '*/deps.edn') }}
           restore-keys: |
             ${{ runner.os }}-${{ env.cache-name }}-
 
@@ -252,7 +252,7 @@ jobs:
           cache-name: cache-maven
         with:
           path: ~/.m2
-          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/deps.edn') }}
+          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('deps.edn', '*/deps.edn') }}
           restore-keys: |
             ${{ runner.os }}-${{ env.cache-name }}-
 
@@ -262,7 +262,7 @@ jobs:
           cache-name: cache-gitlibs
         with:
           path: ~/.gitlibs
-          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/deps.edn') }}
+          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('deps.edn', '*/deps.edn') }}
           restore-keys: |
             ${{ runner.os }}-${{ env.cache-name }}-
 
@@ -313,7 +313,7 @@ jobs:
           cache-name: cache-maven
         with:
           path: ~/.m2
-          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/deps.edn') }}
+          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('deps.edn', '*/deps.edn') }}
           restore-keys: |
             ${{ runner.os }}-${{ env.cache-name }}-
 
@@ -323,7 +323,7 @@ jobs:
           cache-name: cache-gitlibs
         with:
           path: ~/.gitlibs
-          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/deps.edn') }}
+          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('deps.edn', '*/deps.edn') }}
           restore-keys: |
             ${{ runner.os }}-${{ env.cache-name }}-
 
