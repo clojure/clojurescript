@@ -38,25 +38,12 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-${{ env.cache-name }}-
 
-      # - name: Cache JSC
-      #   uses: actions/cache@v4.2.0
-      #   env:
-      #     cache-name: cache-jsc
-      #   with:
-      #     path: WebKit
-      #     key: ${{ runner.os }}-jsc
-      #     restore-keys: |
-      #       ${{ runner.os }}-jsc
-
       - name: Build tests
         run: clojure -M:runtime.test.build
 
-      # - name: Install JSC
-      #   run: ./ci/install_jsc.sh
-
       - name: Run tests
         run: |
-          /System/Library/Frameworks/JavaScriptCore.framework/Versions/A/Helpers/jsc builds/out-adv/core-advanced-test.js | tee test-out.txt
+          node builds/out-adv/core-advanced-test.js | tee test-out.txt
           grep -qxF '0 failures, 0 errors.' test-out.txt
 
   # Lite Tests
@@ -95,25 +82,12 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-${{ env.cache-name }}-
 
-      # - name: Cache JSC
-      #   uses: actions/cache@v4.2.0
-      #   env:
-      #     cache-name: cache-jsc
-      #   with:
-      #     path: WebKit
-      #     key: ${{ runner.os }}-jsc
-      #     restore-keys: |
-      #       ${{ runner.os }}-jsc
-
       - name: Build tests
         run: clojure -M:lite.test.build
 
-      # - name: Install JSC
-      #   run: ./ci/install_jsc.sh
-
       - name: Run tests
         run: |
-          /System/Library/Frameworks/JavaScriptCore.framework/Versions/A/Helpers/jsc builds/out-lite/lite-test.js | tee test-out.txt
+          node builds/out-lite/lite-test.js | tee test-out.txt
           grep -qxF '0 failures, 0 errors.' test-out.txt
 
     # Runtime Tests
