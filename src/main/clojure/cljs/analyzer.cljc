@@ -4134,6 +4134,7 @@
                                sym)])]
           (if (and sym-ns
                    (nil? (resolve-ns-alias env sym-ns nil))
+                   (not= ".." sym-name) ;; special case `..` macro in self-hosted
                    (or (= "new" sym-name)
                        (string/starts-with? sym-name ".")))
             (merge
