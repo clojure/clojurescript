@@ -1301,6 +1301,14 @@
                     (comma-sep args)
                     "))")))
 
+(defmethod emit* :qualified-method
+  [{ctor :class :keys [args env kind name]}]
+  (if (= :new kind)
+    (emit-wrap env
+      (emits "(function (...args) { return Reflect.construct(" ctor ", args) })"))
+    (emit-wrap env
+      (emits "(function (x, ...args) { return Reflect.apply(" ctor ".prototype." name ", x, args) })"))))
+
 (defmethod emit* :set!
   [{:keys [target val env]}]
   (emit-wrap env (emits "(" target " = " val ")")))
