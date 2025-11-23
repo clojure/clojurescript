@@ -6,20 +6,20 @@ Official web site: https://clojurescript.org
 
 ## Releases and dependency information ##
 
-Latest stable release: 1.12.42
+Latest stable release: 1.12.110
 
 * [All released versions](https://search.maven.org/#search%7Cgav%7C1%7Cg%3A%22org.clojure%22%20AND%20a%3A%22clojurescript%22)
 
 [Clojure deps.edn](http://clojure.org/guides/deps_and_cli) dependency information:
 
  ```
- org.clojure/clojurescript {:mvn/version "1.12.42"}
+ org.clojure/clojurescript {:mvn/version "1.12.110"}
  ```
 
 [Leiningen](https://github.com/technomancy/leiningen/) dependency information:
 
 ```
-[org.clojure/clojurescript "1.12.42"]
+[org.clojure/clojurescript "1.12.110"]
 ```
 
 [Maven](https://maven.apache.org) dependency information:

@@ -1,4 +1,4 @@
-## 1.12.
+## 1.12.110
 
 ### Changes
 * CLJS-3233: `:refer-global` + `:only`, `:require-global`
