@@ -185,7 +185,6 @@
    :report-unknown-types DiagnosticGroups/REPORT_UNKNOWN_TYPES
    :strict-missing-properties DiagnosticGroups/STRICT_MISSING_PROPERTIES
    :strict-module-dep-check DiagnosticGroups/STRICT_MODULE_DEP_CHECK
-   :strict-requires DiagnosticGroups/STRICT_REQUIRES
    :suspicious-code DiagnosticGroups/SUSPICIOUS_CODE
    :too-many-type-params DiagnosticGroups/TOO_MANY_TYPE_PARAMS
    :tweaks DiagnosticGroups/TWEAKS
@@ -1970,13 +1969,7 @@
         (.toSource closure-compiler ast-root)))))
 
 (defn- sorting-dependency-options []
-  (try
-    (if (contains? (:flags (clojure.reflect/reflect DependencyOptions)) :abstract)
-      (eval '(do
-               (import '(com.google.javascript.jscomp DependencyOptions))
-               (DependencyOptions/sortOnly)))
-      (doto (DependencyOptions.)
-        (.setDependencySorting true)))))
+  (DependencyOptions/sortOnly))
 
 (defn convert-js-modules
   "Takes a list JavaScript modules as an IJavaScript and rewrites them into a Google
