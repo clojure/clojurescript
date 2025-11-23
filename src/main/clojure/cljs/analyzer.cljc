@@ -4141,12 +4141,12 @@
               {:op    :qualified-method
                :env   env
                :form  sym
-               :class (symbol sym-ns)}
-             (if (= "new" sym-name)
-               {:kind :new
-                :name (symbol sym-name)}
-               {:kind :method
-                :name (symbol (subs sym-name 1))}))
+               :class (analyze-symbol env (symbol sym-ns))}
+              (if (= "new" sym-name)
+                {:kind :new
+                 :name (symbol sym-name)}
+                {:kind :method
+                 :name (symbol (subs sym-name 1))}))
             (let [info (if-not (contains? sym-meta ::analyzed)
                          (resolve-existing-var env sym)
                          (resolve-var env sym))]
