@@ -1,3 +1,26 @@
+## 1.12.
+
+### Changes
+* CLJS-3233: `:refer-global` + `:only`, `:require-global`
+* CLJS-3451: make munge-str public
+* various small DCE enhancements
+* browser REPL reuses same window
+
+### Enhancements
+* Clojure method values syntax support
+* `cljs.proxy`, experimental namespace for efficient interop
+* CLJS-2471: ChunkedSeq should implemented ICounted
+* CLJS-3452: optimize str by compiling to + / .toString + compile time optimizations
+* `:lite-mode` and `:elide-to-string`, new experimental compiler flags for smaller artifacts
+* CLJS-3439: REPL doc support for externs
+
+### Fixes
+* Fix REPL load-file issue
+* CLJS-3425: Incorrect handling of ##NaN with min/max
+* CLJS-3461: don't hard-code destructuring to PAM
+* CLJS-3454: New set instances are created when redundant data is added
+* CLJS-3438: Inference for `goog.object/containsKey` returns any, not boolean
+
 ## 1.12.42
 
 ### Changes
