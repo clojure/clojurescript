@@ -7,6 +7,7 @@
 ;   You must not remove this notice, or any other, from this software.
 
 (ns cljs.core-test
+  (:refer-global :only [Object String])
   (:refer-clojure :exclude [iter])
   (:require [cljs.test :refer-macros [deftest testing is are]]
             [clojure.test.check :as tc]
@@ -1993,3 +1994,16 @@
     (is (NaN? (min 1 ##NaN)))
     (is (NaN? (max ##NaN 1)))
     (is (NaN? (max 1 ##NaN)))))
+
+(deftest test-static-props-methods
+  (is (= [] PersistentVector/EMPTY))
+  (let [f String/fromCharCode]
+    (is (= "A" (f 65)))))
+
+(deftest test-new-method
+  (let [f Object/new]
+    (some? (f))))
+
+(deftest test-instance-method-new
+  (is (= ["FOO" "BAR" "BAZ"]
+         (map String/.toUpperCase ["foo" "bar" "baz"]))))
