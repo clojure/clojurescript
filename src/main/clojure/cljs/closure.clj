@@ -1609,10 +1609,14 @@
          ;; even under Node.js where runtime require is possible
          ;; this is necessary - see CLJS-2151
          (ns-list (cond->>
+                      ;; remove the global js namespace, it's not real
+                      ;;   comes from :refer-global
                       ;; remove external? foreign deps - they are already loaded
-                      ;; in the environment, there is nothing to do.
-                      ;; :require-global is the typical case here
-                      (remove ana/external-dep? (deps/-requires input))
+                      ;;   in the environment, there is nothing to do.
+                      ;;   :require-global is the typical case here
+                      (->> (deps/-requires input) ;; returns nses as strings, not symbols
+                        (remove #{"js"})
+                        (remove ana/external-dep?))
                     ;; under Node.js we emit native `require`s for these
                     (= :nodejs (:target opts))
                     (filter (complement ana/node-module-dep?))))
