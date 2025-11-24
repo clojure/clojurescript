@@ -28,7 +28,7 @@ Latest stable release: 1.12.112
 <dependency>
   <groupId>org.clojure</groupId>
   <artifactId>clojurescript</artifactId>
-  <version>1.12.38</version>
+  <version>1.12.112</version>
 </dependency>
 ```
 
