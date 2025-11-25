@@ -1184,36 +1184,36 @@
   (is (= (transient (obj-map :a 1 :b 2))
          (obj-map :a 1 :b 2))))
 
-(deftest test-simple-hash-map
-  (let [a (simple-hash-map)]
+(deftest test-hash-map-lite
+  (let [a (hash-map-lite)]
     (is (empty? a))
     (is (zero? (count a))))
-  (let [b (simple-hash-map :a 1)]
+  (let [b (hash-map-lite :a 1)]
     (is (not (empty? b)))
     (is (== 1 (count b))))
-  (let [c (simple-hash-map :a 1 :b 2 :c 3)]
+  (let [c (hash-map-lite :a 1 :b 2 :c 3)]
     (is (== 3 (count c)))
     (is (= 1 (get c :a)))
     (is (= 1 (:a c)))
     (is (every? keyword? (keys c)))
     (is (= (set [:a :b :c]) (set (keys c)))))
-  (is (= (simple-hash-map :a 1 :b 2 :c 3)
-        (simple-hash-map :a 1 :b 2 :c 3)))
-  (is (= (simple-hash-map :a 1 :b 2)
-        (into (simple-hash-map) [[:a 1] [:b 2]])))
+  (is (= (hash-map-lite :a 1 :b 2 :c 3)
+        (hash-map-lite :a 1 :b 2 :c 3)))
+  (is (= (hash-map-lite :a 1 :b 2)
+        (into (hash-map-lite) [[:a 1] [:b 2]])))
   (is (= (merge-with +
-           (simple-hash-map :a 1 :b 2)
-           (simple-hash-map :a 1 :b 2))
-        (into (simple-hash-map) [[:a 2] [:b 4]])))
-  (is (= (transient (simple-hash-map :a 1 :b 2))
-         (simple-hash-map :a 1 :b 2))))
+           (hash-map-lite :a 1 :b 2)
+           (hash-map-lite :a 1 :b 2))
+        (into (hash-map-lite) [[:a 2] [:b 4]])))
+  (is (= (transient (hash-map-lite :a 1 :b 2))
+         (hash-map-lite :a 1 :b 2))))
 
-(deftest test-simple-set
+(deftest test-set-lite
   (is (= #{1 2 3} #{1 2 3}))
   (is (= 3 (count #{1 2 3})))
   (let [x #{1 2 3}]
     (is (every? #(contains? x %) [1 2 3])))
-  (is (= (simple-set [[3 4] [1 2] [5 6]])
+  (is (= (set-lite [[3 4] [1 2] [5 6]])
          (into #{} [[3 4] [1 2] [5 6]]))))
 
 (comment
