@@ -350,10 +350,12 @@
            (cljs.env/with-compiler-env test-cenv
              (:tag (analyze test-env '(dec x)))))
         'number))
-  (is (= (ana/no-warn
-           (cljs.env/with-compiler-env test-cenv
-             (:tag (analyze test-env '(int x)))))
-        'number))
+  ;; we relaxed int, making it too strict just creates
+  ;; problems for legit coercion, Clojure is vague so we are vague :)
+  ;; (is (= (ana/no-warn
+  ;;          (cljs.env/with-compiler-env test-cenv
+  ;;            (:tag (analyze test-env '(int x)))))
+  ;;       'number))
   (is (= (ana/no-warn
            (cljs.env/with-compiler-env test-cenv
              (:tag (analyze test-env '(unchecked-int x)))))
