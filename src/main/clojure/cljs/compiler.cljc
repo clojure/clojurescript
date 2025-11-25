@@ -540,8 +540,8 @@
 
 (defn emit-lite-map [keys vals comma-sep distinct-keys?]
   (if (zero? (count keys))
-    (emits "cljs.core.HashMap.EMPTY")
-    (emits "cljs.core.HashMap.fromArrays([" (comma-sep keys) "], [" (comma-sep vals) "])")))
+    (emits "cljs.core.HashMapLite.EMPTY")
+    (emits "cljs.core.HashMapLite.fromArrays([" (comma-sep keys) "], [" (comma-sep vals) "])")))
 
 (defn emit-map [keys vals comma-sep distinct-keys?]
   (cond
@@ -590,8 +590,8 @@
 
 (defn emit-lite-vector [items comma-sep]
   (if (empty? items)
-    (emits "cljs.core.Vector.EMPTY")
-    (emits "new cljs.core.Vector(null, [" (comma-sep items) "], null)")))
+    (emits "cljs.core.VectorLite.EMPTY")
+    (emits "new cljs.core.VectorLite(null, [" (comma-sep items) "], null)")))
 
 (defmethod emit* :vector
   [{:keys [items env]}]
@@ -618,8 +618,8 @@
 
 (defn emit-lite-set [items comma-sep distinct-constants?]
   (if (empty? items)
-    (emits "cljs.core.Set.EMPTY")
-    (emits "cljs.core.simple_set([" (comma-sep items) "])")))
+    (emits "cljs.core.SetLite.EMPTY")
+    (emits "cljs.core.set_lite([" (comma-sep items) "])")))
 
 (defmethod emit* :set
   [{:keys [items env]}]

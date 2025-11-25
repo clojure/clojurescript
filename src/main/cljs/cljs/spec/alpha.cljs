@@ -148,7 +148,7 @@
   (specize* ([s] (spec-impl s s nil nil))
             ([s form] (spec-impl form s nil nil)))
 
-  Set
+  SetLite
   (specize* ([s] (spec-impl s s nil nil))
             ([s form] (spec-impl form s nil nil)))
 

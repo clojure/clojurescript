@@ -18,10 +18,10 @@
   (let [a {:foo 1}]
     (is (== 1 (:foo a)))))
 
-(deftest test-simple-set-with-set
-  (is (= (simple-set []) (set [])))
-  (is (= (set []) (simple-set [])))
-  (is (= (simple-set [(MapEntry. 1 2 nil)])
+(deftest test-set-lite-with-set
+  (is (= (set-lite []) (set [])))
+  (is (= (set []) (set-lite [])))
+  (is (= (set-lite [(MapEntry. 1 2 nil)])
          (set [(MapEntry. 1 2 nil)]))))
 
 (deftest test-obj-map-clj->js
@@ -31,9 +31,9 @@
 (deftest test-unchanged-identical?
   (let [m (obj-map :foo 1)]
     (identical? m (assoc m :foo 1)))
-  (let [m (simple-hash-map :foo 1)]
+  (let [m (hash-map-lite :foo 1)]
     (identical? m (assoc m :foo 1)))
-  (let [s (simple-set [:foo])]
+  (let [s (set-lite [:foo])]
     (identical? s (conj s :foo))))
 
 (comment

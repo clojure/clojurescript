@@ -185,14 +185,14 @@
                 (comp/with-core-cljs {}
                   (fn []
                     (analyze aenv 'cljs.core/vec))))]
-     (is (= 'cljs.core/simple-vec
+     (is (= 'cljs.core/vec-lite
              (-> ast :name)
              (-> ast :info :name))))
     (let [ast (env/with-compiler-env env
                 (comp/with-core-cljs {}
                   (fn []
                     (analyze aenv 'cljs.core/vector))))]
-      (is (= 'cljs.core/simple-vector
+      (is (= 'cljs.core/vector-lite
              (-> ast :name)
              (-> ast :info :name))))))
 

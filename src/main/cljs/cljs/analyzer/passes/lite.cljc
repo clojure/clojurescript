@@ -12,19 +12,19 @@
 (defn var? [ast]
   (= :var (:op ast)))
 
-(def ctor->simple-ctor
-  '{cljs.core/vector cljs.core/simple-vector
-    cljs.core/vec    cljs.core/simple-vec})
+(def ctor->ctor-lite
+  '{cljs.core/vector cljs.core/vector-lite
+    cljs.core/vec    cljs.core/vec-lite})
 
 (defn update-var [{:keys [name] :as ast}]
-  (let [replacement (get ctor->simple-ctor name)]
+  (let [replacement (get ctor->ctor-lite name)]
     (-> ast
       (assoc :name replacement)
       (assoc-in [:info :name] replacement))))
 
 (defn replace-var? [ast]
   (and (var? ast)
-       (contains? ctor->simple-ctor (:name ast))))
+       (contains? ctor->ctor-lite (:name ast))))
 
 (defn use-lite-types
   [env ast _]

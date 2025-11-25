@@ -10432,7 +10432,7 @@ reduces them without incurring seq initialization"
        (implements? IMeta obj)
        (not (nil? (meta obj)))))
 
-(declare Vector)
+(declare VectorLite)
 
 (defn- pr-writer-impl
   [obj writer opts]
@@ -12287,9 +12287,9 @@ reduces them without incurring seq initialization"
 ;; -----------------------------------------------------------------------------
 ;; Original 2011 Copy-on-Write Types
 
-;;; Vector
+;;; VectorLite
 
-(deftype VectorIterator [arr ^:mutable i]
+(deftype VectorLiteIterator [arr ^:mutable i]
   Object
   (hasNext [_]
     (< i (alength arr)))
@@ -12298,7 +12298,7 @@ reduces them without incurring seq initialization"
       (set! i (inc i))
       x)))
 
-(deftype Vector [meta array ^:mutable __hash]
+(deftype VectorLite [meta array ^:mutable __hash]
   Object
   (toString [coll]
     (pr-str* coll))
@@ -12337,10 +12337,10 @@ reduces them without incurring seq initialization"
   (-with-meta [coll new-meta]
     (if (identical? new-meta meta)
       coll
-      (Vector. new-meta array __hash)))
+      (VectorLite. new-meta array __hash)))
 
   ICloneable
-  (-clone [coll] (Vector. meta array __hash))
+  (-clone [coll] (VectorLite. meta array __hash))
 
   IMeta
   (-meta [coll] meta)
@@ -12354,17 +12354,17 @@ reduces them without incurring seq initialization"
     (if (> (alength array) 0)
       (let [new-array (aclone array)]
         (. new-array (pop))
-        (Vector. meta new-array nil))
+        (VectorLite. meta new-array nil))
       (throw (js/Error. "Can't pop empty vector"))))
 
   ICollection
   (-conj [coll o]
     (let [new-array (aclone array)]
       (.push new-array o)
-      (Vector. meta new-array nil)))
+      (VectorLite. meta new-array nil)))
 
   IEmptyableCollection
-  (-empty [coll] (with-meta (. Vector -EMPTY) meta))
+  (-empty [coll] (with-meta (. VectorLite -EMPTY) meta))
 
   ISequential
   IEquiv
@@ -12405,7 +12405,7 @@ reduces them without incurring seq initialization"
     (if (number? k)
       (let [new-array (aclone array)]
         (aset new-array k v)
-        (Vector. meta new-array nil))
+        (VectorLite. meta new-array nil))
       (throw (js/Error. "Vector's key for assoc must be a number."))))
   (-contains-key? [coll k]
     (if (integer? k)
@@ -12482,24 +12482,24 @@ reduces them without incurring seq initialization"
 
   IIterable
   (-iterator [coll]
-    (VectorIterator. array 0))
+    (VectorLiteIterator. array 0))
 
   IPrintWithWriter
   (-pr-writer [coll writer opts] (pr-sequential-writer writer pr-writer "[" " " "]" opts coll)))
 
-(es6-iterable Vector)
+(es6-iterable VectorLite)
 
-(set! (. Vector -EMPTY) (Vector. nil (array) nil))
+(set! (. VectorLite -EMPTY) (VectorLite. nil (array) nil))
 
-(set! (. Vector -fromArray) (fn [xs] (Vector. nil xs nil)))
+(set! (. VectorLite -fromArray) (fn [xs] (VectorLite. nil xs nil)))
 
-(defn simple-vector
+(defn vector-lite
   [& args]
   (if (and (instance? IndexedSeq args) (zero? (.-i args)))
-    (.fromArray Vector (aclone (.-arr args)))
-    (Vector. nil (into-array args) nil)))
+    (.fromArray VectorLite (aclone (.-arr args)))
+    (VectorLite. nil (into-array args) nil)))
 
-(defn simple-vec
+(defn vec-lite
   [coll]
   (cond
     (map-entry? coll)
@@ -12509,7 +12509,7 @@ reduces them without incurring seq initialization"
     (with-meta coll nil)
 
     (array? coll)
-    (.fromArray Vector coll)
+    (.fromArray VectorLite coll)
 
     :else
     (into [] coll)))
@@ -12538,7 +12538,7 @@ reduces them without incurring seq initialization"
           (recur (inc i)))))
     new-obj))
 
-(declare simple-hash-map HashMap)
+(declare hash-map-lite HashMapLite)
 
 (defn- keyword->obj-map-key
   [k]
@@ -12656,7 +12656,7 @@ reduces them without incurring seq initialization"
           (-kv-reduce coll
             (fn [ret k v]
               (-assoc ret k v))
-            (simple-hash-map k v))
+            (hash-map-lite k v))
           meta))))
   (-contains-key? [coll k]
     (let [k (if-not (keyword? k) k (keyword->obj-map-key k))]
@@ -12783,7 +12783,7 @@ reduces them without incurring seq initialization"
 ; hashobj. Each values in hashobj is actually a bucket in order to handle hash
 ; collisions. A bucket is an array of alternating keys (not their hashes) and
 ; vals.
-(deftype HashMap [meta count hashobj ^:mutable __hash]
+(deftype HashMapLite [meta count hashobj ^:mutable __hash]
   Object
   (toString [coll]
     (pr-str* coll))
@@ -12806,13 +12806,13 @@ reduces them without incurring seq initialization"
           #(f (-val %) (-key %))))))
 
   IWithMeta
-  (-with-meta [coll meta] (HashMap. meta count hashobj __hash))
+  (-with-meta [coll meta] (HashMapLite. meta count hashobj __hash))
 
   IMeta
   (-meta [coll] meta)
 
   ICloneable
-  (-clone [coll] (HashMap. meta count hashobj __hash))
+  (-clone [coll] (HashMapLite. meta count hashobj __hash))
 
   ICollection
   (-conj [coll entry]
@@ -12821,7 +12821,7 @@ reduces them without incurring seq initialization"
       (reduce -conj coll entry)))
 
   IEmptyableCollection
-  (-empty [coll] (with-meta (. HashMap -EMPTY) meta))
+  (-empty [coll] (with-meta (. HashMapLite -EMPTY) meta))
 
   IEquiv
   (-equiv [coll other] (equiv-map coll other))
@@ -12874,15 +12874,15 @@ reduces them without incurring seq initialization"
               (do
                 ; found key, replace
                 (aset new-bucket (inc i) v)
-                (HashMap. meta count new-hashobj nil)))
+                (HashMapLite. meta count new-hashobj nil)))
             (do
               ; did not find key, append
               (.push new-bucket k v)
-              (HashMap. meta (inc count) new-hashobj nil))))
+              (HashMapLite. meta (inc count) new-hashobj nil))))
         (let [new-hashobj (gobject/clone hashobj)]
           ; did not find bucket
           (unchecked-set new-hashobj h (array k v))
-          (HashMap. meta (inc count) new-hashobj nil)))))
+          (HashMapLite. meta (inc count) new-hashobj nil)))))
   (-contains-key? [coll k]
     (let [bucket (unchecked-get hashobj (hash k))
           i (when bucket (scan-array-equiv 2 k bucket))]
@@ -12902,7 +12902,7 @@ reduces them without incurring seq initialization"
             (let [new-bucket (aclone bucket)]
               (.splice new-bucket i 2)
               (unchecked-set new-hashobj h new-bucket)))
-          (HashMap. meta (dec count) new-hashobj nil))
+          (HashMapLite. meta (dec count) new-hashobj nil))
         ; key not found, return coll unchanged
         coll)))
 
@@ -12961,27 +12961,27 @@ reduces them without incurring seq initialization"
   (-pr-writer [coll writer opts]
     (print-map coll pr-writer writer opts)))
 
-(es6-iterable HashMap)
+(es6-iterable HashMapLite)
 
-(set! (. HashMap -EMPTY) (HashMap. nil 0 (js-obj) empty-unordered-hash))
+(set! (. HashMapLite -EMPTY) (HashMapLite. nil 0 (js-obj) empty-unordered-hash))
 
-(set! (. HashMap -fromArrays) (fn [ks vs]
+(set! (. HashMapLite -fromArrays) (fn [ks vs]
   (let [len (.-length ks)]
-    (loop [i 0, out (. HashMap -EMPTY)]
+    (loop [i 0, out (. HashMapLite -EMPTY)]
       (if (< i len)
         (recur (inc i) (assoc out (aget ks i) (aget vs i)))
         out)))))
 
-(defn simple-hash-map
+(defn hash-map-lite
   "keyval => key val
   Returns a new hash map with supplied mappings."
   [& keyvals]
-  (loop [in (seq keyvals), out (. HashMap -EMPTY)]
+  (loop [in (seq keyvals), out (. HashMapLite -EMPTY)]
     (if in
       (recur (nnext in) (-assoc out (first in) (second in)))
       out)))
 
-(deftype Set [meta hash-map ^:mutable __hash]
+(deftype SetLite [meta hash-map ^:mutable __hash]
   Object
   (toString [coll]
     (pr-str* coll))
@@ -13003,23 +13003,23 @@ reduces them without incurring seq initialization"
   (-with-meta [coll new-meta]
     (if (identical? new-meta meta)
       coll
-      (Set. new-meta hash-map __hash)))
+      (SetLite. new-meta hash-map __hash)))
 
   IMeta
   (-meta [coll] meta)
 
   ICloneable
-  (-clone [coll] (Set. meta hash-map __hash))
+  (-clone [coll] (SetLite. meta hash-map __hash))
 
   ICollection
   (-conj [coll o]
     (let [new-hash-map (assoc hash-map o o)]
       (if (identical? new-hash-map hash-map)
         coll
-        (Set. meta new-hash-map nil))))
+        (SetLite. meta new-hash-map nil))))
 
   IEmptyableCollection
-  (-empty [coll] (with-meta (. Set -EMPTY) meta))
+  (-empty [coll] (with-meta (. SetLite -EMPTY) meta))
 
   IEquiv
   (-equiv [coll other]
@@ -13058,7 +13058,7 @@ reduces them without incurring seq initialization"
     (let [new-hash-map (-dissoc hash-map v)]
       (if (identical? new-hash-map hash-map)
         coll
-        (Set. meta new-hash-map nil))))
+        (SetLite. meta new-hash-map nil))))
 
   IEditableCollection
   (-as-transient [coll]
@@ -13090,18 +13090,18 @@ reduces them without incurring seq initialization"
   IPrintWithWriter
   (-pr-writer [coll writer opts] (pr-sequential-writer writer pr-writer "#{" " " "}" opts coll)))
 
-(es6-iterable Set)
+(es6-iterable SetLite)
 
-(set! (. Set -EMPTY) (Set. nil (. HashMap -EMPTY) empty-unordered-hash))
+(set! (. SetLite -EMPTY) (SetLite. nil (. HashMapLite -EMPTY) empty-unordered-hash))
 
-(defn simple-set
+(defn set-lite
   [coll]
   (if (set? coll)
     (-with-meta coll nil)
     (let [in (seq coll)]
       (if (nil? in)
         #{}
-        (loop [in in out (. Set -EMPTY)]
+        (loop [in in out (. SetLite -EMPTY)]
           (if-not (nil? in)
             (recur (next in) (-conj out (first in)))
             out))))))
