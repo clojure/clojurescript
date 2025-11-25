@@ -2932,22 +2932,22 @@ reduces them without incurring seq initialization"
     (Math/ceil q)))
 
 (defn int
-  "Coerce to int by stripping decimal places."
+  "Coerce to int."
   [x]
   (bit-or x 0))
 
 (defn unchecked-int
-  "Coerce to int by stripping decimal places."
+  "Coerce to int."
   [x]
   (fix x))
 
 (defn long
-  "Coerce to long by stripping decimal places. Identical to `int'."
+  "Coerce to long. Identical to `int'."
   [x]
   (fix x))
 
 (defn unchecked-long
-  "Coerce to long by stripping decimal places. Identical to `int'."
+  "Coerce to long. Identical to `int'."
   [x]
   (fix x))
 
