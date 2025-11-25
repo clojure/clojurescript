@@ -1236,8 +1236,9 @@
   ([x y] (core/list 'js* "(~{} | ~{})" x y))
   ([x y & more] `(bit-or (bit-or ~x ~y) ~@more)))
 
-(core/defmacro ^::ana/numeric int [x]
-  `(bit-or ~x 0))
+(core/defmacro int
+  [x]
+  (core/list 'js* "(~{} | 0)" x))
 
 (core/defmacro ^::ana/numeric bit-xor
   ([x y] (core/list 'js* "(~{} ^ ~{})" x y))
