@@ -18,7 +18,7 @@
   (let [proxied (proxy {:foo 1 :bar 2})]
     (is (== 1 (gobj/get proxied "foo")))
     (is (== 2 (gobj/get proxied "bar")))
-    (is (= ["foo" "bar"] (seq (Object/keys proxied))))))
+    (is (= #{"foo" "bar"} (into #{} (Object/keys proxied))))))
 
 (deftest vector-proxy
   (let [proxied (proxy [1 2 3 4])]
