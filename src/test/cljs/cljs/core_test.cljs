@@ -824,9 +824,6 @@
 (def some-x 1)
 (def some-y 1)
 
-(deftest test-583
-  (is (= (count #{some-x some-y}) 1)))
-
 (deftest test-584
   (is (= (count {some-x :foo some-y :bar}) 1)))
 
@@ -2012,3 +2009,7 @@
 (deftest test-instance-method-new
   (is (= ["FOO" "BAR" "BAZ"]
          (map String/.toUpperCase ["foo" "bar" "baz"]))))
+
+(deftest test-cljs-3415
+  (let [a 1 b 1]
+    (is (thrown? js/Error #{a b}))))
