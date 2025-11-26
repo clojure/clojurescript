@@ -7,7 +7,8 @@
 ;; You must not remove this notice, or any other, from this software.
 
 (ns lite-test-runner
-  (:require [cljs.test :refer-macros [run-tests]]
+  (:require [cljs.proxy-test]
+            [cljs.test :refer-macros [run-tests]]
             [cljs.apply-test]
             [cljs.primitives-test]
             [cljs.destructuring-test]
@@ -62,8 +63,7 @@
             [cljs.repl-test]
             [cljs.lite-collections-test]
             [cljs.extend-to-native-test]
-            [cljs.var-test]
-            [cljs.proxy-test]))
+            [cljs.var-test]))
 
 (set! *print-newline* false)
 
@@ -73,6 +73,7 @@
   (enable-console-print!))
 
 (run-tests
+  'cljs.proxy-test
   'cljs.apply-test
   'cljs.primitives-test
   'cljs.destructuring-test
@@ -124,6 +125,4 @@
   'cljs.repl-test
   'cljs.lite-collections-test
   'cljs.extend-to-native-test
-  'cljs.var-test
-  'cljs.proxy-test
-  )
+  'cljs.var-test)
