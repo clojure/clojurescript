@@ -1483,10 +1483,18 @@
   IMeta
   (-meta [_] nil))
 
+(defn- root-obj
+  []
+  (->> js/Function
+    (.getPrototypeOf js/Object)
+    (.getPrototypeOf js/Object)))
+
 (extend-type default
   IHash
   (-hash [o]
-    (goog/getUid o)))
+    (if (identical? o (root-obj))
+      0
+      (goog/getUid o))))
 
 (extend-type symbol
   IHash
