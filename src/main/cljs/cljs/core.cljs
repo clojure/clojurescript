@@ -1483,10 +1483,18 @@
   IMeta
   (-meta [_] nil))
 
+(defn- root-obj
+  []
+  (->> js/Function
+    (.getPrototypeOf js/Object)
+    (.getPrototypeOf js/Object)))
+
 (extend-type default
   IHash
   (-hash [o]
-    (goog/getUid o)))
+    (if (identical? o (root-obj))
+      0
+      (goog/getUid o))))
 
 (extend-type symbol
   IHash
@@ -11262,6 +11270,23 @@ reduces them without incurring seq initialization"
 (defn- swap-global-hierarchy! [f & args]
   (apply swap! (get-global-hierarchy) f args))
 
+(defn bases
+  "Returns the immediate prototype of c"
+  [c]
+  (when c
+    (let [s (.getPrototypeOf js/Object c)]
+      (when s
+        (list s)))))
+
+(defn supers
+  "Returns the immediate and indirect prototypes of c, if any"
+  [c]
+  (loop [ret (set (bases c)) cs ret]
+    (if (seq cs)
+      (let [c (first cs) bs (bases c)]
+        (recur (into ret bs) (into (disj cs c) bs)))
+      (not-empty ret))))
+
 (defn ^boolean isa?
   "Returns true if (= child parent), or child is directly or indirectly derived from
   parent, either via a JavaScript type inheritance relationship or a
@@ -11270,17 +11295,17 @@ reduces them without incurring seq initialization"
   hierarchy"
   ([child parent] (isa? @(get-global-hierarchy) child parent))
   ([h child parent]
-     (or (= child parent)
-         ;; (and (class? parent) (class? child)
-         ;;    (. ^Class parent isAssignableFrom child))
-         (contains? ((:ancestors h) child) parent)
-         ;;(and (class? child) (some #(contains? ((:ancestors h) %) parent) (supers child)))
-         (and (vector? parent) (vector? child)
-              (== (count parent) (count child))
-              (loop [ret true i 0]
-                (if (or (not ret) (== i (count parent)))
-                  ret
-                  (recur (isa? h (child i) (parent i)) (inc i))))))))
+   (or (= child parent)
+       (and (js-fn? parent) (js-fn? child)
+            (instance? parent child))
+       (contains? ((:ancestors h) child) parent)
+       (and (js-fn? child) (some #(contains? ((:ancestors h) %) parent) (supers child)))
+       (and (vector? parent) (vector? child)
+            (== (count parent) (count child))
+            (loop [ret true i 0]
+              (if (or (not ret) (== i (count parent)))
+                ret
+                (recur (isa? h (child i) (parent i)) (inc i))))))))
 
 (defn parents
   "Returns the immediate parents of tag, either via a JavaScript type
@@ -11288,7 +11313,12 @@ reduces them without incurring seq initialization"
   must be a hierarchy obtained from make-hierarchy, if not supplied
   defaults to the global hierarchy"
   ([tag] (parents @(get-global-hierarchy) tag))
-  ([h tag] (not-empty (get (:parents h) tag))))
+  ([h tag]
+   (not-empty
+     (let [tp (get (:parents h) tag)]
+       (if (js-fn? tag)
+         (into (set (bases tag)) tp)
+         tp)))))
 
 (defn ancestors
   "Returns the immediate and indirect parents of tag, either via a JavaScript type
@@ -11296,7 +11326,15 @@ reduces them without incurring seq initialization"
   must be a hierarchy obtained from make-hierarchy, if not supplied
   defaults to the global hierarchy"
   ([tag] (ancestors @(get-global-hierarchy) tag))
-  ([h tag] (not-empty (get (:ancestors h) tag))))
+  ([h tag]
+   (not-empty
+     (let [ta (get (:ancestors h) tag)]
+       (if (js-fn? tag)
+         (let [superclasses (set (supers tag))]
+           (reduce into superclasses
+             (cons ta
+               (map #(get (:ancestors h) %) superclasses))))
+         ta)))))
 
 (defn descendants
   "Returns the immediate and indirect children of tag, through a
@@ -11305,7 +11343,10 @@ reduces them without incurring seq initialization"
   hierarchy. Note: does not work on JavaScript type inheritance
   relationships."
   ([tag] (descendants @(get-global-hierarchy) tag))
-  ([h tag] (not-empty (get (:descendants h) tag))))
+  ([h tag]
+   (if (js-fn? tag)
+     (throw (js/Error. "Can't get descendants of constructors"))
+     (not-empty (get (:descendants h) tag)))))
 
 (defn derive
   "Establishes a parent/child relationship between parent and
@@ -11315,13 +11356,12 @@ reduces them without incurring seq initialization"
   supplied defaults to, and modifies, the global hierarchy."
   ([tag parent]
    (assert (namespace parent))
-   ;; (assert (or (class? tag) (and (instance? cljs.core.Named tag) (namespace tag))))
+   (assert (or (js-fn? tag) (and (implements? INamed tag) (namespace tag))))
    (swap-global-hierarchy! derive tag parent) nil)
   ([h tag parent]
    (assert (not= tag parent))
-   ;; (assert (or (class? tag) (instance? clojure.lang.Named tag)))
-   ;; (assert (instance? clojure.lang.INamed tag))
-   ;; (assert (instance? clojure.lang.INamed parent))
+   (assert (or (js-fn? tag) (implements? INamed tag)))
+   (assert (implements? INamed parent))
    (let [tp (:parents h)
          td (:descendants h)
          ta (:ancestors h)
