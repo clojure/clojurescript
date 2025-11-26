@@ -12494,12 +12494,14 @@ reduces them without incurring seq initialization"
 (set! (. VectorLite -fromArray) (fn [xs] (VectorLite. nil xs nil)))
 
 (defn vector-lite
+  ":lite-mode version of vector, not intended to be used directly."
   [& args]
   (if (and (instance? IndexedSeq args) (zero? (.-i args)))
     (.fromArray VectorLite (aclone (.-arr args)))
     (VectorLite. nil (into-array args) nil)))
 
 (defn vec-lite
+  ":lite-mode version of vec, not intended to be used directly."
   [coll]
   (cond
     (map-entry? coll)
@@ -12742,8 +12744,7 @@ reduces them without incurring seq initialization"
 (set! (. ObjMap -fromObject) (fn [ks obj] (ObjMap. nil ks obj nil)))
 
 (defn obj-map
-  "keyval => key val
-  Returns a new object map with supplied mappings."
+  ":lite-mode simple key hash-map, not intended to be used directly."
   [& keyvals]
   (let [ks  (array)
         obj (js-obj)]
@@ -12973,8 +12974,7 @@ reduces them without incurring seq initialization"
         out)))))
 
 (defn hash-map-lite
-  "keyval => key val
-  Returns a new hash map with supplied mappings."
+  ":lite-mode version of hash-map, not intended to be used directly."
   [& keyvals]
   (loop [in (seq keyvals), out (. HashMapLite -EMPTY)]
     (if in
@@ -13095,6 +13095,7 @@ reduces them without incurring seq initialization"
 (set! (. SetLite -EMPTY) (SetLite. nil (. HashMapLite -EMPTY) empty-unordered-hash))
 
 (defn set-lite
+  ":lite-mode version of set, not intended ot be used directly."
   [coll]
   (if (set? coll)
     (-with-meta coll nil)
