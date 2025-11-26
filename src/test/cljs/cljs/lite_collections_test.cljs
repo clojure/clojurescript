@@ -21,6 +21,8 @@
 (deftest test-set-lite-with-set
   (is (= (set-lite []) (set [])))
   (is (= (set []) (set-lite [])))
+  (is (= (set-lite ["foo" "bar"]) (set-lite ["foo" "bar"])))
+  (is (= (set-lite ["foo" "bar"]) (set-lite #js ["foo" "bar"])))
   (is (= (set-lite [(MapEntry. 1 2 nil)])
          (set [(MapEntry. 1 2 nil)]))))
 
