@@ -61,7 +61,8 @@
             [cljs.walk-test]
             [cljs.repl-test]
             [cljs.extend-to-native-test]
-            [cljs.var-test]))
+            [cljs.var-test]
+            [cljs.proxy-test]))
 
 (set! *print-newline* false)
 
@@ -124,4 +125,5 @@
   'cljs.walk-test
   'cljs.repl-test
   'cljs.extend-to-native-test
-  'cljs.var-test)
+  'cljs.var-test
+  'cljs.proxy-test)
