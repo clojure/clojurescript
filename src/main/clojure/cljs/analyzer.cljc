@@ -4141,7 +4141,7 @@
               {:op    :qualified-method
                :env   env
                :form  sym
-               :class (analyze-symbol env (symbol sym-ns))}
+               :class (analyze-symbol (assoc env :context :expr) (symbol sym-ns))}
               (if (= "new" sym-name)
                 {:kind :new
                  :name (symbol sym-name)}
