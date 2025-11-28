@@ -7,7 +7,8 @@
 ;; You must not remove this notice, or any other, from this software.
 
 (ns lite-test-runner
-  (:require [cljs.proxy-test]
+  (:require [cljs.qualified-method-test]
+            [cljs.proxy-test]
             [cljs.test :refer-macros [run-tests]]
             [cljs.apply-test]
             [cljs.primitives-test]
@@ -73,6 +74,7 @@
   (enable-console-print!))
 
 (run-tests
+  'cljs.qualified-method-test
   'cljs.proxy-test
   'cljs.apply-test
   'cljs.primitives-test
