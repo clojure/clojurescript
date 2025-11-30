@@ -82,7 +82,7 @@
          map-handler #js {:get (fn [^cljs.core/ILookup target prop receiver]
                                  (cond
                                    (identical? (. Symbol -iterator) prop)
-                                   (unchecked-get target prop)
+                                   (.bind (unchecked-get target prop) target)
 
                                    :else (js/__ctor (-lookup target (cache-key-fn prop)))))
 
