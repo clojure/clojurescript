@@ -651,14 +651,14 @@
     (.append sb "null;")))
 
 (defn- global-exports-side-effects
-  [bound-vars sb deps ns-name emit-nil-result?]
+  [bound-vars sb deps ns-name opts]
   (let [{:keys [js-dependency-index]} @(:*compiler* bound-vars)]
     (doseq [dep deps]
       (let [{:keys [global-exports]} (get js-dependency-index (name dep))]
         (.append sb
           (with-out-str
-            (comp/emit-global-export ns-name global-exports dep)))))
-    (when (and (seq deps) emit-nil-result?)
+            (comp/emit-global-export ns-name global-exports dep opts)))))
+    (when (and (seq deps) (:def-emits-var opts))
       (.append sb "null;"))))
 
 (defn- trampoline-safe
@@ -835,8 +835,7 @@
                         (node-side-effects bound-vars sb node-deps ns-name (:def-emits-var opts)))
                       (global-exports-side-effects bound-vars sb
                         (filter ana/dep-has-global-exports? (:deps ast))
-                        ns-name
-                        (:def-emits-var opts))
+                        ns-name opts)
                       (cb (try
                             {:ns ns-name :value ((:*eval-fn* bound-vars) {:source (.toString sb)})}
                             (catch :default cause
@@ -1102,8 +1101,7 @@
                                     (node-side-effects bound-vars sb node-deps ns-name (:def-emits-var opts)))
                                   (global-exports-side-effects bound-vars sb
                                     (filter ana/dep-has-global-exports? (:deps ast))
-                                    ns-name
-                                    (:def-emits-var opts))
+                                    ns-name opts)
                                   (trampoline compile-loop ns'))))))
                         (do
                           (env/with-compiler-env (assoc @(:*compiler* bound-vars) :options opts)
