@@ -1,6 +1,6 @@
 (ns cljs.proxy
-  (:refer-global :only [Proxy isNaN])
-  (:require [cljs.proxy.impl :refer [SimpleCache]]))
+  (:refer-global :only [isNaN Proxy Symbol])
+  (:require [cljs.proxy.impl :refer [SimpleCache MapIterator]]))
 
 (defn- write-through [f]
   (let [cache (SimpleCache. #js {} 0)]
@@ -45,16 +45,28 @@
    (js* "var __ctor")
    (let [cache-key-fn (write-through key-fn)
          vec-handler  #js {:get (fn [^cljs.core/IIndexed target prop receiver]
-                                  (if (identical? prop "length")
+                                  (cond
+                                    (identical? "length" prop)
                                     (-count ^cljs.core/ICounted target)
+
+                                    (identical? (. Symbol -iterator) prop)
+                                    (fn []
+                                      (MapIterator.
+                                        ((.bind (unchecked-get target prop) target)) js/__ctor))
+
+                                    :else
                                     (let [n (js* "+~{}" prop)]
                                       (when (and (number? n)
                                                  (not (isNaN n)))
                                         (js/__ctor (-nth target n nil))))))
 
                            :has (fn [^cljs.core/IAssociative target prop]
-                                  (if (identical? prop "length")
-                                    true
+                                  (cond
+                                    (identical? prop "length") true
+
+                                    (identical? (. Symbol -iterator) prop) true
+
+                                    :else
                                     (let [n (js* "+~{}" prop)]
                                       (and (number? n)
                                            (not (isNaN n))
@@ -150,5 +162,7 @@
 
   (def proxied-deep (proxy [{:foo "Hello"}]))
   (-> proxied-deep (aget 0) (unchecked-get "foo"))
+
+  (aget ((cljs.proxy/builder) [{}]) 0)
   
 )
