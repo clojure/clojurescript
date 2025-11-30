@@ -11,6 +11,8 @@
  :aliases
  {:cljs-repl             {:extra-paths ["src/test/cljs"]
                           :main-opts ["-m" "cljs.main" "-re" "node" "-d" ".cljs_repl" "-r"]}
+  :cljs-brepl            {:extra-paths ["src/test/cljs"]
+                          :main-opts ["-m" "cljs.main" "-d" ".cljs_brepl" "-r"]}
   :cljs-lite-repl        {:extra-paths ["src/test/cljs"]
                           :main-opts ["-m" "cljs.main" "-co" "{:lite-mode true}" "-re" "node" "-d" ".cljs_lite_repl" "-r"]}
   :cli.test.run          {:extra-paths ["src/test/cljs_cli"]
