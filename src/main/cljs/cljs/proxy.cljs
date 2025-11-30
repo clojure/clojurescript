@@ -1,5 +1,5 @@
 (ns cljs.proxy
-  (:refer-global :only [Proxy isNaN])
+  (:refer-global :only [isNaN Proxy Symbol])
   (:require [cljs.proxy.impl :refer [SimpleCache]]))
 
 (defn- write-through [f]
@@ -45,16 +45,26 @@
    (js* "var __ctor")
    (let [cache-key-fn (write-through key-fn)
          vec-handler  #js {:get (fn [^cljs.core/IIndexed target prop receiver]
-                                  (if (identical? prop "length")
+                                  (cond
+                                    (identical? "length" prop)
                                     (-count ^cljs.core/ICounted target)
+
+                                    (identical? (. Symbol -iterator) prop)
+                                    (.bind (unchecked-get target prop) target)
+
+                                    (string? prop)
                                     (let [n (js* "+~{}" prop)]
                                       (when (and (number? n)
                                                  (not (isNaN n)))
                                         (js/__ctor (-nth target n nil))))))
 
                            :has (fn [^cljs.core/IAssociative target prop]
-                                  (if (identical? prop "length")
-                                    true
+                                  (cond
+                                    (identical? prop "length") true
+
+                                    (identical? (. Symbol -iterator) prop) true
+
+                                    (string? prop)
                                     (let [n (js* "+~{}" prop)]
                                       (and (number? n)
                                            (not (isNaN n))
@@ -70,10 +80,16 @@
                            :getOwnPropertyDescriptor
                            (fn [target prop] desc)}
          map-handler #js {:get (fn [^cljs.core/ILookup target prop receiver]
-                                 (js/__ctor (-lookup target (cache-key-fn prop))))
+                                 (cond
+                                   (identical? (. Symbol -iterator) prop)
+                                   (unchecked-get target prop)
+
+                                   :else (js/__ctor (-lookup target (cache-key-fn prop)))))
 
                           :has (fn [^cljs.core/IAssociative target prop]
-                                 (-contains-key? target (cache-key-fn prop)))
+                                 (cond
+                                   (identical? (. Symbol -iterator) prop) true
+                                   :else (-contains-key? target (cache-key-fn prop))))
 
                           :getPrototypeOf
                           (fn [target] nil)
@@ -150,5 +166,7 @@
 
   (def proxied-deep (proxy [{:foo "Hello"}]))
   (-> proxied-deep (aget 0) (unchecked-get "foo"))
+
+  (aget ((cljs.proxy/builder) [{}]) 0)
   
 )
