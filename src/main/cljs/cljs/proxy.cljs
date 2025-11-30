@@ -1,6 +1,6 @@
 (ns cljs.proxy
   (:refer-global :only [isNaN Proxy Symbol])
-  (:require [cljs.proxy.impl :refer [SimpleCache]]))
+  (:require [cljs.proxy.impl :refer [SimpleCache MapIterator]]))
 
 (defn- write-through [f]
   (let [cache (SimpleCache. #js {} 0)]
@@ -50,9 +50,11 @@
                                     (-count ^cljs.core/ICounted target)
 
                                     (identical? (. Symbol -iterator) prop)
-                                    (.bind (unchecked-get target prop) target)
+                                    (fn []
+                                      (MapIterator.
+                                        ((.bind (unchecked-get target prop) target)) js/__ctor))
 
-                                    (string? prop)
+                                    :else
                                     (let [n (js* "+~{}" prop)]
                                       (when (and (number? n)
                                                  (not (isNaN n)))
@@ -64,7 +66,7 @@
 
                                     (identical? (. Symbol -iterator) prop) true
 
-                                    (string? prop)
+                                    :else
                                     (let [n (js* "+~{}" prop)]
                                       (and (number? n)
                                            (not (isNaN n))
@@ -80,16 +82,10 @@
                            :getOwnPropertyDescriptor
                            (fn [target prop] desc)}
          map-handler #js {:get (fn [^cljs.core/ILookup target prop receiver]
-                                 (cond
-                                   (identical? (. Symbol -iterator) prop)
-                                   (.bind (unchecked-get target prop) target)
-
-                                   :else (js/__ctor (-lookup target (cache-key-fn prop)))))
+                                 (js/__ctor (-lookup target (cache-key-fn prop))))
 
                           :has (fn [^cljs.core/IAssociative target prop]
-                                 (cond
-                                   (identical? (. Symbol -iterator) prop) true
-                                   :else (-contains-key? target (cache-key-fn prop))))
+                                 (-contains-key? target (cache-key-fn prop)))
 
                           :getPrototypeOf
                           (fn [target] nil)
