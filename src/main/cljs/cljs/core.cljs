@@ -3639,7 +3639,7 @@ reduces them without incurring seq initialization"
   IEmptyableCollection
   (-empty [coll]
     ;; MAYBE FIXME: :lite-mode testing uncovered a very old bug, empty on seq
-    ;; should discared the metadata, we change the behavior in LITE_MODE for now
+    ;; should discard the metadata, we changed the behavior in LITE_MODE for now
     ;; to avoid a breaking change
     (if-not ^boolean LITE_MODE
       (-with-meta (.-EMPTY List) meta)
