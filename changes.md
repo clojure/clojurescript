@@ -1,3 +1,16 @@
+## 1.12.1NN
+
+### Changes
+* Be less specific about the behavior of integer coercion fns
+
+### Fixes
+* Docstrings for `:lite-mode` support fns
+* CLJS-3456: bootstrap wasn't updated for cljs.compiler/emit-global-export change
+* cljs.proxy doesn't handle `for .. of` correctly
+* CLJS-3466: support qualified method in return position
+* CLJS-3464: `parents` does not walk JavaScript prototype chain
+* CLJS-3463: rename all the lite mode data structures / fns to avoid clashing
+
 ## 1.12.116
 
 ### Changes
