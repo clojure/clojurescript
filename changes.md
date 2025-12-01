@@ -2,6 +2,8 @@
 
 ### Changes
 * Be less specific about the behavior of integer coercion fns
+* `cljs.proxy/builder`, `cache-fn` parameterization
+* Provide `cljs.proxy/proxy` default
 
 ### Fixes
 * Docstrings for `:lite-mode` support fns
