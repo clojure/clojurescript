@@ -38,12 +38,17 @@
   Note key-fn is only used for proxied ClojureScript maps. This
   function should map strings to the appropriate key
   representation. If unspecified, key-fn defaults to keyword. All maps
-  proxied from the same ctor fn will share the same key-fn cache."
+  proxied from the same ctor fn will share the same key-fn cache.
+
+  A cache-fn may be suppled to override the default cache. This fn
+  should take key-fn and return a memoized version."
   ([]
    (builder keyword))
   ([key-fn]
+   (builder keyword write-through))
+  ([key-fn cache-fn]
    (js* "var __ctor")
-   (let [cache-key-fn (write-through key-fn)
+   (let [cache-key-fn (cache-fn key-fn)
          vec-handler  #js {:get (fn [^cljs.core/IIndexed target prop receiver]
                                   (cond
                                     (identical? "length" prop)
@@ -105,6 +110,9 @@
                     (implements? IVector target) (Proxy. target vec-handler)
                     :else target))] 
      __ctor)))
+
+(def ^{:doc "Default proxy for maps and vectors."}
+  proxy (builder))
 
 (comment
 
