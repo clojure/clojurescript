@@ -1067,7 +1067,7 @@
                      ;; i.e. [console] -> [Console] but :tag is Console _not_ Function vs.
                      ;; [console log] -> [Console prototype log] where :tag is Function
                      (and (empty? (next pre))
-                          (not (contains? ret :info)))
+x                          (not (contains? ret :info)))
                      (assoc :info info'))]
            ;; handle actual occurrences of types, i.e. `Console`
            (if (and (or (:ctor info') (:iface info')) (= 'Function (:tag info')))

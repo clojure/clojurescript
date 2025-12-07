@@ -2,15 +2,15 @@
 
 ### Changes
 * Be less specific about the behavior of integer coercion fns
-* `cljs.proxy/builder`, `cache-fn` parameterization
 * Provide `cljs.proxy/proxy` default
+* `cljs.proxy/builder`, `cache-fn` parameterization
 
 ### Fixes
+* `cljs.proxy` doesn't handle `for .. of` correctly
 * Docstrings for `:lite-mode` support fns
-* CLJS-3456: bootstrap wasn't updated for cljs.compiler/emit-global-export change
-* cljs.proxy doesn't handle `for .. of` correctly
 * CLJS-3466: support qualified method in return position
 * CLJS-3464: `parents` does not walk JavaScript prototype chain
+* CLJS-3456: bootstrap wasn't updated for cljs.compiler/emit-global-export change
 * CLJS-3463: rename all the lite mode data structures / fns to avoid clashing
 
 ## 1.12.116
@@ -117,7 +117,7 @@
 * CLJS-3372: Vendorize data.json, transit-clj, and tools.reader
   data.json and transit-clj are no longer dependencies. CLJS-3375 bridges
   tools.reader for backwards compatibility
-* Clojure 1.10 minimum version  
+* Clojure 1.10 minimum version
 * Update Google Closure Compiler, transit-java, tools.reader dependencies to latest
 * CLJS-2820 Compile cljs.loader regardless of whether :modules are used
 * CLJS-3370: improved uuid regex to only accept hex characters
@@ -618,7 +618,7 @@
 * cljs.main, simple command line access to Compiler & REPLs
 * cljs.server.* namespaces for integration with -Dclojure.server.repl
 * :aot-cache compiler to enable global AOT caching of dependencies in JARs
-* :stable-names compiler flag, to support vendorization when using :modules, 
+* :stable-names compiler flag, to support vendorization when using :modules,
   defaults to true when using :modules.
 * Add :webworker & :nashorn target
 * pREPL implementation (usage requires Clojure 1.10.0-alpha)
@@ -897,7 +897,7 @@
 
 ### Fixes
 * CLJS-2139: Undeclared var regression in fn bodies
-* CLJS-2137: Missing INext on some sequences 
+* CLJS-2137: Missing INext on some sequences
 * CLJS-2136: Clarify IFind contract to avoid double-lookups
 * need to elide :c.a/analyzed in c.a/analyze-wrap-meta to avoid dumping unintended
   with-meta expressions
@@ -996,12 +996,12 @@
 
 ### Changes
 * CLJS-2021: subvec throws when passed non-vector
-* CLJS-1884: Give a chance to MetaFn to be removed by closure under :advanced 
+* CLJS-1884: Give a chance to MetaFn to be removed by closure under :advanced
   optimization Replace with-meta calls by -with-meta calls where possible
 * CLJS-2052: Port new spec.alpha enhancements
 * Update Google Closure Compiler dependency
 * Update Google Closure Library dependency
- 
+
 ### Fixes
 * CLJS-2053: Regression: cljs.spec.alpha/any for fdef
 * CLJS-2039: remove extraneous argument from ChunkBuffer.chunk
@@ -1049,7 +1049,7 @@
 ### Changes
 * CLJS-2006: Upgrade Closure Compiler to April 2017 release
 
-### Fixes 
+### Fixes
 * CLJS-1497: `find` on an associative collection does not return collection key
 * CLJS-1996: Support correct checking of :preloads when :optimizations not specified
 * CLJS-1994: assoc on nil returns PHM (expected PAM)
@@ -1378,7 +1378,7 @@ possible
 * CLJS-1661: cljs.spec: non-spec'ed fn var printing
 * compute read/write opts for transit if possible, handle JSValue
 * CLJS-1660: cljs.spec: Always return var from instrument / unstrument
-* CLJS-1671: Bad cljs.spec interactive instrumentation session 
+* CLJS-1671: Bad cljs.spec interactive instrumentation session
 * CLJS-1664: The filename aux.cljs is a problem on windows.
 * CLJS-1667: bad describe* for and-spec-impl
 * CLJS-1699: Self-host: s/fdef ns-qualify *ns* name field access
@@ -1753,7 +1753,7 @@ determine which version you should use.
 * CLJS-1203: standard way to pass multiple directories to build
 
 ### Fixes
-* CLJS-1216: incorrect max fixed arity for fns both multi-arity and variadic 
+* CLJS-1216: incorrect max fixed arity for fns both multi-arity and variadic
 * cljs.analyzer/parse-ns did not bind *cljs-file*
 * CLJS-1201: compare broken for IIndexed collections
 * CLJS-1202: cljs.repl/load-file is not additive
