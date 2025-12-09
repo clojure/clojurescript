@@ -6,20 +6,20 @@ Official web site: https://clojurescript.org
 
 ## Releases and dependency information ##
 
-Latest stable release: 1.12.116
+Latest stable release: 1.12.134
 
 * [All released versions](https://search.maven.org/#search%7Cgav%7C1%7Cg%3A%22org.clojure%22%20AND%20a%3A%22clojurescript%22)
 
 [Clojure deps.edn](http://clojure.org/guides/deps_and_cli) dependency information:
 
  ```
- org.clojure/clojurescript {:mvn/version "1.12.116"}
+ org.clojure/clojurescript {:mvn/version "1.12.134"}
  ```
 
 [Leiningen](https://github.com/technomancy/leiningen/) dependency information:
 
 ```
-[org.clojure/clojurescript "1.12.116"]
+[org.clojure/clojurescript "1.12.134"]
 ```
 
 [Maven](https://maven.apache.org) dependency information:
@@ -28,7 +28,7 @@ Latest stable release: 1.12.116
 <dependency>
   <groupId>org.clojure</groupId>
   <artifactId>clojurescript</artifactId>
-  <version>1.12.116</version>
+  <version>1.12.134</version>
 </dependency>
 ```
 
@@ -45,7 +45,7 @@ Please point all of your questions and feedback to the
 [Clojure mailing list](https://groups.google.com/group/clojure). There
 is a community run
 [ClojureScript user mailing list](https://groups.google.com/group/clojurescript) and
-the IRC channel, `#clojurescript` on [freenode.net](https://freenode.net/), is quite active. 
+the IRC channel, `#clojurescript` on [freenode.net](https://freenode.net/), is quite active.
 There is also a community run [Slack channel](https://clojurians.slack.com). The
 Jira bug/feature tracking application is located at
 <https://clojure.atlassian.net/browse/CLJS>. Before submitting issues
