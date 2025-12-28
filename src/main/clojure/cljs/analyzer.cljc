@@ -3098,7 +3098,8 @@ x                          (not (contains? ret :info)))
           (throw (error env (str err-str (pr-str parsed-spec)))))
         (when-not (every? #{:only :rename} (keys parsed-spec))
           (throw (error env (str err-str (pr-str parsed-spec)))))
-        {:use    (zipmap only (repeat 'js))
+        {:use    (zipmap (if rename (remove rename only)
+                             only) (repeat 'js))
          :rename (into {}
                    (map (fn [[orig new-name]]
                           [new-name (symbol "js" (str orig))]))

@@ -391,7 +391,7 @@
   (let [parsed (ana/parse-global-refer-spec {}
                 '((:refer-global :only [Date Symbol] :rename {Symbol JSSymbol})))]
     (is (= parsed
-           '{:use {Date js Symbol js}
+           '{:use {Date js}
              :rename {JSSymbol js/Symbol}}))))
 
 (deftest test-parse-require-global
