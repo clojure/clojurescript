@@ -321,7 +321,8 @@ present"
         reopts (merge repl-env-options (select-keys opts [:main :output-dir]))
         _      (when (or ana/*verbose* (:verbose opts))
                  (util/debug-prn "REPL env options:" (pr-str reopts)))
-        renv   (apply (target->repl-env (:target options) repl-env) (mapcat identity reopts))]
+        renv   (-> (apply (target->repl-env (:target options) repl-env) (mapcat identity reopts))
+                   (assoc :compiler-opts opts))]
     (repl/repl* renv
       (assoc opts
         ::repl/fast-initial-prompt?
