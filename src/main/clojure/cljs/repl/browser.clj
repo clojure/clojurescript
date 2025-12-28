@@ -182,7 +182,7 @@
 
 (defn send-static
   [{path :path :as request} conn
-   {:keys [static-dir output-dir host port gzip?] :or {output-dir "out"} :as opts}]
+   {:keys [static-dir output-dir host port gzip? compiler-opts] :or {output-dir "out"} :as opts}]
   (let [output-dir (when-not (.isAbsolute (io/file output-dir)) output-dir)]
     (if (and static-dir (not= "/favicon.ico" path))
       (let [path (if (= "/" path) "/index.html" path)
@@ -224,7 +224,11 @@
                                       clojure.browser.repl/PORT ~port}
                                   (merge (:closure-defines @browser-state))
                                   cljsc/normalize-closure-defines
-                                  json/write-str)]
+                                  json/write-str)
+                preloads (when-let [preloads (:preloads compiler-opts)]
+                           (mapv (fn [ns-symb]
+                                   (str "document.write('<script>goog.require(\"" (munge ns-symb) "\");</script>');"))
+                                 preloads))]
             (server/send-and-close conn 200
               (str "var CLOSURE_UNCOMPILED_DEFINES = " closure-defines ";\n"
                    "var CLOSURE_NO_DEPS = true;\n"
@@ -233,6 +237,7 @@
                    (when (.exists (io/file output-dir "cljs_deps.js"))
                      (str "document.write('<script src=\"" output-dir "/cljs_deps.js\"></script>');\n"))
                    "document.write('<script src=\"" output-dir "/brepl_deps.js\"></script>');\n"
+                   (when preloads (str/join "\n" preloads))
                    "document.write('<script>goog.require(\"clojure.browser.repl.preload\");</script>');\n")
               "text/javascript" "UTF-8"))
 
