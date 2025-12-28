@@ -54,8 +54,7 @@
   *global* "default")
 
 (goog-define
-  ^{:doc "Boolean flag for LITE_MODE"
-    :jsdoc ["@type {boolean}"]}
+  ^{:doc "Boolean flag for LITE_MODE"}
   LITE_MODE false)
 
 (def
