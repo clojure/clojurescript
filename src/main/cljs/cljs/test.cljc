@@ -262,7 +262,7 @@
      cljs.test/IAsyncTest
      cljs.core/IFn
      (~'-invoke [_# ~done]
-       ~@body)))
+      ((^:async fn [] ~@body)))))
 
 ;; =============================================================================
 ;; Running Tests
