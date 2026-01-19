@@ -2314,6 +2314,12 @@ x                          (not (contains? ret :info)))
                        meths)
         locals       (:locals env)
         name-var     (fn-name-var env locals name)
+        async (or
+               ;; NOTE: adding async on fn form turns it into a MetaFn which isn't great for interop, let's discourage it - Michiel Borkent
+               #_(:async (meta form))
+               (:async (meta name))
+               (:async (meta (first form))))
+        env (assoc env :async async)
         env          (if (some? name)
                        (update-in env [:fn-scope] conj name-var)
                        env)
