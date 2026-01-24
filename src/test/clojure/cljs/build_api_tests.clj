@@ -959,6 +959,21 @@
           (is (= 2 (count (re-seq #"\$1\(.*?\)" source))))))
       (test/delete-out-files out))))
 
+(deftest test-cljs-3470-async-await-optimizations
+  (testing "Test that implicit IIFEs (due to let etc.) without `await` remain synchronous"
+    (let [out (.getPath (io/file (test/tmp-dir) "cljs-3570-async-await-optimizations-out"))]
+      (test/delete-out-files out)
+      (let [{:keys [inputs opts]} {:inputs (str (io/file "src" "test" "cljs_build"))
+                                   :opts {:main 'cljs-3470-async-await.core
+                                          :output-dir out
+                                          :optimizations :none
+                                          :closure-warnings {:check-types :off}}}
+            cenv (env/default-compiler-env)]
+        (build/build (build/inputs (io/file inputs "cljs_3470_async_await/core.cljs")) opts cenv))
+      (let [source (slurp (io/file out "cljs_3470_async_await/core.js"))]
+        (is (= 18 (count (re-seq #"\(await" source)))))
+      (test/delete-out-files out))))
+
 #_(deftest test-advanced-source-maps
   (testing "Test that the `sources` of the final merged source map matches the
   one in the original Closure Compiler generated advanced source map"

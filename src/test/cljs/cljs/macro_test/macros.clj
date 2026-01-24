@@ -14,3 +14,7 @@
 
 (defmacro sm-cljs-3027 []
   (sorted-map "a" "b"))
+
+(defmacro await! [x]
+  ;; resolves as clojure.core/await, not cljs.core/await
+  `(await ~x))
