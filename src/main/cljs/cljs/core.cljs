@@ -10470,6 +10470,7 @@ reduces them without incurring seq initialization"
             (js/isNaN obj) "##NaN"
             (identical? obj js/Number.POSITIVE_INFINITY) "##Inf"
             (identical? obj js/Number.NEGATIVE_INFINITY) "##-Inf"
+            (js/Object.is obj -0.0) "-0.0"
             :else (str_ obj)))
 
         (object? obj)
