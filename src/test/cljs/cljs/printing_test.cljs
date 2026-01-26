@@ -74,6 +74,7 @@
     (is (= (pr-str 1) "1"))
     (is (= (pr-str -1) "-1"))
     (is (= (pr-str -1.5) "-1.5"))
+    (is (= (pr-str -0.0) "-0.0"))
     (is (= (pr-str [3 4]) "[3 4]"))
     (is (= (pr-str "foo") "\"foo\""))
     (is (= (pr-str :hello) ":hello"))
