@@ -1988,6 +1988,11 @@
     (testing "object is stringified using toString"
       (is (= "correct6\"foobar\"1:foo" (str-fn nil (+ 1 2 3)))))))
 
+(def test-cljs-3472-var nil)
+(deftest test-cljs-3472
+  (set! test-cljs-3472-var "dude")
+  (is (= "dude" (str test-cljs-3472-var))))
+
 (deftest test-cljs-3425
   (testing "Incorrect min/max handling of ##NaN"
     (is (NaN? (min ##NaN 1)))
