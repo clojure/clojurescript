@@ -71,6 +71,10 @@
 (def ^:dynamic *passes* nil)
 (def ^:dynamic *file-defs* nil)
 (def ^:dynamic *private-var-access-nowarn* false)
+(def ^:dynamic *await-called* (atom false))
+
+(defn await-called! [atm]
+  (reset! atm true))
 
 (def constants-ns-sym
   "The namespace of the constants table as a symbol."
@@ -1853,40 +1857,46 @@ x                          (not (contains? ret :info)))
   [op env [_ sym tests thens default :as form] name _]
   (assert (symbol? sym) "case* must switch on symbol")
   (assert (every? vector? tests) "case* tests must be grouped in vectors")
-  (let [expr-env (assoc env :context :expr)
-        v        (disallowing-recur (analyze expr-env sym))
-        tests    (mapv #(mapv (fn [t] (analyze expr-env t)) %) tests)
-        thens    (mapv #(analyze env %) thens)
-        nodes    (mapv (fn [tests then]
-                         {:op :case-node
-                          ;synthetic node, no :form
-                          :env env
-                          :tests (mapv (fn [test]
-                                         {:op :case-test
-                                          :form (:form test)
-                                          :env expr-env
-                                          :test test
-                                          :children [:test]})
-                                       tests)
-                          :then {:op :case-then
-                                 :form (:form then)
-                                 :env env
-                                 :then then
-                                 :children [:then]}
-                          :children [:tests :then]})
-                       tests
-                       thens)
-        default  (analyze env default)]
-    (assert (every? (fn [t]
-                      (or
-                        (-> t :info :const)
-                        (and (= :const (:op t))
-                             ((some-fn number? string? char?) (:form t)))))
-              (apply concat tests))
-      "case* tests must be numbers, strings, or constants")
-    {:env env :op :case :form form
-     :test v :nodes nodes :default default
-     :children [:test :nodes :default]}))
+  (let [upper-await-called *await-called*
+        await-called (atom false)]
+    (binding [*await-called* await-called]
+      (let [expr-env (assoc env :context :expr)
+            v        (disallowing-recur (analyze expr-env sym))
+            tests    (mapv #(mapv (fn [t] (analyze expr-env t)) %) tests)
+            thens    (mapv #(analyze env %) thens)
+            nodes    (mapv (fn [tests then]
+                             {:op :case-node
+                                        ;synthetic node, no :form
+                              :env env
+                              :tests (mapv (fn [test]
+                                             {:op :case-test
+                                              :form (:form test)
+                                              :env expr-env
+                                              :test test
+                                              :children [:test]})
+                                           tests)
+                              :then {:op :case-then
+                                     :form (:form then)
+                                     :env env
+                                     :then then
+                                     :children [:then]}
+                              :children [:tests :then]})
+                           tests
+                           thens)
+            default  (analyze env default)]
+        (assert (every? (fn [t]
+                          (or
+                           (-> t :info :const)
+                           (and (= :const (:op t))
+                                ((some-fn number? string? char?) (:form t)))))
+                        (apply concat tests))
+                "case* tests must be numbers, strings, or constants")
+        (let [await-called? @await-called
+              env (if-not await-called? (dissoc env :async) env)]
+          (when await-called? (await-called! upper-await-called))
+          {:env env :op :case :form form
+           :test v :nodes nodes :default default
+           :children [:test :nodes :default]})))))
 
 (defmethod parse 'throw
   [op env [_ throw-form :as form] name _]
@@ -1897,82 +1907,93 @@ x                          (not (contains? ret :info)))
     (< 2 (count form))
     (throw
       (error env "Too many arguments to throw, throw expects a single Error instance")))
-  (let [throw-expr (disallowing-recur (analyze (assoc env :context :expr) throw-form))]
+  (let [upper-await-called *await-called*
+        await-called (atom false)
+        throw-expr (binding [*await-called* await-called]
+                     (disallowing-recur (analyze (assoc env :context :expr) throw-form)))
+        await-called? @await-called
+        env (if-not await-called? (dissoc env :async) env)]
+    (when await-called? (await-called! upper-await-called))
     {:env env :op :throw :form form
      :exception throw-expr
      :children [:exception]}))
 
 (defmethod parse 'try
   [op env [_ & body :as form] name _]
-  (let [catchenv (update-in env [:context] #(if (= :expr %) :return %))
-        catch? (every-pred seq? #(= (first %) 'catch))
-        default? (every-pred catch? #(= (second %) :default))
-        finally? (every-pred seq? #(= (first %) 'finally))
+  (let [upper-await-called *await-called*
+        await-called (atom false)]
+    (binding [*await-called* await-called]
+      (let [catchenv (update-in env [:context] #(if (= :expr %) :return %))
+            catch? (every-pred seq? #(= (first %) 'catch))
+            default? (every-pred catch? #(= (second %) :default))
+            finally? (every-pred seq? #(= (first %) 'finally))
 
-        {:keys [body cblocks dblock fblock]}
-        (loop [parser {:state :start :forms body
-                       :body [] :cblocks [] :dblock nil :fblock nil}]
-          (if (seq? (:forms parser))
-            (let [[form & forms*] (:forms parser)
-                  parser* (assoc parser :forms forms*)]
-              (case (:state parser)
-                :start (cond
-                         (catch? form) (recur (assoc parser :state :catches))
-                         (finally? form) (recur (assoc parser :state :finally))
-                         :else (recur (update-in parser* [:body] conj form)))
-                :catches (cond
-                           (default? form) (recur (assoc parser* :dblock form :state :finally))
-                           (catch? form) (recur (update-in parser* [:cblocks] conj form))
-                           (finally? form) (recur (assoc parser :state :finally))
-                           :else (throw (error env "Invalid try form")))
-                :finally (recur (assoc parser* :fblock form :state :done))
-                :done (throw (error env "Unexpected form after finally"))))
-            parser))
+            {:keys [body cblocks dblock fblock]}
+            (loop [parser {:state :start :forms body
+                           :body [] :cblocks [] :dblock nil :fblock nil}]
+              (if (seq? (:forms parser))
+                (let [[form & forms*] (:forms parser)
+                      parser* (assoc parser :forms forms*)]
+                  (case (:state parser)
+                    :start (cond
+                             (catch? form) (recur (assoc parser :state :catches))
+                             (finally? form) (recur (assoc parser :state :finally))
+                             :else (recur (update-in parser* [:body] conj form)))
+                    :catches (cond
+                               (default? form) (recur (assoc parser* :dblock form :state :finally))
+                               (catch? form) (recur (update-in parser* [:cblocks] conj form))
+                               (finally? form) (recur (assoc parser :state :finally))
+                               :else (throw (error env "Invalid try form")))
+                    :finally (recur (assoc parser* :fblock form :state :done))
+                    :done (throw (error env "Unexpected form after finally"))))
+                parser))
 
-        finally (when (seq fblock)
-                  (-> (disallowing-recur (analyze (assoc env :context :statement) `(do ~@(rest fblock))))
-                      (assoc :body? true)))
-        e (when (or (seq cblocks) dblock) (gensym "e"))
-        default (if-let [[_ _ name & cb] dblock]
-                  `(cljs.core/let [~name ~e] ~@cb)
-                  `(throw ~e))
-        cblock (if (seq cblocks)
-                 `(cljs.core/cond
-                   ~@(mapcat
-                      (fn [[_ type name & cb]]
-                        (when name (assert (not (namespace name)) "Can't qualify symbol in catch"))
-                        `[(cljs.core/instance? ~type ~e)
-                          (cljs.core/let [~name ~e] ~@cb)])
-                      cblocks)
-                   :else ~default)
-                 default)
-        locals (:locals catchenv)
-        locals (if e
-                 (assoc locals e
-                        {:name e
-                         :line (get-line e env)
-                         :column (get-col e env)
-                         ;; :local is required for {:op :local ...} nodes
-                         ;; but previously we had no way to figure this out
-                         ;; for `catch` locals, by adding it here we can recover
-                         ;; it later
-                         :local :catch})
-                 locals)
-        catch (when cblock
-                (disallowing-recur (analyze (assoc catchenv :locals locals) cblock)))
-        try (disallowing-recur (analyze (if (or e finally) catchenv env) `(do ~@body)))]
-
-    {:env env :op :try :form form
-     :body (assoc try :body? true)
-     :finally finally
-     :name e
-     :catch catch
-     :children (vec
-                 (concat [:body]
-                         (when catch
-                           [:catch])
-                         (when finally
-                           [:finally])))}))
+            finally (when (seq fblock)
+                      (-> (disallowing-recur (analyze (assoc env :context :statement) `(do ~@(rest fblock))))
+                          (assoc :body? true)))
+            e (when (or (seq cblocks) dblock) (gensym "e"))
+            default (if-let [[_ _ name & cb] dblock]
+                      `(cljs.core/let [~name ~e] ~@cb)
+                      `(throw ~e))
+            cblock (if (seq cblocks)
+                     `(cljs.core/cond
+                        ~@(mapcat
+                           (fn [[_ type name & cb]]
+                             (when name (assert (not (namespace name)) "Can't qualify symbol in catch"))
+                             `[(cljs.core/instance? ~type ~e)
+                               (cljs.core/let [~name ~e] ~@cb)])
+                           cblocks)
+                        :else ~default)
+                     default)
+            locals (:locals catchenv)
+            locals (if e
+                     (assoc locals e
+                            {:name e
+                             :line (get-line e env)
+                             :column (get-col e env)
+                             ;; :local is required for {:op :local ...} nodes
+                             ;; but previously we had no way to figure this out
+                             ;; for `catch` locals, by adding it here we can recover
+                             ;; it later
+                             :local :catch})
+                     locals)
+            catch (when cblock
+                    (disallowing-recur (analyze (assoc catchenv :locals locals) cblock)))
+            try (disallowing-recur (analyze (if (or e finally) catchenv env) `(do ~@body)))
+            await-called? @await-called
+            env (if-not await-called? (dissoc env :async) env)]
+        (when await-called? (await-called! upper-await-called))
+        {:env env :op :try :form form
+         :body (assoc try :body? true)
+         :finally finally
+         :name e
+         :catch catch
+         :children (vec
+                    (concat [:body]
+                            (when catch
+                              [:catch])
+                            (when finally
+                              [:finally])))}))))
 
 (defn valid-proto [x]
   (when (symbol? x) x))
@@ -2235,7 +2256,8 @@ x                          (not (contains? ret :info)))
      [(assoc locals name param) (conj params param)])))
 
 (defn analyze-fn-method-body [env form recur-frames]
-  (binding [*recur-frames* recur-frames]
+  (binding [*recur-frames* recur-frames
+            *await-called* (atom false)]
     (analyze env form)))
 
 (defn- analyze-fn-method [env locals form type analyze-body?]
@@ -2314,6 +2336,12 @@ x                          (not (contains? ret :info)))
                        meths)
         locals       (:locals env)
         name-var     (fn-name-var env locals name)
+        async (or
+               ;; NOTE: adding async on fn form turns it into a MetaFn which isn't great for interop, let's discourage it - Michiel Borkent
+               #_(:async (meta form))
+               (:async (meta name))
+               (:async (meta (first form))))
+        env (assoc env :async async)
         env          (if (some? name)
                        (update-in env [:fn-scope] conj name-var)
                        env)
@@ -2396,50 +2424,56 @@ x                          (not (contains? ret :info)))
   [op env [_ bindings & exprs :as form] name _]
   (when-not (and (vector? bindings) (even? (count bindings)))
     (throw (error env "bindings must be vector of even number of elements")))
-  (let [n->fexpr (into {} (map (juxt first second) (partition 2 bindings)))
-        names    (keys n->fexpr)
-        context  (:context env)
-        ;; first pass to collect information for recursive references
-        [meth-env bes]
-        (reduce (fn [[{:keys [locals] :as env} bes] n]
-                  (let [ret-tag (-> n meta :tag)
-                        fexpr (no-warn (analyze env (n->fexpr n)))
-                        be (cond->
-                             {:op :binding
-                              :name n
-                              :form n
-                              :env env
-                              :fn-var true
-                              :line (get-line n env)
-                              :column (get-col n env)
-                              :local :letfn
-                              :shadow (handle-symbol-local n (locals n))
-                              :variadic? (:variadic? fexpr)
-                              :max-fixed-arity (:max-fixed-arity fexpr)
-                              :method-params (map :params (:methods fexpr))}
-                             ret-tag (assoc :ret-tag ret-tag))]
-                    [(assoc-in env [:locals n] be)
-                     (conj bes be)]))
-                [env []] names)
-        meth-env (assoc meth-env :context :expr)
-        ;; the real pass
-        [meth-env bes]
-        (reduce (fn [[meth-env bes] {:keys [name shadow] :as be}]
-                  (let [env (assoc-in meth-env [:locals name] shadow)
-                        fexpr (analyze env (n->fexpr name))
-                        be' (assoc be
-                              :init fexpr
-                              :variadic? (:variadic? fexpr)
-                              :max-fixed-arity (:max-fixed-arity fexpr)
-                              :method-params (map :params (:methods fexpr))
-                              :children [:init])]
-                    [(assoc-in env [:locals name] be')
-                     (conj bes be')]))
-          [meth-env []] bes)
-        expr (-> (analyze (assoc meth-env :context (if (= :expr context) :return context)) `(do ~@exprs))
-                 (assoc :body? true))]
-    {:env env :op :letfn :bindings bes :body expr :form form
-     :children [:bindings :body]}))
+  (let [upper-await-called *await-called*
+        await-called (atom false)]
+    (binding [*await-called* await-called]
+      (let [n->fexpr (into {} (map (juxt first second) (partition 2 bindings)))
+            names    (keys n->fexpr)
+            context  (:context env)
+            ;; first pass to collect information for recursive references
+            [meth-env bes]
+            (reduce (fn [[{:keys [locals] :as env} bes] n]
+                      (let [ret-tag (-> n meta :tag)
+                            fexpr (no-warn (analyze env (n->fexpr n)))
+                            be (cond->
+                                   {:op :binding
+                                    :name n
+                                    :form n
+                                    :env env
+                                    :fn-var true
+                                    :line (get-line n env)
+                                    :column (get-col n env)
+                                    :local :letfn
+                                    :shadow (handle-symbol-local n (locals n))
+                                    :variadic? (:variadic? fexpr)
+                                    :max-fixed-arity (:max-fixed-arity fexpr)
+                                    :method-params (map :params (:methods fexpr))}
+                                 ret-tag (assoc :ret-tag ret-tag))]
+                        [(assoc-in env [:locals n] be)
+                         (conj bes be)]))
+                    [env []] names)
+            meth-env (assoc meth-env :context :expr)
+            ;; the real pass
+            [meth-env bes]
+            (reduce (fn [[meth-env bes] {:keys [name shadow] :as be}]
+                      (let [env (assoc-in meth-env [:locals name] shadow)
+                            fexpr (analyze env (n->fexpr name))
+                            be' (assoc be
+                                       :init fexpr
+                                       :variadic? (:variadic? fexpr)
+                                       :max-fixed-arity (:max-fixed-arity fexpr)
+                                       :method-params (map :params (:methods fexpr))
+                                       :children [:init])]
+                        [(assoc-in env [:locals name] be')
+                         (conj bes be')]))
+                    [meth-env []] bes)
+            expr (-> (analyze (assoc meth-env :context (if (= :expr context) :return context)) `(do ~@exprs))
+                     (assoc :body? true))
+            await-called? @await-called
+            env (if-not await-called? (dissoc env :async) env)]
+        (when await-called? (await-called! upper-await-called))
+        {:env env :op :letfn :bindings bes :body expr :form form
+         :children [:bindings :body]}))))
 
 (defn analyze-do-statements* [env exprs]
   (mapv #(analyze (assoc env :context :statement) %) (butlast exprs)))
@@ -2449,26 +2483,35 @@ x                          (not (contains? ret :info)))
 
 (defmethod parse 'do
   [op env [_ & exprs :as form] _ _]
-  (let [statements (analyze-do-statements env exprs)]
-    (if (<= (count exprs) 1)
-      (let [ret      (analyze env (first exprs))
-            children [:statements :ret]]
-        {:op :do
-         :env env
-         :form form
-         :statements statements :ret ret
-         :children children})
-      (let [ret-env  (if (= :statement (:context env))
-                       (assoc env :context :statement)
-                       (assoc env :context :return))
-            ret      (analyze ret-env (last exprs))
-            children [:statements :ret]]
-        {:op :do
-         :env env
-         :form form
-         :statements statements
-         :ret ret
-         :children children}))))
+  (let [upper-await-called *await-called*
+        await-called (atom false)]
+    (binding [*await-called* await-called]
+      (let [statements (analyze-do-statements env exprs)]
+        (if (<= (count exprs) 1)
+          (let [ret      (analyze env (first exprs))
+                children [:statements :ret]
+                await-called? @await-called
+                env (if-not await-called? (dissoc env :async) env)]
+            (when await-called? (await-called! upper-await-called))
+            {:op :do
+             :env env
+             :form form
+             :statements statements :ret ret
+             :children children})
+          (let [ret-env  (if (= :statement (:context env))
+                           (assoc env :context :statement)
+                           (assoc env :context :return))
+                ret      (analyze ret-env (last exprs))
+                children [:statements :ret]
+                await-called? @await-called
+                env (if-not await-called? (dissoc env :async) env)]
+            (when await-called? (await-called! upper-await-called))
+            {:op :do
+             :env env
+             :form form
+             :statements statements
+             :ret ret
+             :children children}))))))
 
 (defn analyze-let-binding-init [env init loop-lets]
   (binding [*loop-lets* loop-lets]
@@ -2543,19 +2586,22 @@ x                          (not (contains? ret :info)))
   [encl-env [_ bindings & exprs :as form] is-loop widened-tags]
   (when-not (and (vector? bindings) (even? (count bindings)))
     (throw (error encl-env "bindings must be vector of even number of elements")))
-  (let [context      (:context encl-env)
+  (let [upper-await-called *await-called*
+        await-called (atom false)
+        context      (:context encl-env)
         op           (if (true? is-loop) :loop :let)
         bindings     (if widened-tags
                        (vec (mapcat
-                              (fn [[name init] widened-tag]
-                                [(vary-meta name assoc :tag widened-tag) init])
-                              (partition 2 bindings)
-                              widened-tags))
+                             (fn [[name init] widened-tag]
+                               [(vary-meta name assoc :tag widened-tag) init])
+                             (partition 2 bindings)
+                             widened-tags))
                        bindings)
-        [bes env]    (-> encl-env
-                         (cond->
-                           (true? is-loop) (assoc :in-loop true))
-                         (analyze-let-bindings bindings op))
+        [bes env]    (binding [*await-called* await-called]
+                       (-> encl-env
+                           (cond->
+                               (true? is-loop) (assoc :in-loop true))
+                           (analyze-let-bindings bindings op)))
         recur-frame  (when (true? is-loop)
                        {:params bes
                         :flag (atom nil)
@@ -2570,12 +2616,16 @@ x                          (not (contains? ret :info)))
         warn-acc     (when (and is-loop
                                 (not widened-tags))
                        (atom []))
-        expr         (if warn-acc
-                       (with-warning-handlers [(accumulating-warning-handler warn-acc)]
-                         (analyze-let-body env context exprs recur-frames loop-lets))
-                       (analyze-let-body env context exprs recur-frames loop-lets))
+        expr         (binding [*await-called* await-called]
+                       (if warn-acc
+                         (with-warning-handlers [(accumulating-warning-handler warn-acc)]
+                           (analyze-let-body env context exprs recur-frames loop-lets))
+                         (analyze-let-body env context exprs recur-frames loop-lets)))
         children     [:bindings :body]
-        nil->any     (fnil identity 'any)]
+        nil->any     (fnil identity 'any)
+        await-called? @await-called]
+    ;; propogate await-called to surrounding expression
+    (when await-called? (await-called! upper-await-called))
     (if (and is-loop
              (not widened-tags)
              (not= (mapv nil->any @(:tags recur-frame))
@@ -2584,12 +2634,13 @@ x                          (not (contains? ret :info)))
       (do
         (when warn-acc
           (replay-accumulated-warnings warn-acc))
-        {:op       op
-         :env      encl-env
-         :bindings bes
-         :body     (assoc expr :body? true)
-         :form     form
-         :children children}))))
+        (let [encl-env (if @await-called encl-env (dissoc encl-env :async))]
+          {:op       op
+           :env      encl-env
+           :bindings bes
+           :body     (assoc expr :body? true)
+           :form     form
+           :children children})))))
 
 (defmethod parse 'let*
   [op encl-env form _ _]
@@ -4194,6 +4245,9 @@ x                          (not (contains? ret :info)))
        #?(:clj  (find-ns (symbol nstr))
           :cljs (find-macros-ns (symbol nstr)))))))
 
+(defn await-macro? [qsym]
+  (= 'cljs.core/await qsym))
+
 (defn get-expander* [sym env]
   (when-not (or (some? (gets env :locals sym)) ; locals hide macros
                 (and (excluded? env sym) (not (used? env sym))))
@@ -4202,22 +4256,31 @@ x                          (not (contains? ret :info)))
         (some? nstr)
         (let [ns (get-expander-ns env nstr)]
           (when (some? ns)
-            (.findInternedVar ^clojure.lang.Namespace ns (symbol (name sym)))))
-
+            (let [qualified-symbol (symbol (str (ns-name ns)) (name sym))]
+              (when (await-macro? qualified-symbol)
+                (await-called! *await-called*))
+              (.findInternedVar ^clojure.lang.Namespace ns (symbol (name sym))))))
         (some? (gets env :ns :rename-macros sym))
         (let [qualified-symbol (gets env :ns :rename-macros sym)
               nsym (symbol (namespace qualified-symbol))
               sym  (symbol (name qualified-symbol))]
+          (when (await-macro? qualified-symbol)
+            (await-called! *await-called*))
           (.findInternedVar ^clojure.lang.Namespace
             #?(:clj (find-ns nsym) :cljs (find-macros-ns nsym)) sym))
 
         :else
         (let [nsym (gets env :ns :use-macros sym)]
           (if (and (some? nsym) (symbol? nsym))
-            (.findInternedVar ^clojure.lang.Namespace
-              #?(:clj (find-ns nsym) :cljs (find-macros-ns nsym)) sym)
+            (let [qualified-symbol (symbol (str nsym) (str sym))]
+              (when (await-macro? qualified-symbol)
+                (await-called! *await-called*))
+              (.findInternedVar ^clojure.lang.Namespace
+                #?(:clj (find-ns nsym) :cljs (find-macros-ns nsym)) sym))
             ;; can't be done as compiler pass because macros get to run first
             (when-not (and (lite-mode?) (= 'vector sym))
+              (when (= 'await sym)
+                (await-called! *await-called*))
               (.findInternedVar ^clojure.lang.Namespace
                 #?(:clj (find-ns 'cljs.core) :cljs (find-macros-ns impl/CLJS_CORE_MACROS_SYM)) sym))))))))
 
