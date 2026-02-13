@@ -1599,6 +1599,20 @@ x                          (not (contains? ret :info)))
                              else-tag #{else-tag})]
               (into then-tag else-tag))))))))
 
+(defn infer-try
+  [env ast]
+  (let [body-tag (infer-tag env (:body ast))
+        catch-tag (infer-tag env (:catch ast))]
+    (cond
+      #?(:clj (= body-tag impl/IGNORE_SYM)
+         :cljs (symbol-identical? body-tag impl/IGNORE_SYM))
+      catch-tag
+      #?(:clj (= catch-tag impl/IGNORE_SYM)
+         :cljs (symbol-identical? catch-tag impl/IGNORE_SYM))
+      body-tag
+      :else
+      (add-types body-tag catch-tag))))
+
 (defn js-var? [ast]
   (= :js-var (:op ast)))
 
@@ -1638,7 +1652,7 @@ x                          (not (contains? ret :info)))
         :throw    impl/IGNORE_SYM
         :let      (infer-tag env (:body ast))
         :loop     (infer-tag env (:body ast))
-        :try      (infer-tag env (:body ast))
+        :try      (infer-try env ast)
         :do       (infer-tag env (:ret ast))
         :fn-method (infer-tag env (:body ast))
         :def      (infer-tag env (:init ast))
