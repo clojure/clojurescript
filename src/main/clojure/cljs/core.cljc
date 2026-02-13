@@ -878,8 +878,6 @@
   [& xs]
   (core/let [interpolate (core/fn [x]
                            (core/cond
-                             (typed-expr? &env x '#{clj-nil})
-                             nil
                              (compile-time-constant? x)
                              ["+~{}" x]
                              :else
