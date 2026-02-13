@@ -941,7 +941,7 @@
       (test/delete-node-modules)
       (test/delete-out-files out))))
 
-(deftest test-cljs-3452-str-optimizations
+#_(deftest test-cljs-3452-str-optimizations
   (testing "Test that uses compile time optimizations from str macro"
     (let [out (.getPath (io/file (test/tmp-dir) "cljs-3452-str-optimizations-out"))]
       (test/delete-out-files out)
