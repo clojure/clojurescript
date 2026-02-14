@@ -701,10 +701,16 @@
           (emitln then "} else {")
           (emitln else "}"))))))
 
+(defn iife-open [{:keys [async]}]
+  (str (when async "(await ") "(" (when async "async ") "function (){"))
+
+(defn iife-close [{:keys [async]}]
+  (str "})()" (when async ")")))
+
 (defmethod emit* :case
   [{v :test :keys [nodes default env]}]
   (when (= (:context env) :expr)
-    (emitln "(function(){"))
+    (emitln (iife-open env)))
   (let [gs (gensym "caseval__")]
     (when (= :expr (:context env))
       (emitln "var " gs ";"))
@@ -723,12 +729,13 @@
         (emitln default)))
     (emitln "}")
     (when (= :expr (:context env))
-      (emitln "return " gs ";})()"))))
+      (emitln "return " gs ";"
+              (iife-close env)))))
 
 (defmethod emit* :throw
   [{throw :exception :keys [env]}]
   (if (= :expr (:context env))
-    (emits "(function(){throw " throw "})()")
+    (emits (iife-open env) "throw " throw (iife-close env))
     (emitln "throw " throw ";")))
 
 (def base-types
@@ -865,7 +872,7 @@
       (when (= :return (:context env))
         (emitln "return ("))
       (when (:def-emits-var env)
-        (emitln "(function (){"))
+        (emitln (iife-open env)))
       (emits var)
       (when init
         (emits " = "
@@ -878,7 +885,8 @@
                  {:op  :the-var
                   :env (assoc env :context :expr)}
                  var-ast))
-        (emitln ");})()"))
+        (emitln ");"
+                (iife-close env)))
       (when (= :return (:context env))
         (emitln ")"))
       ;; NOTE: JavaScriptCore does not like this under advanced compilation
@@ -936,18 +944,19 @@
 
 (defn emit-fn-method
   [{expr :body :keys [type name params env recurs]}]
-  (emit-wrap env
-    (emits "(function " (munge name) "(")
-    (emit-fn-params params)
-    (emitln "){")
-    (when type
-      (emitln "var self__ = this;"))
-    (when recurs (emitln "while(true){"))
-    (emits expr)
-    (when recurs
-      (emitln "break;")
-      (emitln "}"))
-    (emits "})")))
+  (let [async (:async env)]
+    (emit-wrap env
+               (emits "(" (when async "async ") "function " (munge name) "(")
+               (emit-fn-params params)
+               (emitln "){")
+               (when type
+                 (emitln "var self__ = this;"))
+               (when recurs (emitln "while(true){"))
+               (emits expr)
+               (when recurs
+                 (emitln "break;")
+                 (emitln "}"))
+               (emits "})"))))
 
 (defn emit-arguments-to-array
   "Emit code that copies function arguments into an array starting at an index.
@@ -968,9 +977,10 @@
   (emit-wrap env
     (let [name (or name (gensym))
           mname (munge name)
-          delegate-name (str mname "__delegate")]
+          delegate-name (str mname "__delegate")
+          async (:async env)]
       (emitln "(function() { ")
-      (emits "var " delegate-name " = function (")
+      (emits "var " delegate-name " = " (when async "async ") "function (")
       (doseq [param params]
         (emit param)
         (when-not (= param (last params)) (emits ",")))
@@ -984,10 +994,11 @@
         (emitln "}"))
       (emitln "};")
 
-      (emitln "var " mname " = function (" (comma-sep
-                                             (if variadic
-                                               (concat (butlast params) ['var_args])
-                                               params)) "){")
+      (emitln "var " mname " = " (when async "async ")  "function ("
+              (comma-sep
+               (if variadic
+                 (concat (butlast params) ['var_args])
+                 params)) "){")
       (when type
         (emitln "var self__ = this;"))
       (when variadic
@@ -1024,13 +1035,14 @@
                  (when (or in-loop (seq recur-params))
                    (mapcat :params loop-lets)))
                (map munge)
-               seq)]
+               seq)
+          async (:async env)]
       (when loop-locals
         (when (= :return (:context env))
             (emits "return "))
         (emitln "((function (" (comma-sep (map munge loop-locals)) "){")
         (when-not (= :return (:context env))
-            (emits "return ")))
+          (emits "return ")))
       (if (= 1 (count methods))
         (if variadic
           (emit-variadic-fn-method (assoc (first methods) :name name))
@@ -1054,9 +1066,10 @@
               (emit-variadic-fn-method meth)
               (emit-fn-method meth))
             (emitln ";"))
-            (emitln mname " = function(" (comma-sep (if variadic
-                                                      (concat (butlast maxparams) ['var_args])
-                                                      maxparams)) "){")
+          (emitln mname " = " (when async "async ") "function("
+                  (comma-sep (if variadic
+                               (concat (butlast maxparams) ['var_args])
+                               maxparams)) "){")
           (when variadic
             (emits "var ")
             (emit (last maxparams))
@@ -1101,10 +1114,10 @@
 (defmethod emit* :do
   [{:keys [statements ret env]}]
   (let [context (:context env)]
-    (when (and (seq statements) (= :expr context)) (emitln "(function (){"))
+    (when (and (seq statements) (= :expr context)) (emitln (iife-open env)))
     (doseq [s statements] (emitln s))
     (emit ret)
-    (when (and (seq statements) (= :expr context)) (emitln "})()"))))
+    (when (and (seq statements) (= :expr context)) (emitln (iife-close env)))))
 
 (defmethod emit* :try
   [{try :body :keys [env catch name finally]}]
@@ -1112,7 +1125,7 @@
     (if (or name finally)
       (do
         (when (= :expr context)
-          (emits "(function (){"))
+          (emits (iife-open env)))
         (emits "try{" try "}")
         (when name
           (emits "catch (" (munge name) "){" catch "}"))
@@ -1120,13 +1133,14 @@
           (assert (not= :const (:op (ana/unwrap-quote finally))) "finally block cannot contain constant")
           (emits "finally {" finally "}"))
         (when (= :expr context)
-          (emits "})()")))
+          (emits (iife-close env))))
       (emits try))))
 
 (defn emit-let
   [{expr :body :keys [bindings env]} is-loop]
   (let [context (:context env)]
-    (when (= :expr context) (emits "(function (){"))
+    (when (= :expr context)
+      (emits (iife-open env)))
     (binding [*lexical-renames*
               (into *lexical-renames*
                 (when (= :statement context)
@@ -1145,7 +1159,7 @@
       (when is-loop
         (emitln "break;")
         (emitln "}")))
-    (when (= :expr context) (emits "})()"))))
+    (when (= :expr context) (emits (iife-close env)))))
 
 (defmethod emit* :let [ast]
   (emit-let ast false))
@@ -1166,11 +1180,11 @@
 (defmethod emit* :letfn
   [{expr :body :keys [bindings env]}]
   (let [context (:context env)]
-    (when (= :expr context) (emits "(function (){"))
+    (when (= :expr context) (emits (iife-open env)))
     (doseq [{:keys [init] :as binding} bindings]
       (emitln "var " (munge binding) " = " init ";"))
     (emits expr)
-    (when (= :expr context) (emits "})()"))))
+    (when (= :expr context) (emits (iife-close env)))))
 
 (defn protocol-prefix [psym]
   (symbol (str (-> (str psym)
