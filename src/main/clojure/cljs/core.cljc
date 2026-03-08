@@ -7,7 +7,7 @@
 ;   You must not remove this notice, or any other, from this software.
 
 (ns cljs.core
-  (:refer-clojure :exclude [-> ->> .. amap and areduce alength aclone assert assert-args binding bound-fn case comment
+  (:refer-clojure :exclude [-> ->> .. amap and areduce alength aclone assert await binding bound-fn case comment
                             cond condp declare definline definterface defmethod defmulti defn defn- defonce
                             defprotocol defrecord defstruct deftype delay destructure doseq dosync dotimes doto
                             extend-protocol extend-type fn for future gen-class gen-interface
@@ -246,28 +246,26 @@
      [p & specs]
      (emit-extend-protocol p specs)))
 
-#?(:cljs
-   (core/defn ^{:private true}
-   maybe-destructured
-     [params body]
-     (if (every? core/symbol? params)
-       (cons params body)
-       (core/loop [params params
-                   new-params (with-meta [] (meta params))
-                   lets []]
-         (if params
-           (if (core/symbol? (first params))
-             (recur (next params) (conj new-params (first params)) lets)
-             (core/let [gparam (gensym "p__")]
-               (recur (next params) (conj new-params gparam)
-                 (core/-> lets (conj (first params)) (conj gparam)))))
-           `(~new-params
-              (let ~lets
-                ~@body)))))))
+(core/defn ^{:private true}
+  maybe-destructured
+  [params body]
+  (if (every? core/symbol? params)
+    (cons params body)
+    (core/loop [params params
+                new-params (with-meta [] (meta params))
+                lets []]
+      (if params
+        (if (core/symbol? (first params))
+          (recur (next params) (conj new-params (first params)) lets)
+          (core/let [gparam (gensym "p__")]
+            (recur (next params) (conj new-params gparam)
+                   (core/-> lets (conj (first params)) (conj gparam)))))
+        `(~new-params
+          (let ~lets
+            ~@body))))))
 
-#?(:cljs
-   (core/defmacro fn
-     "params => positional-params* , or positional-params* & rest-param
+(core/defmacro fn
+  "params => positional-params* , or positional-params* & rest-param
      positional-param => binding-form
      rest-param => binding-form
      binding-form => name, or destructuring-form
@@ -275,35 +273,35 @@
      Defines a function
 
      See https://clojure.org/reference/special_forms#fn for more information"
-     {:forms '[(fn name? [params*] exprs*) (fn name? ([params*] exprs*) +)]}
-     [& sigs]
-     (core/let [name (if (core/symbol? (first sigs)) (first sigs) nil)
-                sigs (if name (next sigs) sigs)
-                sigs (if (vector? (first sigs))
-                       (core/list sigs)
-                       (if (seq? (first sigs))
-                         sigs
-                         ;; Assume single arity syntax
-                         (throw (js/Error.
-                                  (if (seq sigs)
-                                    (core/str "Parameter declaration "
-                                      (core/first sigs)
-                                      " should be a vector")
-                                    (core/str "Parameter declaration missing"))))))
-                psig (fn* [sig]
+  {:forms '[(fn name? [params*] exprs*) (fn name? ([params*] exprs*) +)]}
+  [& sigs]
+  (core/let [name (if (core/symbol? (first sigs)) (first sigs) nil)
+             sigs (if name (next sigs) sigs)
+             sigs (if (vector? (first sigs))
+                    (core/list sigs)
+                    (if (seq? (first sigs))
+                      sigs
+                      ;; Assume single arity syntax
+                      (throw (#?(:clj Exception. :cljs js/Error.)
+                              (if (seq sigs)
+                                (core/str "Parameter declaration "
+                                          (core/first sigs)
+                                          " should be a vector")
+                                (core/str "Parameter declaration missing"))))))
+             psig (fn* [sig]
                        ;; Ensure correct type before destructuring sig
                        (core/when (not (seq? sig))
-                         (throw (js/Error.
-                                  (core/str "Invalid signature " sig
-                                    " should be a list"))))
+                         (throw (#?(:clj Exception. :cljs js/Error.)
+                                 (core/str "Invalid signature " sig
+                                           " should be a list"))))
                        (core/let [[params & body] sig
                                   _ (core/when (not (vector? params))
-                                      (throw (js/Error.
-                                               (if (seq? (first sigs))
-                                                 (core/str "Parameter declaration " params
-                                                   " should be a vector")
-                                                 (core/str "Invalid signature " sig
-                                                   " should be a list")))))
+                                      (throw (#?(:clj Exception. :cljs js/Error.)
+                                              (if (seq? (first sigs))
+                                                (core/str "Parameter declaration " params
+                                                          " should be a vector")
+                                                (core/str "Invalid signature " sig
+                                                          " should be a list")))))
                                   conds (core/when (core/and (next body) (map? (first body)))
                                           (first body))
                                   body (if conds (next body) body)
@@ -319,15 +317,17 @@
                                          body)
                                   body (if pre
                                          (concat (map (fn* [c] `(assert ~c)) pre)
-                                           body)
+                                                 body)
                                          body)]
                          (maybe-destructured params body)))
-                new-sigs (map psig sigs)]
-       (with-meta
-         (if name
-           (list* 'fn* name new-sigs)
-           (cons 'fn* new-sigs))
-         (meta &form)))))
+             new-sigs (map psig sigs)
+             fn-sym-meta (meta (first &form))
+             fn*-sym (with-meta 'fn* fn-sym-meta)]
+    (with-meta
+      (if name
+        (list* fn*-sym name new-sigs)
+        (cons fn*-sym new-sigs))
+      (meta &form))))
 
 #?(:cljs
    (core/defmacro defn-
@@ -971,6 +971,10 @@
           (map #(core/str " * " (string/replace % #"^   " "") "\n"))
           (reduce core/str ""))
         " */\n"))))
+
+(core/defmacro await [expr]
+  (core/assert (:async &env) "await can only be used in async contexts")
+  (core/list 'js* "(await ~{})" expr))
 
 (core/defmacro unsafe-cast
   "EXPERIMENTAL: Subject to change. Unsafely cast a value to a different type."
@@ -3209,7 +3213,7 @@
                             (. self# (~(get-delegate) (seq ~restarg))))))))]
        `(do
           (set! (. ~sym ~(get-delegate-prop))
-            (fn (~(vec sig) ~@body)))
+                (~(with-meta `fn (meta sym)) (~(vec sig) ~@body)))
           ~@(core/when solo
               `[(set! (. ~sym ~'-cljs$lang$maxFixedArity)
                   ~(core/dec (count sig)))])
@@ -3290,7 +3294,7 @@
                             {:variadic? false :fixed-arity (count sig)})
                         ~(symbol (core/str "-cljs$core$IFn$_invoke$arity$"
                                    (count sig))))
-                      (fn ~method))))]
+                      (~(with-meta `fn (core/meta name)) ~method))))]
     (core/let [rname    (symbol (core/str ana/*cljs-ns*) (core/str name))
                arglists (map first fdecl)
                macro?   (:macro meta)

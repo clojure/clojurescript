@@ -7,7 +7,8 @@
 ;; You must not remove this notice, or any other, from this software.
 
 (ns test-runner
-  (:require [cljs.qualified-method-test]
+  (:require [cljs.async-await-test]
+            [cljs.qualified-method-test]
             [cljs.proxy-test]
             [cljs.test :refer-macros [run-tests]]
             [cljs.apply-test]
@@ -73,6 +74,7 @@
   (enable-console-print!))
 
 (run-tests
+  'cljs.async-await-test
   'cljs.qualified-method-test
   'cljs.proxy-test
   'cljs.apply-test
