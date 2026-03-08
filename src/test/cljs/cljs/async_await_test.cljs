@@ -1,6 +1,8 @@
 (ns cljs.async-await-test
+  (:refer-global :only [Date Promise])
   (:require [clojure.test :refer [deftest is async]]
-            [cljs.core :as cc :refer [await] :rename {await aw}])
+            [cljs.core :as cc :refer [await] :rename {await aw}]
+            [goog.object :as gobj])
   (:require-macros [cljs.macro-test.macros :refer [await!] :as macros]))
 
 (defn ^:async foo [n]
@@ -192,9 +194,9 @@
                             (let [x (await (js/Promise.resolve 1))] x)))
                      b3 (case :foo :foo (case :foo :foo (await (js/Promise.resolve 1))))
                      b4 (int ;; wrapped in int to avoid false positive warning:
-                             ;; all arguments must be numbers, got [number
-                             ;; ignore] instead
-                         (try (throw (throw (await (js/Promise.resolve 1)))) (catch :default _ 1 )))
+                          ;; all arguments must be numbers, got [number
+                          ;; ignore] instead
+                          (try (throw (throw (await (js/Promise.resolve 1)))) (catch :default _ 1 )))
                      a (atom 0)
                      b5 (do (swap! a inc) (swap! a inc)
                             ;; do with single expr, wrapped in identity to avoid merging with upper do
@@ -229,3 +231,46 @@
         (is (= 1 f))
         (done))
       (catch :default _ (is false)))))
+
+(deftest await-with-ctor
+  (async done
+    (let [f (^:async fn [] (Date. (await (Promise/resolve 0))))]
+      (is (= (Date. 0) (await (f)))))
+    (done)))
+
+(deftest await-with-literals
+  (async done
+    (let [objf (^:async fn [] #js {:foo (await (Promise/resolve "bar"))})]
+      (is (gobj/equals #js {:foo "bar"} (await (objf)))))
+    (let [arrayf (^:async fn [] #js [0 (await (Promise/resolve 1 )) 2])]
+      (is (= [0 1 2] (seq (await (arrayf))))))
+    (let [listf (^:async fn [] (list 0 1 2))]
+      (is (= '(0 1 2) (await (listf)))))
+    (let [vectorf (^:async fn [] [0 (await (Promise/resolve 1 )) 2])]
+      (is (= [0 1 2] (await (vectorf)))))
+    (let [mapf (^:async fn [] {:foo (await (Promise/resolve :bar))})]
+      (is (= {:foo :bar} (await (mapf)))))
+    (let [setf (^:async fn [] #{:foo (await (Promise/resolve :bar)) :baz})]
+      (is (= #{:foo :bar :baz} (await (setf)))))
+    (done)))
+
+(deftest await-with-if-test
+  (async done
+    (let [f (^:async fn [] (if (await (Promise/resolve true)) :success :fail))]
+      (is (= :success (await (f)))))
+    (done)))
+
+(defn ^:async async-destructure
+  [{:keys [foo bar]
+    :or   {bar (await (Promise/resolve "hello!"))}}]
+  [foo bar])
+
+(deftest await-in-async-destructure
+  (async done
+    (let [res (await (async-destructure {:foo 1}))]
+      (is (= [1 "hello!"] res)))
+    (done)))
+
+(comment
+  (clojure.test/run-tests)
+  )
