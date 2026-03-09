@@ -1562,6 +1562,17 @@
     (is (= 1 (count @ws)))
     (is (string/starts-with? (first @ws) "Wrong number of args (2) passed to Foo"))))
 
+(deftest test-cljs-3473
+  (let [ws (atom [])]
+    (ana/with-warning-handlers [(collecting-warning-handler ws)]
+      (analyze (ana/empty-env)
+               '(+ 1 2 (try (throw (throw 2)) (catch :default _ 1)))))
+    (is (empty? @ws))
+    (ana/with-warning-handlers [(collecting-warning-handler ws)]
+      (analyze (ana/empty-env)
+               '(+ 1 2 (try (throw (throw 2)) (catch :default _ "1")))))
+    (is (string/starts-with? (first @ws) "cljs.core/+, all arguments must be numbers, got [number string] instead"))))
+
 (deftest test-cljs-3401
   (is (not= (ana/gen-constant-id '_PLUS_)
             (ana/gen-constant-id '+)))
