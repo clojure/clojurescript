@@ -239,11 +239,17 @@
 
   When cljs.analyzer/*load-tests* is false, deftest is ignored."
   [name & body]
-  (when ana/*load-tests*
-    `(do
-       (def ~(vary-meta name assoc :test `(fn [] ~@body))
-         (fn [] (cljs.test/test-var (.-cljs$lang$var ~name))))
-       (set! (.-cljs$lang$var ~name) (var ~name)))))
+  (let [body (if (:async (meta name))
+               (let [done-sym (gensym "done")]
+                 [`(cljs.test/async ~done-sym
+                                    (try ~@body
+                                         (finally (~done-sym))))])
+               body)]
+    (when ana/*load-tests*
+      `(do
+         (def ~(vary-meta name assoc :test `(fn [] ~@body))
+           (fn [] (cljs.test/test-var (.-cljs$lang$var ~name))))
+         (set! (.-cljs$lang$var ~name) (var ~name))))))
 
 (defmacro async
   "Wraps body as a CPS function that can be returned from a test to
