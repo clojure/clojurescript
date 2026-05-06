@@ -1,3 +1,15 @@
+## 1.12.144
+
+### Enhancements
+* CLJS-3476: async deftest support
+* CLJS-3470: add async/await support
+
+### Fixes
+* CLJS-3472: str on var that is set! returns empty string (#307)
+* CLJS-3471: fix printing of negative zero
+* CLJS-3469: ClojureScript :preloads doesn't work with just cljs.main --repl (#302)
+* CLJS-3468: :refer-global should not make unrenamed object available
+
 ## 1.12.134
 
 ### Changes
