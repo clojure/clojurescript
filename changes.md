@@ -1,4 +1,4 @@
-## 1.12.144
+## 1.12.145
 
 ### Enhancements
 * CLJS-3476: async deftest support
