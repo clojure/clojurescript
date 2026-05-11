@@ -188,14 +188,24 @@
                  :libs (s/+ (s/alt :libspec ::use-macros-libspec
                                    :flag #{:reload :reload-all :verbose})))))
 
+(s/def ::ns-refer-global
+  (s/spec (s/cat :clause #{:refer-global}
+                 :only #{:only}
+                 :symbols (s/+ symbol?))))
+
+(s/def ::ns-require-global
+  (s/spec (s/cat :clause #{:require-global}
+                 :body (s/+ ::libspec))))
 
 (s/def ::ns-clauses
-  (s/* (s/alt :refer-clojure ::ns-refer-clojure
-              :require ::ns-require
-              :require-macros ::ns-require-macros
-              :import ::ns-import
-              :use ::ns-use
-              :use-macros ::ns-use-macros)))
+  (s/* (s/alt
+         :refer-clojure ::ns-refer-clojure
+         :require ::ns-require
+         :require-macros ::ns-require-macros
+         :import ::ns-import
+         :use ::ns-use
+         :use-macros ::ns-use-macros
+         :refer-global :require-global)))
 
 (s/def ::ns-form
   (s/cat :ns-name simple-symbol?
