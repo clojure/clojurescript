@@ -11730,9 +11730,27 @@ reduces them without incurring seq initialization"
   (assert (string? s))
   (UUID. (.toLowerCase s) nil))
 
-(defn random-uuid
-  "Returns a pseudo-randomly generated UUID instance (i.e. type 4)."
-  []
+(defn- random-uuid-crypto-uuid [crypto]
+  (uuid (.randomUUID crypto)))
+
+(defn- random-uuid-crypto-values [crypto]
+  (let [buf (js/Uint16Array. 8)]
+    (.getRandomValues crypto buf)
+    (letfn [(^string quad-hex [i]
+              (let [unpadded-hex ^string (.toString (aget buf i) 16)]
+                (case (count unpadded-hex)
+                  1 (str_ "000" unpadded-hex)
+                  2 (str_ "00" unpadded-hex)
+                  3 (str_ "0" unpadded-hex)
+                  unpadded-hex)))]
+      (let [ver-tripple-hex ^string (.toString (bit-or 0x4000 (bit-and 0x0fff (aget buf 3))) 16)
+            res-tripple-hex ^string (.toString (bit-or 0x8000 (bit-and 0x3fff (aget buf 4))) 16)]
+        (uuid
+          (str_ (quad-hex 0) (quad-hex 1) "-" (quad-hex 2) "-"
+                ver-tripple-hex "-" res-tripple-hex "-"
+                (quad-hex 5) (quad-hex 6) (quad-hex 7)))))))
+
+(defn- random-uuid-math-random []
   (letfn [(^string quad-hex []
             (let [unpadded-hex ^string (.toString (rand-int 65536) 16)]
               (case (count unpadded-hex)
@@ -11744,8 +11762,43 @@ reduces them without incurring seq initialization"
           res-tripple-hex ^string (.toString (bit-or 0x8000 (bit-and 0x3fff (rand-int 65536))) 16)]
       (uuid
         (str_ (quad-hex) (quad-hex) "-" (quad-hex) "-"
-             ver-tripple-hex "-" res-tripple-hex "-"
-             (quad-hex) (quad-hex) (quad-hex))))))
+              ver-tripple-hex "-" res-tripple-hex "-"
+              (quad-hex) (quad-hex) (quad-hex))))))
+
+(def ^:private uuid-gen-method (volatile! nil))
+(def ^:private uuid-crypto-obj (volatile! nil))
+
+(defn- init-uuid-strategy! []
+  (let [crypto-obj (cond
+                     (exists? js/crypto) js/crypto
+                     (identical? *target* "nodejs") (try (js/require "crypto") (catch :default _ nil)))]
+
+    (vreset! uuid-crypto-obj crypto-obj)
+    (vreset! uuid-gen-method
+             (cond
+               (and (some? crypto-obj)
+                    (exists? (.-randomUUID crypto-obj))
+                    (fn? (.-randomUUID crypto-obj)))
+               :random-uuid-crypto-uuid
+
+               (and (some? crypto-obj)
+                    (exists? (.-getRandomValues crypto-obj))
+                    (fn? (.-getRandomValues crypto-obj)))
+               :random-uuid-crypto-values
+
+               :else
+               :random-uuid-math-random))))
+
+(defn random-uuid
+  "Returns a pseudo-randomly generated UUID instance (i.e. type 4)."
+  []
+  (when (nil? @uuid-gen-method)
+    (init-uuid-strategy!))
+
+  (case @uuid-gen-method
+    :random-uuid-crypto-uuid (random-uuid-crypto-uuid @uuid-crypto-obj)
+    :random-uuid-crypto-values (random-uuid-crypto-values @uuid-crypto-obj)
+    (random-uuid-math-random)))
 
 (defn uuid?
   "Return true if x is a UUID."
