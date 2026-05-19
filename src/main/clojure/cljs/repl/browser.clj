@@ -299,7 +299,7 @@
   (constrain-order order
     (fn []
       (binding [*out* (or (and repl (.get outs repl)) *out*)]
-        (print (read-string content))
+        (print (edn/read-string content))
         (.flush *out*))))
   (server/send-and-close conn 200 "ignore__"))
 
@@ -322,7 +322,7 @@
       (fn [val] (deliver return-value val)))
     (let [ret @return-value]
       (try
-        (read-string ret)
+        (edn/read-string ret)
         (catch Exception e
           {:status :error
            :value (str "Could not read return value: " ret)})))))
