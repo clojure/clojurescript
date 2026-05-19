@@ -11,6 +11,7 @@
   (:require [cljs.repl.server :as server]
             [cljs.analyzer :as analyzer]
             [cljs.compiler :as compiler]
+            [clojure.edn :as edn]
             [clojure.string :as str]
             [clojure.pprint :as pprint]))
 
@@ -48,7 +49,7 @@
 (defn- url-decode [encoded & [encoding]]
   (java.net.URLDecoder/decode encoded (or encoding "UTF-8")))
 
-(def read-url-string (comp read-string url-decode))
+(def read-url-string (comp edn/read-string url-decode))
 
 (defn parse-param
   "Parses the query parameter of a path of the form \"/reflect?var=foo\"
