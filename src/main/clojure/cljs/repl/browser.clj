@@ -336,16 +336,6 @@
   [repl-env provides url]
   (browser-eval (slurp url)))
 
-(defn serve [{:keys [host port output-dir] :as opts}]
-  (println "Serving HTTP on" host "port" port)
-  (binding [ordering (agent {:expecting nil :fns {}})
-            es (Executors/newFixedThreadPool 16)
-            server/state (atom {:socket nil})]
-    (server/start
-      (merge opts
-        {:static-dir (cond-> ["." "out/"] output-dir (conj output-dir))
-         :gzip? true}))))
-
 ;; =============================================================================
 ;; BrowserEnv
 
@@ -519,3 +509,18 @@
   ;; curl -v -d "2" http://127.0.0.1:9000
 
   )
+
+;; ==================================================================
+;; Static Web Server
+
+(defn serve
+  "See cljs.cli --serve command line flag."
+  [{:keys [host port output-dir] :as opts}]
+  (println "Serving HTTP on" host "port" port)
+  (binding [ordering (agent {:expecting nil :fns {}})
+            es (Executors/newFixedThreadPool 16)
+            server/state (atom {:socket nil})]
+    (server/start
+      (merge opts
+        {:static-dir (cond-> ["." "out/"] output-dir (conj output-dir))
+         :gzip? true}))))
