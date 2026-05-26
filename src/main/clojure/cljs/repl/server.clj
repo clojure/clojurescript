@@ -8,7 +8,8 @@
 
 (ns cljs.repl.server
   (:refer-clojure :exclude [loaded-libs])
-  (:require [clojure.string :as str])
+  (:require [clojure.string :as str]
+            [clojure.edn :as edn])
   (:import java.io.BufferedReader
            java.io.InputStreamReader
            java.io.ByteArrayOutputStream
@@ -191,7 +192,7 @@
                          handler))
                      handlers)]
         (if (= :post (:method request))
-          (handler (read-string (:content request)) conn opts )
+          (handler (edn/read-string (:content request)) conn opts )
           (handler request conn opts))
         (send-404 conn (:path request))))
     (catch Throwable t

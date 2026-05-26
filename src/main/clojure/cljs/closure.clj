@@ -17,6 +17,7 @@
             [cljs.env :as env]
             [cljs.foreign.node :refer [package-json-entries node-file-seq->libs-spec*]]
             [cljs.js-deps :as deps]
+            [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.java.shell :as sh]
             [clojure.reflect]
@@ -2231,7 +2232,7 @@
   ([]
    (get-upstream-deps* (. (Thread/currentThread) (getContextClassLoader))))
   ([classloader]
-   (let [upstream-deps (map #(read-string (slurp %))
+   (let [upstream-deps (map #(edn/read-string (slurp %))
                          (enumeration-seq (. classloader (getResources "deps.cljs"))))]
      (apply merge-with
        (fn [a b]

@@ -276,11 +276,17 @@
              @clojure.browser.repl/xpc-connection))] {}))
     identity))
 
-(defn add-in-order [{:keys [expecting fns]} order f]
+(defn add-in-order
+  "Add f to ordering agent state. `:expecting` is nil or an integer from the client.
+  `:fns` is a map from int -> fn, it maintains the current order."
+  [{:keys [expecting fns] :as _ordering} order f]
   {:expecting (or expecting order)
    :fns (assoc fns order f)})
 
-(defn run-in-order [{:keys [expecting fns]}]
+(defn run-in-order
+  "Run all fs in the ordering agent state in the order that they were
+  added."
+  [{:keys [expecting fns] :as _ordering}]
   (loop [order expecting fns fns]
     (if-let [f (get fns order)]
       (do
@@ -295,18 +301,26 @@
   (send-via es ordering add-in-order order f)
   (send-via es ordering run-in-order))
 
-(defmethod handle-post :print [{:keys [repl content order]} conn _]
+(defmethod handle-post :print
+  ;; see clojure.browser.repl/wrap-message
+  [{:keys [repl data order] :as _request-content} conn _]
   (constrain-order order
     (fn []
-      (binding [*out* (or (and repl (.get outs repl)) *out*)]
-        (print (read-string content))
-        (.flush *out*))))
+      (try
+        (binding [*out* (or (and repl (.get outs repl)) *out*)]
+          (print data))
+        (catch Throwable t
+          (print t))
+        (finally
+          (.flush *out*)))))
   (server/send-and-close conn 200 "ignore__"))
 
-(defmethod handle-post :result [{:keys [content order]} conn _]
+(defmethod handle-post :result
+  ;; see clojure.browser.repl/wrap-message
+  [{:keys [data order] :as _request-content} conn _]
   (constrain-order order
     (fn []
-      (return-value content)
+      (return-value data)
       (server/set-connection conn))))
 
 (defn browser-eval
@@ -322,7 +336,7 @@
       (fn [val] (deliver return-value val)))
     (let [ret @return-value]
       (try
-        (read-string ret)
+        (edn/read-string ret)
         (catch Exception e
           {:status :error
            :value (str "Could not read return value: " ret)})))))
@@ -335,16 +349,6 @@
   ClojureScript REPL."
   [repl-env provides url]
   (browser-eval (slurp url)))
-
-(defn serve [{:keys [host port output-dir] :as opts}]
-  (println "Serving HTTP on" host "port" port)
-  (binding [ordering (agent {:expecting nil :fns {}})
-            es (Executors/newFixedThreadPool 16)
-            server/state (atom {:socket nil})]
-    (server/start
-      (merge opts
-        {:static-dir (cond-> ["." "out/"] output-dir (conj output-dir))
-         :gzip? true}))))
 
 ;; =============================================================================
 ;; BrowserEnv
@@ -519,3 +523,18 @@
   ;; curl -v -d "2" http://127.0.0.1:9000
 
   )
+
+;; ==================================================================
+;; Static Web Server
+
+(defn serve
+  "See cljs.cli --serve command line flag."
+  [{:keys [host port output-dir] :as opts}]
+  (println "Serving HTTP on" host "port" port)
+  (binding [ordering (agent {:expecting nil :fns {}})
+            es (Executors/newFixedThreadPool 16)
+            server/state (atom {:socket nil})]
+    (server/start
+      (merge opts
+        {:static-dir (cond-> ["." "out/"] output-dir (conj output-dir))
+         :gzip? true}))))

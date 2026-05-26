@@ -49,7 +49,7 @@
   (garray/clear print-queue))
 
 (defn repl-print [data]
-  (.push print-queue (pr-str data))
+  (.push print-queue data)
   (when @parent-connected?
     (flush-print-queue! @xpc-connection)))
 
@@ -97,10 +97,15 @@
 
 (defn wrap-message [repl t data]
   (pr-str
-    {:repl repl
-     :type t
-     :content data
-     :order (swap! order inc)}))
+    {;; REPL thread-name from the server
+     :repl  repl
+     ;; :ready | :result | :print
+     :type  t
+     ;; payload
+     :data  data             
+     ;; to ensure server responses are returned in order
+     :order (swap! order inc) 
+     }))
 
 (defn start-evaluator
   "Start the REPL server connection process. This process runs inside the
