@@ -276,11 +276,17 @@
              @clojure.browser.repl/xpc-connection))] {}))
     identity))
 
-(defn add-in-order [{:keys [expecting fns]} order f]
+(defn add-in-order
+  "Add f to ordering agent state. `:expecting` is nil or an integer from the client.
+  `:fns` is a map from int -> fn, it maintains the current order."
+  [{:keys [expecting fns] :as _ordering} order f]
   {:expecting (or expecting order)
    :fns (assoc fns order f)})
 
-(defn run-in-order [{:keys [expecting fns]}]
+(defn run-in-order
+  "Run all fs in the ordering agent state in the order that they were
+  added."
+  [{:keys [expecting fns] :as _ordering}]
   (loop [order expecting fns fns]
     (if-let [f (get fns order)]
       (do
@@ -295,18 +301,22 @@
   (send-via es ordering add-in-order order f)
   (send-via es ordering run-in-order))
 
-(defmethod handle-post :print [{:keys [repl content order]} conn _]
+(defmethod handle-post :print
+  ;; see clojure.browser.repl/wrap-message
+  [{:keys [repl data order] :as _request-content} conn _]
   (constrain-order order
     (fn []
       (binding [*out* (or (and repl (.get outs repl)) *out*)]
-        (print (edn/read-string content))
+        (print (edn/read-string data))
         (.flush *out*))))
   (server/send-and-close conn 200 "ignore__"))
 
-(defmethod handle-post :result [{:keys [content order]} conn _]
+(defmethod handle-post :result
+  ;; see clojure.browser.repl/wrap-message
+  [{:keys [data order] :as _request-content} conn _]
   (constrain-order order
     (fn []
-      (return-value content)
+      (return-value data)
       (server/set-connection conn))))
 
 (defn browser-eval
