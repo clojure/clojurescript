@@ -306,9 +306,13 @@
   [{:keys [repl data order] :as _request-content} conn _]
   (constrain-order order
     (fn []
-      (binding [*out* (or (and repl (.get outs repl)) *out*)]
-        (print (edn/read-string data))
-        (.flush *out*))))
+      (try
+        (binding [*out* (or (and repl (.get outs repl)) *out*)]
+          (print data))
+        (catch Throwable t
+          (print t))
+        (finally
+          (.flush *out*)))))
   (server/send-and-close conn 200 "ignore__"))
 
 (defmethod handle-post :result
