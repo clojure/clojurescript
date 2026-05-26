@@ -49,7 +49,7 @@
   (garray/clear print-queue))
 
 (defn repl-print [data]
-  (.push print-queue (pr-str data))
+  (.push print-queue data)
   (when @parent-connected?
     (flush-print-queue! @xpc-connection)))
 
