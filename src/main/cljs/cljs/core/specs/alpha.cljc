@@ -204,7 +204,8 @@
          :import ::ns-import
          :use ::ns-use
          :use-macros ::ns-use-macros
-         :refer-global :require-global)))
+         :refer-global ::ns-refer-global
+         :require-global ::ns-require-global)))
 
 (s/def ::ns-form
   (s/cat :ns-name simple-symbol?
