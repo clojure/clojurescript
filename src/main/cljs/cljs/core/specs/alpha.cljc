@@ -190,8 +190,7 @@
 
 (s/def ::ns-refer-global
   (s/spec (s/cat :clause #{:refer-global}
-                 :only #{:only}
-                 :symbols (s/+ symbol?))))
+                 :options (s/keys* :req-un [::only]))))
 
 (s/def ::ns-require-global
   (s/spec (s/cat :clause #{:require-global}
