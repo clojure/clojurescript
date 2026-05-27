@@ -243,3 +243,16 @@
 (s/fdef core/use-macros
   :args (s/+ (s/alt :libspec (quoted ::use-macros-libspec)
                     :flag #{:reload :reload-all :verbose})))
+
+(comment
+
+  (s/valid? ::ns-refer-global
+    '(:refer-global :only [Date] :rename {Date MyDate}))
+
+  (s/valid? ::ns-refer-global
+    '(:refer-global :only))
+  
+  (s/valid? ::ns-require-global
+    '(:require-global [jquery :as jq :refer [carousel] :rename {carousel car}]))
+
+)
