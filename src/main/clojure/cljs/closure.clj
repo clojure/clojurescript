@@ -3048,15 +3048,18 @@
                    ana/*load-tests* (not= (:load-tests opts) false)
                    ana/*cljs-warnings*
                    (let [warnings (opts :warnings true)]
-                     (merge
-                       ana/*cljs-warnings*
-                       (if (or (true? warnings)
-                               (false? warnings))
+                     (cond
+                       (map? warnings)
+                       (merge ana/*cljs-warnings* warnings)
+                       
+                       ;; backwards compatible
+                       (or (boolean? warnings)
+                           (keyword? warnings))
+                       (merge ana/*cljs-warnings*
                          (zipmap
                            [:unprovided :undeclared-var
                             :undeclared-ns :undeclared-ns-form]
-                           (repeat warnings))
-                         warnings)))
+                           (repeat warnings)))))
                    ana/*verbose* (:verbose opts)]
            (when (and ana/*verbose* (not (::watch-triggered-build? opts)))
              (util/debug-prn "Options passed to ClojureScript compiler:" (pr-str opts)))

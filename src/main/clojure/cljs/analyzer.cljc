@@ -484,12 +484,17 @@
                    "ambiguous expression " form)))
 
 (defn default-warning-handler [warning-type env extra]
-  (when (warning-type *cljs-warnings*)
-    (when-let [s (error-message warning-type extra)]
-      #?(:clj  (binding [*out* *err*]
-                 (println (message env (str "WARNING: " s))))
-         :cljs (binding [*print-fn* *print-err-fn*]
-                 (println (message env (str "WARNING: " s))))))))
+  (let [warn-mode (warning-type *cljs-warnings*)]
+    (when-not (#{false :off} warn-mode)
+      (when-let [s (error-message warning-type extra)]
+        (cond
+          (#{true :warning} warn-mode)
+          #?(:clj  (binding [*out* *err*]
+                     (println (message env (str "WARNING: " s))))
+             :cljs (binding [*print-fn* *print-err-fn*]
+                     (println (message env (str "WARNING: " s)))))
+          (= :error warn-mode)
+          (throw (ex-info s {})))))))
 
 (def ^:dynamic *cljs-warning-handlers*
   [default-warning-handler])
