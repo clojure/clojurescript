@@ -181,6 +181,21 @@ classpath. Classpath-relative paths have prefix of @ or @/")
   [cfg level]
   (assoc-in cfg [:options :optimizations] (keyword level)))
 
+(defn- promote-warn-opt
+  [cfg warn-type-str]
+  (let [warn-type (keyword warn-type-str)]
+    (cond
+      (= :all warn-type)
+      (assoc-in cfg [:options :warnings] :error)
+
+      (contains? ana/*cljs-warnings* warn-type)
+      (assoc-in cfg [:options :warnings warn-type] :error)
+
+      :else
+      (throw
+        (ex-info (str "Unknown warning type: " warn-type)
+          {:cfg cfg :warn-type warn-type})))))
+
 (defn- output-to-opt
   [cfg path]
   (assoc-in cfg [:options :output-to] path))
@@ -682,6 +697,13 @@ generic - the combinations must be explicitly supported"}
                                 (str "Set optimization level, only effective with "
                                   "--compile main option. Valid values are: none, "
                                   "whitespace, simple, advanced")}
+      ["-Werror"]              {:group ::compile
+                                :fn promote-warn-opt
+                                :arg "warning-type"
+                                :doc (str "Promote a warning type to error. If |\"all|\" or no argument supplied "
+                                          "serious warnings are promoted to errors.")
+                                :optional-arg? true
+                                :default "all"}
       ["-t" "--target"]        {:group ::main&compile :fn target-opt
                                 :arg "name"
                                 :doc
