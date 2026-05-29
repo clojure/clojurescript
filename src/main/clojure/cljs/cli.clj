@@ -721,7 +721,7 @@ generic - the combinations must be explicitly supported"}
                                 :doc "Print this help message and exit"}}}))
 
 (defn get-arg-default
-  "Given commands and arg, return the :defaults value for that arg. The
+  "Given commands and arg, return the :default value for that arg. The
   arg should either be a bool, or declare :optional-arg? in the config"
   [commands arg]
   (let [config (get-in commands [:index arg])]
