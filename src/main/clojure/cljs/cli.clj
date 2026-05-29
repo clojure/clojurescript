@@ -560,7 +560,8 @@ present"
   flag set (:init + :main)."
   [commands phase]
   (if (= :all phase)
-    (into (get-options commands :main) (get-options commands :init))
+    ;; remove the nil opt, this is not a real flag
+    (disj (into (get-options commands :main) (get-options commands :init)) nil)
     (-> (get commands (keyword (str (name phase) "-dispatch")))
       keys set)))
 
@@ -570,6 +571,7 @@ present"
   (get-options commands phase))
 
 (defn bool-init-options
+  "Kept here only for backwards compatibility. See optional-arg-init-flags."
   [commands]
   (reduce
     (fn [ret [flags config]]
@@ -578,11 +580,33 @@ present"
         (into flags)))
     #{} (:init commands)))
 
+(defn optional-arg-init-flags
+  "Given commands, return all :init flags that are
+  either :arg \"bool\" or declare :optional-args true
+  as a set."
+  [commands]
+  (reduce
+    (fn [ret [flags config]]
+      (cond-> ret
+        (or (= "bool" (:arg config))
+            (:optional-arg? config))
+        (into flags)))
+    #{} (:init commands)))
+
 (defn dispatch?
   "Given a commands map, a phase (:init or :main) and a command line flag,
   return true if the flag has a handler."
   [commands phase opt]
   (contains? (get-flags-set commands phase) opt))
+
+(defn- add-index
+  [commands]
+  (assoc commands :index
+    (reduce
+      (fn [ret [flags config]]
+        (merge ret (zipmap flags (repeat config))))
+      ;; the nil opt is not a real flag
+      {} (dissoc (merge (:main commands) (:init commands)) [nil]))))
 
 (defn add-commands
   "Given commands map (see below), create a commands map with :init-dispatch
@@ -604,7 +628,8 @@ present"
        (update-in [:main] merge main)
        (update-in [:init] merge init)
        (merge-dispatch :init-dispatch init)
-       (merge-dispatch :main-dispatch main)))))
+       (merge-dispatch :main-dispatch main)
+       add-index))))
 
 (def ^{:doc "Default commands for ClojureScript REPLs. :groups are to support
 printing organized output for --help. a :main option must come at the end, they
@@ -695,6 +720,20 @@ generic - the combinations must be explicitly supported"}
       ["-h" "--help" "-?"]     {:fn help-opt
                                 :doc "Print this help message and exit"}}}))
 
+(defn get-arg-default
+  "Given commands and arg, return the :default value for that arg. The
+  arg should either be a bool, or declare :optional-arg? in the config"
+  [commands arg]
+  (let [config (get-in commands [:index arg])]
+    (if (= "bool" (:arg config))
+      "true"
+      (:default config))))
+
+(defn flag?
+  "Given commands and arg, checks to see if the arg is actually a known command flag."
+  [commands arg]
+  (contains? (get-flags-set commands :all) arg))
+
 (defn normalize
   "Given a commands map (flag + value -> option processor fn) and the sequence of
   command line arguments passed to the process, normalize it. Boolean flags don't
@@ -703,16 +742,18 @@ generic - the combinations must be explicitly supported"}
   [commands args]
   (letfn [(normalize* [args*]
             (if (not (contains? (get-flags-set commands :main) (first args*)))
-              (let [pred (complement (bool-init-options commands))
-                    [pre post] ((juxt #(take-while pred %)
-                                  #(drop-while pred %))
-                                args*)]
+              (let [not-optional-arg? (complement (optional-arg-init-flags commands))
+                    [pre post] ((juxt #(take-while not-optional-arg? %)
+                                      #(drop-while not-optional-arg? %)) args*)]
                 (cond
+                  ;; nothing changed, done
                   (= pre args*) pre
 
-                  (not (#{"true" "false"} (fnext post)))
-                  (concat pre [(first post) "true"]
-                    (normalize commands (next post)))
+                  (flag? commands (fnext post))
+                  (let [flag (first post)
+                        flag+default [flag (get-arg-default commands flag)]]
+                    (concat pre flag+default
+                      (normalize commands (next post))))
 
                   :else
                   (concat pre [(first post) (fnext post)]
