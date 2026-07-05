@@ -43,10 +43,10 @@ the sorting function."}
   {:added "1.1"}
   [inner outer form]
   (cond
-    (list? form)      (outer (apply list (map inner form)))
+    (list? form)      (outer (with-meta (apply list (map inner form)) (meta form)))
     (map-entry? form)
     (outer (MapEntry. (inner (key form)) (inner (val form)) nil))
-    (seq? form)       (outer (doall (map inner form)))
+    (seq? form)       (outer (with-meta (doall (map inner form)) (meta form)))
     (record? form)    (outer (reduce (fn [r x] (conj r (inner x))) form form))
     (coll? form)      (outer (into (empty form) (map inner form)))
     :else             (outer form)))
