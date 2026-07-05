@@ -69,7 +69,9 @@
   *out* nil)
 
 (def
-  ^{:dynamic true}
+  ^{:dynamic true
+    :doc "When set to logical false, 'assert' will omit assertion checks in
+ compiled code. Defaults to true."}
   *assert* true)
 
 (defonce

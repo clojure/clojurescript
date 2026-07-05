@@ -2479,8 +2479,11 @@
   (core/when *assert* x))
 
 (core/defmacro assert
-  "Evaluates expr and throws an exception if it does not evaluate to
-  logical true."
+  "Evaluates expression x and throws an exception with optional
+  message if x does not evaluate to logical true.
+
+  Assertion checks are omitted from compiled code if '*assert*' is
+  false."
   ([x]
      (core/when *assert*
        `(when-not ~x
