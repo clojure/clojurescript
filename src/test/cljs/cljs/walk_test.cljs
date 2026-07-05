@@ -7,7 +7,7 @@
 ;; You must not remove this notice, or any other, from this software.
 
 (ns cljs.walk-test
-  (:require [cljs.test :refer-macros [deftest testing is]]
+  (:require [cljs.test :refer-macros [deftest testing is are]]
             [clojure.walk :as w]))
 
 (deftest t-prewalk-replace
