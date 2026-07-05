@@ -4462,7 +4462,11 @@ reduces them without incurring seq initialization"
 
 (defn constantly
   "Returns a function that takes any number of arguments and returns x."
-  [x] (fn [& args] x))
+  [x] (fn
+        ([] x)
+        ([_] x)
+        ([_ _] x)
+        ([_ _ & args] x)))
 
 (defn comp
   "Takes a set of functions and returns a fn that is the composition
