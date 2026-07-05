@@ -5433,8 +5433,9 @@ reduces them without incurring seq initialization"
           (rest (tree-seq sequential? seq x))))
 
 (defn into
-  "Returns a new coll consisting of to-coll with all of the items of
-  from-coll conjoined. A transducer may be supplied."
+  "Returns a new coll consisting of to with all of the items of
+  from conjoined. A transducer may be supplied.
+  (into x) returns x. (into) returns []."
   ([] [])
   ([to] to)
   ([to from]
