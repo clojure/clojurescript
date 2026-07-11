@@ -13149,7 +13149,12 @@ reduces them without incurring seq initialization"
     (let [in (seq coll)]
       (if (nil? in)
         #{}
-        (loop [in in out (. SetLite -EMPTY)]
+        (loop [in in out (. SetLite -EMPTY) i 0]
           (if-not (nil? in)
-            (recur (next in) (-conj out (first in)))
+            (let [x    (first in)
+                  out' (conj out x)
+                  i'   (inc i)]
+              (if-not (== i (count out))
+                (throw (js/Error. (str_ "Duplicate key: " x)))
+                (recur (next in) out' i')))
             out))))))
