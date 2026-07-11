@@ -617,9 +617,14 @@
     :else (emits "cljs.core.PersistentHashSet.createWithCheck([" (comma-sep items) "])")))
 
 (defn emit-lite-set [items comma-sep distinct-constants?]
-  (if (empty? items)
+  (cond
+    (empty? items)
     (emits "cljs.core.SetLite.EMPTY")
-    (emits "cljs.core.set_lite([" (comma-sep items) "])")))
+
+    (distinct-constants? items)
+    (emits "cljs.core.set_lite([" (comma-sep items) "])")
+
+    :else (emits "cljs.core.set_lite_check([" (comma-sep items) "])")))
 
 (defmethod emit* :set
   [{:keys [items env]}]

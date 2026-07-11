@@ -13142,7 +13142,20 @@ reduces them without incurring seq initialization"
 (set! (. SetLite -EMPTY) (SetLite. nil (. HashMapLite -EMPTY) empty-unordered-hash))
 
 (defn set-lite
-  ":lite-mode version of set, not intended ot be used directly."
+  ":lite-mode version of set, not intended to be used directly."
+  [coll]
+  (if (set? coll)
+    (-with-meta coll nil)
+    (let [in (seq coll)]
+      (if (nil? in)
+        #{}
+        (loop [in in out (. SetLite -EMPTY)]
+          (if-not (nil? in)
+            (recur (next in) (conj out (first in)))
+            out))))))
+
+(defn set-lite-check
+  ":lite-mode version of set with check, not intended to be used directly."
   [coll]
   (if (set? coll)
     (-with-meta coll nil)
