@@ -13154,7 +13154,7 @@ reduces them without incurring seq initialization"
             (let [x    (first in)
                   out' (conj out x)
                   i'   (inc i)]
-              (if-not (== i (count out))
+              (if-not (== i (count out'))
                 (throw (js/Error. (str_ "Duplicate key: " x)))
                 (recur (next in) out' i')))
             out))))))
