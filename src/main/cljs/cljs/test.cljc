@@ -243,6 +243,12 @@
                (let [done-sym (gensym "done")]
                  [`(cljs.test/async ~done-sym
                                     (try ~@body
+                                         (catch :default e#
+                                           (cljs.test/do-report
+                                             {:type :error
+                                              :message "Uncaught exception, not in assertion."
+                                              :expected nil
+                                              :actual e#}))
                                          (finally (~done-sym))))])
                body)]
     (when ana/*load-tests*
