@@ -233,6 +233,10 @@
   should also define a function named test-ns-hook; run-tests will
   call test-ns-hook instead of testing all vars.
 
+  If the test is marked ^:async, the body of the test is emitted as a
+  host async function with an implicit try/catch. As with synchronous
+  test cases, uncaught exceptions will be reported as failures.
+
   Note: Actually, the test body goes in the :test metadata on the var,
   and the real function (the value of the var) calls test-var on
   itself.
