@@ -2072,7 +2072,7 @@ reduces them without incurring seq initialization"
         :else not-found)
       not-found)))
 
-(def REQ_NOT_FOUND #js {})
+(def ^:private REQ_NOT_FOUND #js {})
 
 (defn req!
   "Like arity-2 'get', but throws if key not present."
