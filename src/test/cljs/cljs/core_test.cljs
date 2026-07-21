@@ -2013,3 +2013,12 @@
 (deftest test-cljs-3415
   (let [a 1 b 1]
     (is (thrown? js/Error #{a b}))))
+
+(deftest test-req!
+  (let [m {:a 1, :b 2, :f nil, :g false, nil "nil"}]
+    (is (thrown? js/Error (req! m :e)))
+    (are [x y] (= x y)
+         (req! m :a)  1
+         (req! m nil) "nil"
+         (req! m :b)  2
+         (req! m :f)  nil)))

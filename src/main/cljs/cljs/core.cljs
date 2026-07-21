@@ -2072,6 +2072,16 @@ reduces them without incurring seq initialization"
         :else not-found)
       not-found)))
 
+(def ^:private REQ_NOT_FOUND #js {})
+
+(defn req!
+  "Like arity-2 'get', but throws if key not present."
+  [m k]
+  (let [v (get m k REQ_NOT_FOUND)]
+    (if (identical? REQ_NOT_FOUND v)
+      (throw (js/Error. (str_ "Missing required key: " k)))
+      v)))
+
 (declare PersistentHashMap PersistentArrayMap MapEntry)
 
 (defn assoc
