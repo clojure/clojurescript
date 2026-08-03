@@ -667,7 +667,55 @@
 (core/defn ^:private destmap*
   [pb bvec b v]
   (core/let [gmap (gensym "map__")
-             defaults (:or b)]
+             gignore (gensym "ignore__")
+             defaults (:or b)
+             defaults-as (:defaults b)
+             _ (core/when (core/and defaults-as (not defaults))
+                 (throw (new js/Error "Can't specify :defaults without :or")))
+             b (dissoc b :defaults)
+             gdefaults (core/when defaults (zipmap (keys defaults) (repeatedly #(gensym "default__"))))
+             select (:select b)
+             all (:all b)
+             xf (core/fn [mk]
+                  (core/let [mkns (namespace mk)
+                             mkn (name mk)]
+                    (core/cond
+                      (.startsWith mkn "keys") #(keyword (core/or mkns (namespace %)) (name %))
+                      (.startsWith mkn "syms") #(core/list `quote (symbol (core/or mkns (namespace %)) (name %)))
+                      (.startsWith mkn "strs") core/str
+                      :else (throw (new js/Error (core/str "Unsupported map directive: " mk))))))
+             ret (reduce (core/fn [ret e]
+                           (conj ret (val e) (defaults (key e))))
+                   bvec defaults)
+             ret (core/-> ret (conj gmap) (conj v)
+                   (conj gmap)
+                   (conj `(--destructure-map ~gmap))
+                   ((core/fn [ret]
+                      (if (:as b)
+                        (conj ret (:as b) gmap)
+                        ret))))
+             bes (dissoc b :as :or :select :all)
+             localize (core/fn [bb]
+                        (if #?(:clj  (core/instance? clojure.lang.Named bb)
+                               :cljs (cljs.core/implements? INamed bb))
+                          (with-meta (symbol nil (name bb)) (meta bb)) bb))
+             push1 (core/fn [ret bb bk req?]
+                     (core/let [getter (if req? `req! `get)
+                                local (localize bb)
+                                local-default? (contains? defaults local)
+                                key-default? (contains? defaults bk)
+                                bv (if (core/or local-default? key-default?)
+                                     (if (core/and local-default? key-default?)
+                                       (throw (new js/Error
+                                                (core/str "Multiple :or defaults for same key: " bk " '" "'")))
+                                       (if req?
+                                         (throw (new js/Error
+                                                  (core/str "Can't supply default value for required key: " bk)))
+                                         (core/list `get gmap bk (if local-default? (gdefaults local) (gdefaults bk)))))
+                                     (core/list getter gmap gmap bk))]
+                       (if (ident? bb)
+                         (core/-> ret (conj local bv))
+                         (pb ret bb bv))))]
     (core/loop [ret (core/-> bvec (conj gmap) (conj v)
                       (conj gmap) (conj `(--destructure-map ~gmap))
                       ((core/fn [ret]
