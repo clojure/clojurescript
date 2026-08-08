@@ -789,7 +789,7 @@
                                                  (apply disj (set (keys dm)) sel)
                                                  " appear only in :or")))))
              ret (if select
-                   (conj ret select `(when-let [mm# (merge (some-vals (select-keys ~dm ~sel)) ~gmap (some-vals ~(:subs retsel)))]
+                   (conj ret select `(when-let [mm# (merge (some-vals ~dm) ~gmap (some-vals ~(:subs retsel)))]
                                        (select-keys mm# ~sel)))
                    ret)
              ret (if all
