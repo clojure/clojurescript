@@ -648,7 +648,7 @@
                             true)
             (= firstb :as) (pb ret (second bs) gvec)
             :else (if seen-rest?
-                    (throw #?(:clj (new Exception "Unsupported binding form, only :as can follow & parameter")
+                    (throw #?(:clj  (new Exception "Unsupported binding form, only :as can follow & parameter")
                               :cljs (new js/Error "Unsupported binding form, only :as can follow & parameter")))
                     (recur (pb (if has-rest
                                  (conj ret
@@ -671,7 +671,8 @@
              defaults (:or b)
              defaults-as (:defaults b)
              _ (core/when (core/and defaults-as (not defaults))
-                 (throw (new js/Error "Can't specify :defaults without :or")))
+                 #?(:clj  (throw (new IllegalArgumentException "Can't specify :defaults without :or"))
+                    :cljs (throw (new js/Error "Can't specify :defaults without :or"))))
              b (dissoc b :defaults)
              gdefaults (core/when defaults (zipmap (keys defaults) (repeatedly #(gensym "default__"))))
              select (:select b)
@@ -683,7 +684,8 @@
                       (.startsWith mkn "keys") #(keyword (core/or mkns (namespace %)) (name %))
                       (.startsWith mkn "syms") #(core/list `quote (symbol (core/or mkns (namespace %)) (name %)))
                       (.startsWith mkn "strs") core/str
-                      :else (throw (new js/Error (core/str "Unsupported map directive: " mk))))))
+                      :else (throw #?(:clj  (new Exception (core/str "Unsupported map directive: " mk))
+                                      :cljs (new js/Error (core/str "Unsupported map directive: " mk)))))))
              ret (reduce (core/fn [ret e]
                            (conj ret (val e) (defaults (key e))))
                    bvec defaults)
@@ -706,58 +708,95 @@
                                 key-default? (contains? defaults bk)
                                 bv (if (core/or local-default? key-default?)
                                      (if (core/and local-default? key-default?)
-                                       (throw (new js/Error
-                                                (core/str "Multiple :or defaults for same key: " bk " '" "'")))
+                                       #?(:clj  (throw (new Exception
+                                                         (core/str "Multiple :or defaults for same key: " bk " '" "'")))
+                                          :cljs (throw (new js/Error
+                                                         (core/str "Multiple :or defaults for same key: " bk " '" "'"))))
                                        (if req?
-                                         (throw (new js/Error
-                                                  (core/str "Can't supply default value for required key: " bk)))
+                                         #?(:clj  (throw (new Exception
+                                                           (core/str "Can't supply default value for required key: " bk)))
+                                            :cljs (throw (new js/Error
+                                                           (core/str "Can't supply default value for required key: " bk))))
                                          (core/list `get gmap bk (if local-default? (gdefaults local) (gdefaults bk)))))
                                      (core/list getter gmap gmap bk))]
                        (if (ident? bb)
                          (core/-> ret (conj local bv))
-                         (pb ret bb bv))))]
-    (core/loop [ret (core/-> bvec (conj gmap) (conj v)
-                      (conj gmap) (conj `(--destructure-map ~gmap))
-                      ((core/fn [ret]
-                         (if (:as b)
-                           (conj ret (:as b) gmap)
-                           ret))))
-                bes (core/let [transforms
-                               (reduce
-                                 (core/fn [transforms mk]
-                                   (if (core/keyword? mk)
-                                     (core/let [mkns (namespace mk)
-                                                mkn (name mk)]
-                                       (core/cond (= mkn "keys") (assoc transforms mk #(keyword (core/or mkns (namespace %)) (name %)))
-                                                  (= mkn "syms") (assoc transforms mk #(core/list `quote (symbol (core/or mkns (namespace %)) (name %))))
-                                                  (= mkn "strs") (assoc transforms mk core/str)
-                                                  :else transforms))
-                                     transforms))
-                                 {}
-                                 (keys b))]
-                      (reduce
-                        (core/fn [bes entry]
-                          (reduce #(assoc %1 %2 ((val entry) %2))
-                            (dissoc bes (key entry))
-                            ((key entry) bes)))
-                        (dissoc b :as :or)
-                        transforms))]
-      (if (seq bes)
-        (core/let [bb (key (first bes))
-                   bk (val (first bes))
-                   local (if #?(:clj  (core/instance? clojure.lang.Named bb)
-                                :cljs (cljs.core/implements? INamed bb))
-                           (with-meta (symbol nil (name bb)) (meta bb))
-                           bb)
-                   bv (if (contains? defaults local)
-                        (core/list 'cljs.core/get gmap bk (defaults local))
-                        (core/list 'cljs.core/get gmap bk))]
-          (recur
-            (if (core/or (core/keyword? bb) (core/symbol? bb)) ;(ident? bb)
-              (core/-> ret (conj local bv))
-              (pb ret bb bv))
-            (next bes)))
-        ret))))
+                         (pb ret bb bv))))
+             retsel
+             (core/loop [ret ret, sel #{}, bes bes, b->k {}, subs nil, suba nil]
+               (if (seq bes)
+                 (core/let [be (first bes), bb (key be), bk (val be)]
+                   (if (core/keyword? bb)
+                     (core/let [dir bb
+                                tr (xf bb)
+                                req? (.endsWith (name bb) "!")
+                                retsel
+                                (core/loop [ret ret, sel sel, bbs (seq bk), preamp? true, b->k b->k]
+                                  (if (seq bbs)
+                                    (core/let [bb (first bbs)]
+                                      (if (= bb '&)
+                                        (if preamp?
+                                          (recur ret sel (next bbs) false b->k)
+                                          #?(:clj  (throw (new IllegalArgumentException (core/str "& can only appear once in " dir)))
+                                             :cljs (throw (new js/Error (core/str "& can only appear once in " dir)))))
+                                        (core/let [_
+                                                   (core/when (core/and (not preamp?) (core/symbol? bb))
+                                                     #?(:clj (throw
+                                                               (new IllegalArgumentException
+                                                                 (core/str "'" bb
+                                                                   "' - binding symbols can only appear before '&', use keys after")))
+                                                        :cljs (throw
+                                                                (new js/Error
+                                                                  (core/str "'" bb
+                                                                    "' - binding symbols can only appear before '&', use keys after")))))
+                                                   bk (if preamp? (tr bb) bb)]
+                                          (recur (if (core/or preamp? req?)
+                                                   (push1 ret (if preamp? bb gignore) bk req?)
+                                                   ret)
+                                            (conj sel bk)
+                                            (next bbs) preamp?
+                                            (if preamp? (assoc b->k (localize bb) bk) b->k)))))
+                                    {:ret ret, :sel sel, :b->k b->k}))]
+                       (recur (:ret retsel) (:sel retsel) (next bes) (:b->k retsel) subs suba))
+                     (core/let [subsel? (core/and select (map? bb))
+                                bb (if (core/or (core/not subsel?) (:select bb))
+                                     bb
+                                     (assoc bb :select (gensym "select__")))
+                                subs (if subsel? (assoc subs bk (:select bb)) subs)
+                                suball? (core/and all (map? bb))
+                                bb (if (core/or (core/not suball?) (:all bb))
+                                     bb
+                                     (assoc bb :all (gensym "all__")))
+                                suba (if suball? (assoc suba bk (:all bb)) suba)
+                                b->k (if (core/symbol? bb) (assoc b->k bb bk) b->k)]
+                       (recur (push1 ret bb bk false) (conj sel bk) (next bes) b->k subs suba))))
+                 {:ret ret, :sel sel, :b->k b->k :subs subs}))
+             ret (:ret retsel), sel (:sel retsel), b->k (:b->k retsel)
+             new-or-code (core/and defaults (core/or defaults-as select all))
+             bk #(if (core/symbol? %)
+                   (core/let [bk (b->k %)]
+                     (core/when (core/and new-or-code (core/not bk))
+                       #?(:clj  (throw (new IllegalArgumentException (core/str "symbol " % " in :or does not refer to a binding")))
+                          :cljs (throw (new js/Error (core/str "symbol " % " in :or does not refer to a binding")))))
+                     bk)
+                   %)
+             dm (core/when defaults (dissoc (zipmap (map bk (keys gdefaults)) (vals gdefaults)) nil))
+             _ (core/and new-or-code (core/not= (count (select-keys dm sel)) (count defaults))
+                 #?(:clj  (throw (new IllegalArgumentException (core/str "keys "
+                                                                 (apply disj (set (keys dm)) sel)
+                                                                 " appear only in :or")))
+                    :cljs (throw (new js/Error (core/str "keys "
+                                                 (apply disj (set (keys dm)) sel)
+                                                 " appear only in :or")))))
+             ret (if select
+                   (conj ret select `(when-let [mm# (merge (some-vals (select-keys ~dm ~sel)) ~gmap (some-vals ~(:subs retsel)))]
+                                       (select-keys mm# ~sel)))
+                   ret)
+             ret (if all
+                   (conj ret all `(merge (some-vals ~dm) ~gmap (some-vals ~(:suba retsel))))
+                   ret)
+             ret (if defaults-as (conj ret defaults-as dm) ret)]
+    ret))
 
 (core/defn destructure [bindings]
   (core/let [bents (partition 2 bindings)
