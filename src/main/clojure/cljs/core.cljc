@@ -718,7 +718,7 @@
                                             :cljs (throw (new js/Error
                                                            (core/str "Can't supply default value for required key: " bk))))
                                          (core/list `get gmap bk (if local-default? (gdefaults local) (gdefaults bk)))))
-                                     (core/list getter gmap gmap bk))]
+                                     (core/list getter gmap bk))]
                        (if (ident? bb)
                          (core/-> ret (conj local bv))
                          (pb ret bb bv))))
@@ -770,7 +770,7 @@
                                 suba (if suball? (assoc suba bk (:all bb)) suba)
                                 b->k (if (core/symbol? bb) (assoc b->k bb bk) b->k)]
                        (recur (push1 ret bb bk false) (conj sel bk) (next bes) b->k subs suba))))
-                 {:ret ret, :sel sel, :b->k b->k :subs subs}))
+                 {:ret ret, :sel sel, :b->k b->k :subs subs :suba suba}))
              ret (:ret retsel), sel (:sel retsel), b->k (:b->k retsel)
              new-or-code (core/and defaults (core/or defaults-as select all))
              bk #(if (core/symbol? %)
