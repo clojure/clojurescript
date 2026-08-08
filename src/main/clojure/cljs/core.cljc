@@ -688,7 +688,7 @@
                                       :cljs (new js/Error (core/str "Unsupported map directive: " mk)))))))
              ret (reduce (core/fn [ret e]
                            (conj ret (val e) (defaults (key e))))
-                   bvec defaults)
+                   bvec gdefaults)
              ret (core/-> ret (conj gmap) (conj v)
                    (conj gmap)
                    (conj `(--destructure-map ~gmap))
