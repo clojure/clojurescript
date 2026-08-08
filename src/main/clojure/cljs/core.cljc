@@ -670,7 +670,7 @@
              gignore (gensym "ignore__")
              defaults (:or b)
              defaults-as (:defaults b)
-             _ (core/when (core/and defaults-as (not defaults))
+             _ (core/when (core/and defaults-as (core/not defaults))
                  #?(:clj  (throw (new IllegalArgumentException "Can't specify :defaults without :or"))
                     :cljs (throw (new js/Error "Can't specify :defaults without :or"))))
              b (dissoc b :defaults)
@@ -682,7 +682,7 @@
                              mkn (name mk)]
                     (core/cond
                       (.startsWith mkn "keys") #(keyword (core/or mkns (namespace %)) (name %))
-                      (.startsWith mkn "syms") #(core/list `quote (symbol (core/or mkns (namespace %)) (name %)))
+                      (.startsWith mkn "syms") #(core/list `quote (core/symbol (core/or mkns (namespace %)) (name %)))
                       (.startsWith mkn "strs") core/str
                       :else (throw #?(:clj  (new Exception (core/str "Unsupported map directive: " mk))
                                       :cljs (new js/Error (core/str "Unsupported map directive: " mk)))))))
@@ -700,7 +700,7 @@
              localize (core/fn [bb]
                         (if #?(:clj  (core/instance? clojure.lang.Named bb)
                                :cljs (cljs.core/implements? INamed bb))
-                          (with-meta (symbol nil (name bb)) (meta bb)) bb))
+                          (with-meta (core/symbol nil (name bb)) (meta bb)) bb))
              push1 (core/fn [ret bb bk req?]
                      (core/let [getter (if req? `req! `get)
                                 local (localize bb)
