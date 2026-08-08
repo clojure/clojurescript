@@ -709,9 +709,9 @@
                                 bv (if (core/or local-default? key-default?)
                                      (if (core/and local-default? key-default?)
                                        #?(:clj  (throw (new Exception
-                                                         (core/str "Multiple :or defaults for same key: " bk " '" "'")))
+                                                         (core/str "Multiple :or defaults for same key: " bk " '" local "'")))
                                           :cljs (throw (new js/Error
-                                                         (core/str "Multiple :or defaults for same key: " bk " '" "'"))))
+                                                         (core/str "Multiple :or defaults for same key: " bk " '" local "'"))))
                                        (if req?
                                          #?(:clj  (throw (new Exception
                                                            (core/str "Can't supply default value for required key: " bk)))
@@ -802,21 +802,16 @@
   (core/let [bents (partition 2 bindings)
              pb (core/fn pb [bvec b v]
                   (core/cond
-                    (core/symbol? b) (core/-> bvec (conj (if (namespace b) (symbol (name b)) b)) (conj v))
-                    (core/keyword? b) (core/-> bvec (conj (symbol (name b))) (conj v))
-                    (vector? b) (destvec* pb bvec b v)
-                    (map? b) (destmap* pb bvec b v)
+                    (core/symbol? b) (core/-> bvec (conj b) (conj v))
+                    (core/vector? b) (destvec* pb bvec b v)
+                    (core/map? b) (destmap* pb bvec b v)
                     :else (throw
-                            #?(:clj (new Exception (core/str "Unsupported binding form: " b))
+                            #?(:clj  (new Exception (core/str "Unsupported binding form: " b))
                                :cljs (new js/Error (core/str "Unsupported binding form: " b))))))
              process-entry (core/fn [bvec b] (pb bvec (first b) (second b)))]
     (if (every? core/symbol? (map first bents))
       bindings
-      (core/if-let [kwbs (seq (filter #(core/keyword? (first %)) bents))]
-        (throw
-          #?(:clj (new Exception (core/str "Unsupported binding key: " (ffirst kwbs)))
-             :cljs (new js/Error (core/str "Unsupported binding key: " (ffirst kwbs)))))
-        (reduce process-entry [] bents)))))
+      (reduce process-entry [] bents))))
 
 (core/defmacro ^:private return-first
   [& body]
