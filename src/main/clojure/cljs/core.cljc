@@ -702,7 +702,7 @@
                                :cljs (cljs.core/implements? INamed bb))
                           (with-meta (core/symbol nil (name bb)) (meta bb)) bb))
              push1 (core/fn [ret bb bk req?]
-                     (core/let [getter (if req? `req! `get)
+                     (core/let [getter (if req? `cljs.core/req! `cljs.core/get)
                                 local (localize bb)
                                 local-default? (contains? defaults local)
                                 key-default? (contains? defaults bk)
@@ -717,7 +717,7 @@
                                                            (core/str "Can't supply default value for required key: " bk)))
                                             :cljs (throw (new js/Error
                                                            (core/str "Can't supply default value for required key: " bk))))
-                                         (core/list `get gmap bk (if local-default? (gdefaults local) (gdefaults bk)))))
+                                         (core/list `cljs.core/get gmap bk (if local-default? (gdefaults local) (gdefaults bk)))))
                                      (core/list getter gmap bk))]
                        (if (ident? bb)
                          (core/-> ret (conj local bv))
