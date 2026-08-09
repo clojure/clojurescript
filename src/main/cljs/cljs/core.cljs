@@ -5254,6 +5254,16 @@ reduces them without incurring seq initialization"
   ([f] (lazy-seq (cons (f) (repeatedly f))))
   ([n f] (take n (repeatedly f))))
 
+(defn some-vals
+  "Returns a map with only the non-nil values of map m. Returns nil if
+  m has no non-nil vals."
+  {:added "1.13"
+   :static true}
+  [m]
+  (reduce-kv
+   (fn [m k v] (if (some? v) (assoc m k v) m))
+   nil m))
+
 (def ^:private UNREALIZED-SEED #js {})
 
 (deftype Iterate [meta f prev-seed ^:mutable seed ^:mutable next]
