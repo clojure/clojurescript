@@ -30,26 +30,38 @@
 
 ;; map destructuring
 
-(s/def ::keys (s/coll-of ident? :kind vector?))
-(s/def ::syms (s/coll-of symbol? :kind vector?))
-(s/def ::strs (s/coll-of simple-symbol? :kind vector?))
-(s/def ::or (s/map-of simple-symbol? any?))
+(s/def ::non-binding-elements (s/cat :ampersand #{'&} ::non-binding-element (s/+ any?)))
+(s/def ::keys-form (s/and vector? (s/cat :bindings (s/* ident?) :nonbinding (s/? ::non-binding-elements))))
+(s/def ::syms-form (s/and vector? (s/cat :bindings (s/* symbol?) :nonbinding (s/? ::non-binding-elements))))
+(s/def ::simple-syms-form (s/and vector? (s/cat :bindings (s/* simple-symbol?) :nonbinding (s/? ::non-binding-elements))))
+
+(s/def ::keys ::keys-form)
+(s/def ::syms ::syms-form)
+(s/def ::strs ::simple-syms-form)
+(s/def ::keys! ::keys-form)
+(s/def ::syms! ::syms-form)
+(s/def ::strs! ::simple-syms-form)
+(s/def ::or map?)
 (s/def ::as ::local-name)
+(s/def ::defaults ::local-name)
+(s/def ::select ::local-name)
+(s/def ::all ::local-name)
 
 (s/def ::map-special-binding
-  (s/keys :opt-un [::as ::or ::keys ::syms ::strs]))
+  (s/keys :opt-un [::as ::or ::keys ::syms ::strs ::keys! ::syms! ::strs! ::select ::defaults ::all]))
 
 (s/def ::map-binding (s/tuple ::binding-form any?))
 
 (s/def ::ns-keys
   (s/tuple
-    (s/and qualified-keyword? #(-> % name #{"keys" "syms"}))
-    (s/coll-of simple-symbol? :kind vector?)))
+    (s/and qualified-keyword? #(-> % name #{"keys" "syms" "keys!" "syms!"}))
+    ::simple-syms-form))
 
 (s/def ::map-bindings
   (s/every (s/or :map-binding ::map-binding
                  :qualified-keys-or-syms ::ns-keys
-                 :special-binding (s/tuple #{:as :or :keys :syms :strs} any?)) :kind map?))
+                 :special-binding (s/tuple #{:as :or :keys :syms :strs :keys! :syms! :strs! :select :defaults :all} any?))
+    :kind map?))
 
 (s/def ::map-binding-form (s/merge ::map-bindings ::map-special-binding))
 
