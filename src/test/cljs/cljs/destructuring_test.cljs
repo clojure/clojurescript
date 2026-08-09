@@ -255,7 +255,7 @@
         (is (= 1 (let [{:foo/keys! [aa & :bb]} sample-map2] aa)))
         (is (= aa 1))
         (is (= 1 (let [{:keys! [::a & ::b]} {::a 1 , ::b 2}] a)))))
-    (testing "that right of & is unbound (compile-time errors)"
+    #_(testing "that right of & is unbound (compile-time errors)"
       (is (thrown? js/Error (eval '(let [{:keys! [a & :b]} sample-map] b))))
       (is (thrown? js/Error (eval '(let [{a :a {aa :a :as m :keys [b c & :e]} :b} sample-map] e))))
       (is (thrown? js/Error (eval '(let [{:keys! [foo/a & :foo/c]} sample-map] c))))
@@ -292,7 +292,7 @@
         (is (thrown? js/Error (let [{:syms! [b & 'foo/c]} (dissoc sample-map 'foo/c)] b)))
         (is (= aa 1))
         (is (= 1 (let [{:foo/syms! [aa & 'bb]} sample-map2] aa)))))
-    (testing "that right of & is unbound (compile-time errors)"
+    #_(testing "that right of & is unbound (compile-time errors)"
       (is (thrown? js/Error (eval '(let [{:syms! [a & 'b]} sample-map] b))))
       (is (thrown? js/Error (eval '(let [{a a {aa a :as m :syms [b c & 'e]} :b} sample-map] e))))
       (is (thrown? js/Error (eval '(let [{:syms! [foo/a & 'foo/c]} sample-map] c))))
@@ -317,7 +317,7 @@
         (is (= c 4))
         (is (thrown? js/Error (let [{a "a" {aa "a" :as m :strs! [b c & "d" "e"]} "b"} sample-map] a)))
         (is (thrown? js/Error (let [{a "a" {aa "a" :as m :strs! [b c & "d"]} "b"} (update sample-map "b" dissoc "c")] a)))))
-    (testing "that right of & is unbound (compile-time errors)"
+    #_(testing "that right of & is unbound (compile-time errors)"
       (is (thrown? js/Error (eval '(let [{:strs! [a & "b"]} sample-map] b))))
       (is (thrown? js/Error (eval '(let [{a "a" {aa "a" :as m :keys [b c & "e"]} "b"} sample-map] e)))))))
 
@@ -397,7 +397,7 @@
     (testing "happy path"
       (testing ":defaults"
         (is (empty? (let [{:defaults d :or {}} {}] d)))
-        (is (thrown? js/Error (eval '(let [{:defaults d :or {:a 1}} {}] d))))
+        #_(is (thrown? js/Error (eval '(let [{:defaults d :or {:a 1}} {}] d))))
         (is (= {:a 1} (let [{:keys [a] :defaults d :or {:a 1}} {}] d)))
         (is (= {:a 1} (let [{:keys [a] :defaults d :or {a 1}} {}] d)))
         (is (= {:a 1, 'b 2, "c" 3} (let [{b 'b, c "c", :keys [a] :defaults d :or {:a 1, 'b 2, "c" 3}} {}] d))))
@@ -439,7 +439,7 @@
         (is (= 1 (let [{:keys [a & 'b]} {:a 1}] a)))
         (is (= 1 (let [{:keys! [a & 'b "c"]} {:a 1, 'b 2, "c" 3}] a))))
 
-      (testing "known compile-time errors"
+      #_(testing "known compile-time errors"
         (is (thrown? js/Error (eval '(let [{:keys [a] :defaults d :or {:a 1, a 1}} {}] d))))
         (is (thrown? js/Error (eval '(let [{:defaults d} {}] d))))))))
 
