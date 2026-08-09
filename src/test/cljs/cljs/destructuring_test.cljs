@@ -8,7 +8,7 @@
 
 (ns cljs.destructuring-test
   (:refer-clojure :exclude [iter])
-  (:require [cljs.test :refer-macros [deftest testing is]]
+  (:require [cljs.test :refer-macros [deftest testing is are]]
             [clojure.string :as s]
             [clojure.set :as set]))
 
@@ -223,6 +223,225 @@
         (= m2 (seq-to-map-for-destructuring (list :a 1 :b 2 {:c 3})))
         (= m3 (seq-to-map-for-destructuring (list :a 1 :b 2 {:a 0})))
         (= a4 nil)))))
+
+(deftest keys-bang
+  (let [sample-map {:a 1 :b 2}]
+    (testing ":keys! happy path, binds and throws when key missing"
+      (is (= 1 (let [{:keys! [a b]} sample-map] a)))
+      (is (thrown? js/Error (let [{:keys! [a b]} {:a 1}] a))))
+    (testing ":keys! with & bind and don't bind"
+      (is (= 1 (let [{:keys! [a & :b]} sample-map] a)))
+      (is (thrown? js/Error (let [{:keys! [a & :b]} {:a 1}] a))))
+    (testing "nested maps with :keys! &"
+      (let [sample-map {:a 1 :b {:a 2 :b 3 :c 4 :d 42}}
+            {a :a {aa :a :as m :keys! [b c & :d]} :b} sample-map]
+        (is (= m (:b sample-map)))
+        (is (= a 1))
+        (is (= aa 2))
+        (is (= b 3))
+        (is (= c 4))
+        (is (thrown? js/Error (let [{a :a {aa :a :as m :keys! [b c & :d :e]} :b} sample-map] a)))
+        (is (thrown? js/Error (let [{a :a {aa :a :as m :keys! [b c & :d]} :b} (update sample-map :b dissoc :c)] a)))))
+    (testing "a broad range of qualified names/declarators with :keys! &"
+      (let [sample-map {:foo/a 1 :b 2 :foo/c 3}
+            {:keys! [foo/a & :b]} sample-map
+            {:keys! [b & :foo/c]} sample-map
+            sample-map2 {:foo/aa 1 :bb 2 :foo/cc 3}
+            {:foo/keys! [aa & :foo/cc]} sample-map2]
+        (is (= a 1))
+        (is (= b 2))
+        (is (thrown? js/Error (let [{:keys! [b & :foo/c]} (dissoc sample-map :b)] b)))
+        (is (thrown? js/Error (let [{:keys! [b & :foo/c]} (dissoc sample-map :foo/c)] b)))
+        (is (= 1 (let [{:foo/keys! [aa & :bb]} sample-map2] aa)))
+        (is (= aa 1))
+        (is (= 1 (let [{:keys! [::a & ::b]} {::a 1 , ::b 2}] a)))))
+    (testing "that right of & is unbound (compile-time errors)"
+      (is (thrown? js/Error (eval '(let [{:keys! [a & :b]} sample-map] b))))
+      (is (thrown? js/Error (eval '(let [{a :a {aa :a :as m :keys [b c & :e]} :b} sample-map] e))))
+      (is (thrown? js/Error (eval '(let [{:keys! [foo/a & :foo/c]} sample-map] c))))
+      (let [sample-map2 {:foo/aa 1 :bb 2 :foo/cc 3}]
+        (is (thrown? js/Error (eval '(let [{:foo/keys! [foo/aa & :foo/cc]} sample-map2] cc))))))))
+
+(deftest syms-bang
+  (let [sample-map '{a 1 b 2}]
+    (testing ":syms! happy path, binds and throws when key missing"
+      (is (= 1 (let [{:syms! [a b]} sample-map] a)))
+      (is (thrown? js/Error (let [{:syms! [a b]} {:a 1}] a))))
+    (testing ":syms! with & bind and don't bind"
+      (is (= 1 (let [{:syms! [a & 'b]} sample-map] a)))
+      (is (thrown? js/Error (let [{:syms! [a & 'b]} {:a 1}] a))))
+    (testing "nested maps with :syms! &"
+      (let [sample-map '{a 1 b {a 2 b 3 c 4 d 42}}
+            {a 'a {aa 'a :as m :syms! [b c & 'd]} 'b} sample-map]
+        (is (= m ('b sample-map)))
+        (is (= a 1))
+        (is (= aa 2))
+        (is (= b 3))
+        (is (= c 4))
+        (is (thrown? js/Error (let [{a 'a {aa :a :as m :syms! [b c & 'd 'e]} 'b} sample-map] a)))
+        (is (thrown? js/Error (let [{a 'a {aa :a :as m :syms! [b c & 'd]} 'b} (update sample-map 'b dissoc 'c)] a)))))
+    (testing "a broad range of qualified names/declarators with :syms! &"
+      (let [sample-map '{foo/a 1 b 2 foo/c 3}
+            {:syms! [foo/a & 'b]} sample-map
+            {:syms! [b & 'foo/c]} sample-map
+            sample-map2 '{foo/aa 1 bb 2 foo/cc 3}
+            {:foo/syms! [aa & 'foo/cc]} sample-map2]
+        (is (= a 1))
+        (is (= b 2))
+        (is (thrown? js/Error (let [{:syms! [b & 'foo/c]} (dissoc sample-map 'b)] b)))
+        (is (thrown? js/Error (let [{:syms! [b & 'foo/c]} (dissoc sample-map 'foo/c)] b)))
+        (is (= aa 1))
+        (is (= 1 (let [{:foo/syms! [aa & 'bb]} sample-map2] aa)))))
+    (testing "that right of & is unbound (compile-time errors)"
+      (is (thrown? js/Error (eval '(let [{:syms! [a & 'b]} sample-map] b))))
+      (is (thrown? js/Error (eval '(let [{a a {aa a :as m :syms [b c & 'e]} :b} sample-map] e))))
+      (is (thrown? js/Error (eval '(let [{:syms! [foo/a & 'foo/c]} sample-map] c))))
+      (let [sample-map2 '{foo/aa 1 bb 2 foo/cc 3}]
+        (is (thrown? js/Error (eval '(let [{:foo/syms! [foo/aa & 'foo/cc]} sample-map2] cc))))))))
+
+(deftest strs-bang
+  (let [sample-map {"a" 1 "b" 2}]
+    (testing ":strs! happy path, binds and throws when key missing"
+      (is (= 1 (let [{:strs! [a b]} sample-map] a)))
+      (is (thrown? js/Error (let [{:strs! [a b]} {:a 1}] a))))
+    (testing ":strs! with & bind and don't bind"
+      (is (= 1 (let [{:strs! [a & "b"]} sample-map] a)))
+      (is (thrown? js/Error (let [{:strs! [a & "b"]} {:a 1}] a))))
+    (testing "nested maps with :strs! &"
+      (let [sample-map {"a" 1 "b" {"a" 2 "b" 3 "c" 4 "d" 42}}
+            {a "a" {aa "a" :as m :strs! [b c & "d"]} "b"} sample-map]
+        (is (= m (get sample-map "b")))
+        (is (= a 1))
+        (is (= aa 2))
+        (is (= b 3))
+        (is (= c 4))
+        (is (thrown? js/Error (let [{a "a" {aa "a" :as m :strs! [b c & "d" "e"]} "b"} sample-map] a)))
+        (is (thrown? js/Error (let [{a "a" {aa "a" :as m :strs! [b c & "d"]} "b"} (update sample-map "b" dissoc "c")] a)))))
+    (testing "that right of & is unbound (compile-time errors)"
+      (is (thrown? js/Error (eval '(let [{:strs! [a & "b"]} sample-map] b))))
+      (is (thrown? js/Error (eval '(let [{a "a" {aa "a" :as m :keys [b c & "e"]} "b"} sample-map] e)))))))
+
+(deftest select-directive
+  (let [m {:a 1 :b 2 :c 3 :d 4
+           'sa 10 'sb 20 'sc 30 'sd 40
+           "stra" 100 "strb" 200 "strc" 300 "strd" 400
+           :foo/x 1000 :foo/y 2000 :foo/z 3000
+           ::x 10000 ::y 20000 ::z 30000
+           :nested {:aa 1 'saa 10 "straa" 100}}
+
+        {:keys [a b & :c :z]
+         :keys! [d]
+         :select keys-sel} m
+
+        {:syms [sa sb & 'sc 'sz]
+         :syms! [sd]
+         :select syms-sel} m
+
+        {:strs [stra strb & "strc" "strz"]
+         :strs! [strd]
+         :select strs-sel} m
+
+        {:foo/keys [x & :y :zz]
+         :foo/keys! [z]
+         :select qkeys-sel} m
+
+        {::keys [x & :y :zz]
+         ::keys! [z]
+         :select aqkeys-sel} m
+
+        {{aa :aa saa 'saa
+          :select nest-sel} :nested
+         aqx ::x
+         :select tl-sel} m
+
+        {:keys! [a b & :c]
+         :keys [d & :z]
+         :or {}
+         :select or-sel} m
+
+        {:keys [a b c d]
+         :syms [sa sb sc sd]
+         :strs [stra strb strc strd]
+         :foo/keys! [x y z]
+         ::keys [x y z]
+         nest :nested
+         :as mm
+         :select sel-mm} m]
+    (are [expected result] (= expected result)
+      keys-sel {:a 1 :b 2 :c 3 :d 4}
+      syms-sel '{sa 10 sb 20 sc 30 sd 40}
+      strs-sel {"stra" 100 "strb" 200 "strc" 300 "strd" 400}
+      qkeys-sel {:foo/x 1000 :foo/z 3000}
+      aqkeys-sel {::x 10000 ::z 30000}
+      nest-sel '{:aa 1, saa 10}
+      tl-sel '{:nested {:aa 1, saa 10} ::x 10000}
+      or-sel {:a 1 :b 2 :c 3 :d 4}
+      sel-mm mm))
+  (testing "base cases"
+    (is (nil? (let [{{a :a} :n :select s} nil] s))
+        "if you haven't supplied a map, select won't make one for no reason")
+
+    (testing "you get what you supplied if nothing else"
+      (is (= {} (let [{{a :a} :n :select s} {}] s)))
+      (is (= {:n nil} (let [{{a :a} :n :select s} {:n nil}] s)))
+      (is (= {:n {}} (let [{{a :a} :n :select s} {:n {}}] s))))
+
+    (testing "defaults can turn nothing into something"
+      (is (= {:n {:a 42}} (let [{{a :a :or {a 42}} :n :select s} nil] s)))
+      (is (= {:n {:a 42}} (let [{{a :a :or {a 42}} :n :select s} {:n nil}] s))))))
+
+(deftest select-or-defaults
+  (let [sample-map {:a 1, :b 2, :c  {:aa 10 :bb 20},
+                    'd 4  'e 5  'f  {'dd 40 'ee 50},
+                    "g" 6 "h" 7 "i" {"gg" 60 "hh" 70},}]
+    (testing "happy path"
+      (testing ":defaults"
+        (is (empty? (let [{:defaults d :or {}} {}] d)))
+        (is (thrown? js/Error (eval '(let [{:defaults d :or {:a 1}} {}] d))))
+        (is (= {:a 1} (let [{:keys [a] :defaults d :or {:a 1}} {}] d)))
+        (is (= {:a 1} (let [{:keys [a] :defaults d :or {a 1}} {}] d)))
+        (is (= {:a 1, 'b 2, "c" 3} (let [{b 'b, c "c", :keys [a] :defaults d :or {:a 1, 'b 2, "c" 3}} {}] d))))
+      
+      (testing ":keys + :select + :or + defaults"
+        (let [{:keys [a b z & :c :d] {:keys! [aa & :bb]} :c
+               :or {:d 42, z :or-z}
+               :select m
+               :defaults dfs} sample-map]
+          (is (= 1 a))
+          (is (= 2 b))
+          (is (= 10 aa))
+          (is (= {:z :or-z, :c {:aa 10, :bb 20}, :b 2, :d 42, :a 1} m))
+          (is (= {:d 42, :z :or-z} dfs))))
+
+      (testing ":syms + :select + :or + defaults"
+        (let [{:syms [d e z & 'd 'f] {:syms! [dd & 'ee]} 'f
+               :or {'d 42, z :or-z}
+               :select m
+               :defaults dfs} sample-map]
+          (is (= 4 d))
+          (is (= 5 e))
+          (is (= 40 dd))
+          (is (= '{f {dd 40, ee 50}, e 5, d 4, z :or-z} m))
+          (is (= '{d 42, z :or-z} dfs))))
+
+      (testing ":strs + :select + :or + defaults"
+        (let [{:strs [g h z & "d" "i"] {:strs! [gg & "hh"]} "i"
+               :or {"d" 42, z :or-z}
+               :select m
+               :defaults dfs} sample-map]
+          (is (= 6 g))
+          (is (= 7 h))
+          (is (= 60 gg))
+          (is (= {"d" 42, "z" :or-z, "i" {"gg" 60, "hh" 70}, "g" 6, "h" 7} m))
+          (is (= {"d" 42, "z" :or-z} dfs))))
+
+      (testing "mixed things after &"
+        (is (= 1 (let [{:keys [a & 'b]} {:a 1}] a)))
+        (is (= 1 (let [{:keys! [a & 'b "c"]} {:a 1, 'b 2, "c" 3}] a))))
+
+      (testing "known compile-time errors"
+        (is (thrown? js/Error (eval '(let [{:keys [a] :defaults d :or {:a 1, a 1}} {}] d))))
+        (is (thrown? js/Error (eval '(let [{:defaults d} {}] d))))))))
 
 (comment
 
