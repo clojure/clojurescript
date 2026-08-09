@@ -2510,13 +2510,14 @@ x                          (not (contains? ret :info)))
   (loop [bes []
          env (assoc encl-env :context :expr)
          bindings (seq (partition 2 bindings))]
-
       (if-some [[name init] (first bindings)]
-        (let []
+        (do
           (when (or (some? (namespace name))
                   #?(:clj  (.contains (str name) ".")
                      :cljs ^boolean (goog.string/contains (str name) ".")))
             (throw (error encl-env (str "Invalid local name: " name))))
+          (when (= '& name)
+            (throw (error encl-env "Can't use & as a local binding")))
           (let [init-expr (analyze-let-binding-init env init (cons {:params bes} *loop-lets*))
                 line (get-line name env)
                 col (get-col name env)

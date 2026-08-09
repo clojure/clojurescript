@@ -401,6 +401,30 @@
                      (if (gobject/containsKey nil nil) true false)]))]
       (is (nil? (re-find #"truth_" code))))))
 
+(deftest test-amp-as-local-clj-2954
+  (testing "& disallowed as local binding"
+    (try
+      (env/with-compiler-env (env/default-compiler-env)
+        (compile-form-seq
+          '[(let [& 42] &)]))
+      (catch Throwable t
+        (is (instance? clojure.lang.ExceptionInfo t))
+        (is (.startsWith (-> t ex-cause ex-message) "Can't use & as a local binding"))))
+    (try
+      (env/with-compiler-env (env/default-compiler-env)
+        (compile-form-seq
+          '[(let* [& 42] &)]))
+      (catch Throwable t
+        (is (instance? clojure.lang.ExceptionInfo t))
+        (is (.startsWith (-> t ex-cause ex-message) "Can't use & as a local binding"))))
+    (try
+      (env/with-compiler-env (env/default-compiler-env)
+        (compile-form-seq
+          '[(loop* [& 42] &)]))
+      (catch Throwable t
+        (is (instance? clojure.lang.ExceptionInfo t))
+        (is (.startsWith (-> t ex-cause ex-message) "Can't use & as a local binding"))))))
+
 ;; CLJS-1225
 
 (comment
