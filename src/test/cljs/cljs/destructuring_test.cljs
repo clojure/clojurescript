@@ -254,13 +254,7 @@
         (is (thrown? js/Error (let [{:keys! [b & :foo/c]} (dissoc sample-map :foo/c)] b)))
         (is (= 1 (let [{:foo/keys! [aa & :bb]} sample-map2] aa)))
         (is (= aa 1))
-        (is (= 1 (let [{:keys! [::a & ::b]} {::a 1 , ::b 2}] a)))))
-    #_(testing "that right of & is unbound (compile-time errors)"
-      (is (thrown? js/Error (eval '(let [{:keys! [a & :b]} sample-map] b))))
-      (is (thrown? js/Error (eval '(let [{a :a {aa :a :as m :keys [b c & :e]} :b} sample-map] e))))
-      (is (thrown? js/Error (eval '(let [{:keys! [foo/a & :foo/c]} sample-map] c))))
-      (let [sample-map2 {:foo/aa 1 :bb 2 :foo/cc 3}]
-        (is (thrown? js/Error (eval '(let [{:foo/keys! [foo/aa & :foo/cc]} sample-map2] cc))))))))
+        (is (= 1 (let [{:keys! [::a & ::b]} {::a 1 , ::b 2}] a)))))))
 
 (deftest syms-bang
   (let [sample-map '{a 1 b 2}]
@@ -291,13 +285,7 @@
         (is (thrown? js/Error (let [{:syms! [b & 'foo/c]} (dissoc sample-map 'b)] b)))
         (is (thrown? js/Error (let [{:syms! [b & 'foo/c]} (dissoc sample-map 'foo/c)] b)))
         (is (= aa 1))
-        (is (= 1 (let [{:foo/syms! [aa & 'bb]} sample-map2] aa)))))
-    #_(testing "that right of & is unbound (compile-time errors)"
-      (is (thrown? js/Error (eval '(let [{:syms! [a & 'b]} sample-map] b))))
-      (is (thrown? js/Error (eval '(let [{a a {aa a :as m :syms [b c & 'e]} :b} sample-map] e))))
-      (is (thrown? js/Error (eval '(let [{:syms! [foo/a & 'foo/c]} sample-map] c))))
-      (let [sample-map2 '{foo/aa 1 bb 2 foo/cc 3}]
-        (is (thrown? js/Error (eval '(let [{:foo/syms! [foo/aa & 'foo/cc]} sample-map2] cc))))))))
+        (is (= 1 (let [{:foo/syms! [aa & 'bb]} sample-map2] aa)))))))
 
 (deftest strs-bang
   (let [sample-map {"a" 1 "b" 2}]
@@ -316,10 +304,7 @@
         (is (= b 3))
         (is (= c 4))
         (is (thrown? js/Error (let [{a "a" {aa "a" :as m :strs! [b c & "d" "e"]} "b"} sample-map] a)))
-        (is (thrown? js/Error (let [{a "a" {aa "a" :as m :strs! [b c & "d"]} "b"} (update sample-map "b" dissoc "c")] a)))))
-    #_(testing "that right of & is unbound (compile-time errors)"
-      (is (thrown? js/Error (eval '(let [{:strs! [a & "b"]} sample-map] b))))
-      (is (thrown? js/Error (eval '(let [{a "a" {aa "a" :as m :keys [b c & "e"]} "b"} sample-map] e)))))))
+        (is (thrown? js/Error (let [{a "a" {aa "a" :as m :strs! [b c & "d"]} "b"} (update sample-map "b" dissoc "c")] a)))))))
 
 (deftest select-directive
   (let [m {:a 1 :b 2 :c 3 :d 4
@@ -397,7 +382,7 @@
     (testing "happy path"
       (testing ":defaults"
         (is (empty? (let [{:defaults d :or {}} {}] d)))
-        #_(is (thrown? js/Error (eval '(let [{:defaults d :or {:a 1}} {}] d))))
+        
         (is (= {:a 1} (let [{:keys [a] :defaults d :or {:a 1}} {}] d)))
         (is (= {:a 1} (let [{:keys [a] :defaults d :or {a 1}} {}] d)))
         (is (= {:a 1, 'b 2, "c" 3} (let [{b 'b, c "c", :keys [a] :defaults d :or {:a 1, 'b 2, "c" 3}} {}] d))))
@@ -437,11 +422,7 @@
 
       (testing "mixed things after &"
         (is (= 1 (let [{:keys [a & 'b]} {:a 1}] a)))
-        (is (= 1 (let [{:keys! [a & 'b "c"]} {:a 1, 'b 2, "c" 3}] a))))
-
-      #_(testing "known compile-time errors"
-        (is (thrown? js/Error (eval '(let [{:keys [a] :defaults d :or {:a 1, a 1}} {}] d))))
-        (is (thrown? js/Error (eval '(let [{:defaults d} {}] d))))))))
+        (is (= 1 (let [{:keys! [a & 'b "c"]} {:a 1, 'b 2, "c" 3}] a)))))))
 
 (comment
 

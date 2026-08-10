@@ -44,20 +44,27 @@
        (doseq [form forms]
          (comp/emit (ana/analyze (ana/empty-env) form)))))))
 
+(defn compile-simple-form
+  [form]
+  (env/with-compiler-env (env/default-compiler-env)
+    (comp/with-core-cljs {}
+      (fn []
+        (compile-form-seq [form])))))
+
 #_(deftest should-recompile
-  (let [src (File. "test/hello.cljs")
-        dst (File/createTempFile "compilertest" ".cljs")
-        opt {:optimize-constants true}
-        optmod {:optimize-constants true :elide-asserts false}]
-    (with-redefs [util/*clojurescript-version* {:major 0 :minor 0 :qualifier 42}]
-      (env/with-compiler-env (env/default-compiler-env)
-        (.setLastModified dst (- (.lastModified src) 100))
-        (is (comp/requires-compilation? src dst opt))
-        (comp/compile-file src dst opt)
-        (is (not (comp/requires-compilation? src dst opt)))
-        (is (comp/requires-compilation? src dst optmod))
-        (comp/compile-file src dst optmod)
-        (is (not (comp/requires-compilation? src dst optmod)))))))
+    (let [src (File. "test/hello.cljs")
+          dst (File/createTempFile "compilertest" ".cljs")
+          opt {:optimize-constants true}
+          optmod {:optimize-constants true :elide-asserts false}]
+      (with-redefs [util/*clojurescript-version* {:major 0 :minor 0 :qualifier 42}]
+        (env/with-compiler-env (env/default-compiler-env)
+          (.setLastModified dst (- (.lastModified src) 100))
+          (is (comp/requires-compilation? src dst opt))
+          (comp/compile-file src dst opt)
+          (is (not (comp/requires-compilation? src dst opt)))
+          (is (comp/requires-compilation? src dst optmod))
+          (comp/compile-file src dst optmod)
+          (is (not (comp/requires-compilation? src dst optmod)))))))
 
 (deftest fn-scope-munge
   (is (= (comp/munge
@@ -424,6 +431,44 @@
       (catch Throwable t
         (is (instance? clojure.lang.ExceptionInfo t))
         (is (.startsWith (-> t ex-cause ex-message) "Can't use & as a local binding"))))))
+
+;; -----------------------------------------------------------------------------
+;; 1.13 Compile Time Destructuring Tests
+
+;; The following only emits warnings in ClojureScript
+ 
+(defn undeclared-warning? [form sym]
+  (let [[[warn-type warn-mesg] :as warns] (capture-warnings (compile-simple-form form))]
+    (and (= warn-type :undeclared-var)
+      (.startsWith warn-mesg  (str "WARNING: Use of undeclared Var cljs.user/" (name sym))))))
+
+(deftest keys-bang
+  (testing "that right of & is unbound (compile-time errors)"
+    (is (undeclared-warning? '(let [{:keys! [a & :b]} {:a 1 :b 2}] b) 'b))
+    (is (undeclared-warning? '(let [{a :a {aa :a :as m :keys [b c & :e]} :b} {:a 1 :b 2}] e) 'e))
+    (is (undeclared-warning? '(let [{:keys! [foo/a & :foo/c]} {:a 1 :b 2}] c) 'c))
+    (is (undeclared-warning? '(let [{:foo/keys! [foo/aa & :foo/cc]} {:foo/aa 1 :bb 2 :foo/cc 3}] cc) 'cc))))
+
+(deftest syms-bang
+  (testing "that right of & is unbound (compile-time errors)"
+    (is (undeclared-warning? '(let [{:syms! [a & 'b]} (quote {a 1 b 2})] b) 'b))
+    #_(is (undeclared-warning? '(let [{a a {aa a :as m :syms [b c & 'e]} :b} (quote {a 1 b 2})] e) 'e))
+    (is (undeclared-warning? '(let [{:syms! [foo/a & 'foo/c]} (quote {a 1 b 2})] c) 'c))
+    (is (undeclared-warning? '(let [{:foo/syms! [foo/aa & 'foo/cc]} (quote {foo/aa 1 bb 2 foo/cc 3})] cc) 'cc))))
+
+(deftest strs-bang
+  (testing "that right of & is unbound (compile-time errors)"
+    (is (undeclared-warning? '(let [{:strs! [a & "b"]} {"a" 1 "b" 2}] b) 'b))
+    (is (undeclared-warning? '(let [{a "a" {aa "a" :as m :keys [b c & "e"]} "b"} {"a" 1 "b" 2}] e) 'e))))
+
+(deftest select-or-defaults
+  (testing ":defaults"
+    (is (thrown? Exception
+          (compile-simple-form
+            '(let [{:defaults d :or {:a 1}} {}] d)))))
+  (testing "known compile-time errors"
+    (is (thrown? Exception (compile-simple-form '(let [{:keys [a] :defaults d :or {:a 1, a 1}} {}] d))))
+    (is (thrown? Exception (compile-simple-form '(let [{:defaults d} {}] d))))))
 
 ;; CLJS-1225
 
