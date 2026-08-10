@@ -807,6 +807,7 @@
     (is (= "cafrogbd" (let [jumble (fn [a b] (str (apply str (reverse (str a))) b))]
                         (reduce jumble "frog" "abcd"))))
     (is (= [3] (nthnext [1 2 3] 2)))
+    (is (= (nthnext [1 2 3] 2) [3]))
     (assert (not= 1 2))
     (is (not (not= 1 1)))
     (is (not (not-empty [])))
