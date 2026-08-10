@@ -30,10 +30,10 @@
 
 (defn check-as-alias-duplicates
   [as-aliases new-as-aliases]
-  (doseq [[alias _] new-as-aliases]
-    (assert (not (contains? as-aliases alias))
-      (str "Duplicate :as-alias " alias ", already in use for lib "
-        (get as-aliases alias)))))
+  (doseq [[alias new-lib] new-as-aliases]
+    (let [lib-in-use (get as-aliases alias)]
+      (assert (or (not lib-in-use) (= lib-in-use new-lib))
+        (str "Duplicate :as-alias " alias ", already in use for lib " lib-in-use)))))
 
 (defn elide-aliases-from-libspecs
   "Given libspecs, elide all :as-alias. Return a map of :libspecs (filtered)

@@ -941,6 +941,21 @@
       (test/delete-node-modules)
       (test/delete-out-files out))))
 
+(deftest test-cljs-3475-as-alias-duplicate
+  (testing "Test that using :as-alias in a :require-macro .cljc does not cause a duplicate alias"
+    (let [{:keys [major minor]} *clojure-version*
+          out      (.getPath (io/file (test/tmp-dir) "cljs-3475-as-alias-duplicate-out"))
+          out-file (io/file out "main.js")
+          {:keys [inputs opts]} {:inputs (str (io/file "src" "test" "cljs_build"))
+                                 :opts   {:main       'cljs-3475-as-alias-duplicate.a-ns
+                                          :output-dir out
+                                          :output-to  (.getPath out-file)}}
+          cenv     (env/default-compiler-env)]
+      (test/delete-out-files out)
+      (is (and (<= 1 major) (<= 11 minor)) "Clojure version too old - as-alias was introduced in Clojure 1.11: https://clojure.org/news/2022/03/22/clojure-1-11-0")
+      (build/build (build/inputs (io/file inputs "cljs_3475_as_alias_duplicate/a_ns.cljc"))
+        opts cenv))))
+
 #_(deftest test-cljs-3452-str-optimizations
   (testing "Test that uses compile time optimizations from str macro"
     (let [out (.getPath (io/file (test/tmp-dir) "cljs-3452-str-optimizations-out"))]
