@@ -677,6 +677,7 @@
              gdefaults (core/when defaults (zipmap (keys defaults) (repeatedly #(gensym "default__"))))
              select (:select b)
              all (:all b)
+             excess (:excess b)
              xf (core/fn [mk]
                   (core/let [mkns (namespace mk)
                              mkn (name mk)]
@@ -696,7 +697,7 @@
                       (if (:as b)
                         (conj ret (:as b) gmap)
                         ret))))
-             bes (dissoc b :as :or :select :all)
+             bes (dissoc b :as :or :select :all :excess)
              localize (core/fn [bb]
                         (if #?(:clj  (core/instance? clojure.lang.Named bb)
                                :cljs (cljs.core/implements? INamed bb))
@@ -723,7 +724,7 @@
                          (core/-> ret (conj local bv))
                          (pb ret bb bv))))
              retsel
-             (core/loop [ret ret, sel #{}, bes bes, b->k {}, subs nil, suba nil]
+             (core/loop [ret ret, sel #{}, bes bes, b->k {}, subs nil, suba nil subd nil]
                (if (seq bes)
                  (core/let [be (first bes), bb (key be), bk (val be)]
                    (if (core/keyword? bb)
@@ -757,7 +758,7 @@
                                             (next bbs) preamp?
                                             (if preamp? (assoc b->k (localize bb) bk) b->k)))))
                                     {:ret ret, :sel sel, :b->k b->k}))]
-                       (recur (:ret retsel) (:sel retsel) (next bes) (:b->k retsel) subs suba))
+                       (recur (:ret retsel) (:sel retsel) (next bes) (:b->k retsel) subs suba subd))
                      (core/let [subsel? (core/and select (map? bb))
                                 bb (if (core/or (core/not subsel?) (:select bb))
                                      bb
@@ -768,9 +769,16 @@
                                      bb
                                      (assoc bb :all (gensym "all__")))
                                 suba (if suball? (assoc suba bk (:all bb)) suba)
+                                
+                                subexcess? (core/and excess (map? bb))
+                                bb (if (core/or (core/not subexcess?) (:excess bb))
+                                     bb
+                                     (assoc bb :excess (gensym "excess__")))
+                                subd (if subexcess? (assoc subd bk (:excess bb)) subd)
+                                
                                 b->k (if (core/symbol? bb) (assoc b->k bb bk) b->k)]
-                       (recur (push1 ret bb bk false) (conj sel bk) (next bes) b->k subs suba))))
-                 {:ret ret, :sel sel, :b->k b->k :subs subs :suba suba}))
+                       (recur (push1 ret bb bk false) (conj sel bk) (next bes) b->k subs suba subd))))
+                 {:ret ret, :sel sel, :b->k b->k :subs subs :suba suba :subd subd}))
              ret (:ret retsel), sel (:sel retsel), b->k (:b->k retsel)
              new-or-code (core/and defaults (core/or defaults-as select all))
              bk #(if (core/symbol? %)
@@ -780,7 +788,7 @@
                           :cljs (throw (new js/Error (core/str "symbol " % " in :or does not refer to a binding")))))
                      bk)
                    %)
-             dm (core/when defaults (dissoc (zipmap (map bk (keys gdefaults)) (vals gdefaults)) nil))
+             dm (core/when defaults (zipmap (map bk (keys gdefaults)) (vals gdefaults)))
              _ (core/and new-or-code (core/not= (count (select-keys dm sel)) (count defaults))
                  #?(:clj  (throw (new IllegalArgumentException (core/str "keys "
                                                                  (apply disj (set (keys dm)) sel)
@@ -788,13 +796,19 @@
                     :cljs (throw (new js/Error (core/str "keys "
                                                  (apply disj (set (keys dm)) sel)
                                                  " appear only in :or")))))
+             dm (if (empty? dm) nil dm)
              ret (if select
-                   (conj ret select `(when-let [mm# (merge (some-vals ~dm) ~gmap (some-vals ~(:subs retsel)))]
+                   (conj ret select `(when-let [mm# (merge ~dm ~gmap (some-vals ~(:subs retsel)))]
                                        (select-keys mm# ~sel)))
                    ret)
              ret (if all
-                   (conj ret all `(merge (some-vals ~dm) ~gmap (some-vals ~(:suba retsel))))
+                   (conj ret all `(merge ~dm ~gmap (some-vals ~(:suba retsel))))
                    ret)
+             
+             ret (if excess
+                   (conj ret excess `(merge (not-empty (apply dissoc ~gmap ~sel)) (some-vals ~(:subd retsel))))
+                   ret)
+             
              ret (if defaults-as (conj ret defaults-as dm) ret)]
     ret))
 
