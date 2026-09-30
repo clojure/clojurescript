@@ -729,9 +729,9 @@
                                          (core/list `cljs.core/get gmap bk (if local-default? (gdefaults local) (gdefaults bk)))))
                                      (if req?
                                        (if missing
-                                         (core/list `get gmap bk gnotfound)
-                                         (core/list `req! gmap bk))
-                                       (core/list `get gmap bk)))]
+                                         (core/list `cljs.core/get gmap bk gnotfound)
+                                         (core/list `cljs.core/req! gmap bk))
+                                       (core/list `cljs.core/get gmap bk)))]
                        (if (ident? bb)
                          (if (core/and req? missing)
                            (conj ret
