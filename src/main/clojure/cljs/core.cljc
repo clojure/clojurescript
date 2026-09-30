@@ -803,7 +803,7 @@
                                 b->k (if (core/symbol? bb) (assoc b->k bb bk) b->k)]
                        (recur (push1 ret bb bk false) (conj sel bk) (next bes) b->k subs suba subexcess submissing))))
                  {:ret ret, :sel sel, :b->k b->k :subs subs :suba suba :subexcess subexcess :submissing submissing}))
-             ret (:ret retsel), sel (:sel retsel), b->k (:b->k retsel)
+             ret (:ret retsel), sel (vec (:sel retsel)), b->k (:b->k retsel)
              new-or-code (core/and defaults (core/or defaults-as select all))
              bk #(if (core/symbol? %)
                    (core/let [bk (b->k %)]
