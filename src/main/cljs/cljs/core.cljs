@@ -9315,16 +9315,16 @@ reduces them without incurring seq initialization"
 (defn select-keys
   "Returns a map containing only those entries in map whose key is in keys"
   [map keyseq]
-    (loop [ret {} keys (seq keyseq)]
-      (if keys
-        (let [key   (first keys)
-              entry (get map key ::not-found)]
-          (recur
-           (if (not= entry ::not-found)
-             (assoc ret key entry)
-             ret)
-           (next keys)))
-        (-with-meta ret (meta map)))))
+  (loop [ret (transient {}) keys (seq keyseq)]
+    (if keys
+      (let [key   (first keys)
+            entry (get map key lookup-sentinel)]
+        (recur
+          (if-not (identical? entry lookup-sentinel)
+            (-assoc! ret key entry)
+            ret)
+          (next keys)))
+      (-with-meta (persistent! ret) (meta map)))))
 
 ;;; PersistentHashSet
 
