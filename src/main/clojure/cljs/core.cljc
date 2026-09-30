@@ -792,7 +792,7 @@
                                 bb (if (core/or (core/not subexcess?) (:excess bb))
                                      bb
                                      (assoc bb :excess (gensym "excess__")))
-                                subecxess (if subexcess? (assoc subexcess bk (:excess bb)) subexcess)
+                                subexcess (if subexcess? (assoc subexcess bk (:excess bb)) subexcess)
 
                                 submissing? (core/and missing (map? bb))
                                 bb (if (core/or (core/not submissing?) (:missing bb))
@@ -834,7 +834,7 @@
                    ret)
 
              ret (if missing
-                   (conj ret missing `(merge `missing (some-vals ~(:submissing retsel))))
+                   (conj ret missing `(merge ~missing (some-vals ~(:submissing retsel))))
                    ret)
              
              ret (if defaults-as (conj ret defaults-as dm) ret)]
