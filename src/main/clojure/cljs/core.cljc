@@ -739,7 +739,7 @@
                              gnotfound? `(identical? ~gtemp ~gnotfound)
                              missing `(if ~gnotfound? (assoc ~missing ~bk nil) ~missing)
                              local `(when-not ~gnotfound? ~gtemp))
-                           (-> ret (conj local bv)))
+                           (core/-> ret (conj local bv)))
                          (pb ret bb bv))))
              retsel
              (core/loop [ret ret, sel #{}, bes bes, b->k {}, subs nil, suba nil, subexcess nil submissing nil]
