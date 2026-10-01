@@ -667,7 +667,7 @@
 (core/defn ^:private destmap*
   [pb bvec b v]
   (core/let [gmap (gensym "map__")
-             gignore (gensym "ignore__")
+             gtemp (gensym "temp__")
              defaults (:or b)
              defaults-as (:defaults b)
              _ (core/when (core/and defaults-as (core/not defaults))
@@ -677,6 +677,10 @@
              gdefaults (core/when defaults (zipmap (keys defaults) (repeatedly #(gensym "default__"))))
              select (:select b)
              all (:all b)
+             excess (:excess b)
+             missing (:missing b)
+             gnotfound (core/when missing (gensym "notfound__"))
+             gnotfound? (core/when missing (gensym "notfound?__"))
              xf (core/fn [mk]
                   (core/let [mkns (namespace mk)
                              mkn (name mk)]
@@ -696,7 +700,12 @@
                       (if (:as b)
                         (conj ret (:as b) gmap)
                         ret))))
-             bes (dissoc b :as :or :select :all)
+             ret (if missing
+                   (conj ret
+                     missing nil
+                     gnotfound (core/list 'new 'js/Object))
+                   ret)
+             bes (dissoc b :as :or :select :all :excess :missing)
              localize (core/fn [bb]
                         (if #?(:clj  (core/instance? clojure.lang.Named bb)
                                :cljs (cljs.core/implements? INamed bb))
@@ -718,12 +727,22 @@
                                             :cljs (throw (new js/Error
                                                            (core/str "Can't supply default value for required key: " bk))))
                                          (core/list `cljs.core/get gmap bk (if local-default? (gdefaults local) (gdefaults bk)))))
-                                     (core/list getter gmap bk))]
+                                     (if req?
+                                       (if missing
+                                         (core/list `cljs.core/get gmap bk gnotfound)
+                                         (core/list `cljs.core/req! gmap bk))
+                                       (core/list `cljs.core/get gmap bk)))]
                        (if (ident? bb)
-                         (core/-> ret (conj local bv))
+                         (if (core/and req? missing)
+                           (conj ret
+                             gtemp bv
+                             gnotfound? `(identical? ~gtemp ~gnotfound)
+                             missing `(if ~gnotfound? (assoc ~missing ~bk nil) ~missing)
+                             local `(when-not ~gnotfound? ~gtemp))
+                           (core/-> ret (conj local bv)))
                          (pb ret bb bv))))
              retsel
-             (core/loop [ret ret, sel #{}, bes bes, b->k {}, subs nil, suba nil]
+             (core/loop [ret ret, sel #{}, bes bes, b->k {}, subs nil, suba nil, subexcess nil submissing nil]
                (if (seq bes)
                  (core/let [be (first bes), bb (key be), bk (val be)]
                    (if (core/keyword? bb)
@@ -740,7 +759,7 @@
                                           #?(:clj  (throw (new IllegalArgumentException (core/str "& can only appear once in " dir)))
                                              :cljs (throw (new js/Error (core/str "& can only appear once in " dir)))))
                                         (core/let [_
-                                                   (core/when (core/and (not preamp?) (core/symbol? bb))
+                                                   (core/when (core/and (core/not preamp?) (core/symbol? bb))
                                                      #?(:clj (throw
                                                                (new IllegalArgumentException
                                                                  (core/str "'" bb
@@ -751,13 +770,13 @@
                                                                     "' - binding symbols can only appear before '&', use keys after")))))
                                                    bk (if preamp? (tr bb) bb)]
                                           (recur (if (core/or preamp? req?)
-                                                   (push1 ret (if preamp? bb gignore) bk req?)
+                                                   (push1 ret (if preamp? bb gtemp) bk req?)
                                                    ret)
                                             (conj sel bk)
                                             (next bbs) preamp?
                                             (if preamp? (assoc b->k (localize bb) bk) b->k)))))
                                     {:ret ret, :sel sel, :b->k b->k}))]
-                       (recur (:ret retsel) (:sel retsel) (next bes) (:b->k retsel) subs suba))
+                       (recur (:ret retsel) (:sel retsel) (next bes) (:b->k retsel) subs suba subexcess submissing))
                      (core/let [subsel? (core/and select (map? bb))
                                 bb (if (core/or (core/not subsel?) (:select bb))
                                      bb
@@ -768,10 +787,23 @@
                                      bb
                                      (assoc bb :all (gensym "all__")))
                                 suba (if suball? (assoc suba bk (:all bb)) suba)
+                                
+                                subexcess? (core/and excess (map? bb))
+                                bb (if (core/or (core/not subexcess?) (:excess bb))
+                                     bb
+                                     (assoc bb :excess (gensym "excess__")))
+                                subexcess (if subexcess? (assoc subexcess bk (:excess bb)) subexcess)
+
+                                submissing? (core/and missing (map? bb))
+                                bb (if (core/or (core/not submissing?) (:missing bb))
+                                     bb
+                                     (assoc bb :missing (gensym "missing__")))
+                                submissing (if submissing? (assoc submissing bk (:missing bb)) submissing)
+                                
                                 b->k (if (core/symbol? bb) (assoc b->k bb bk) b->k)]
-                       (recur (push1 ret bb bk false) (conj sel bk) (next bes) b->k subs suba))))
-                 {:ret ret, :sel sel, :b->k b->k :subs subs :suba suba}))
-             ret (:ret retsel), sel (:sel retsel), b->k (:b->k retsel)
+                       (recur (push1 ret bb bk false) (conj sel bk) (next bes) b->k subs suba subexcess submissing))))
+                 {:ret ret, :sel sel, :b->k b->k :subs subs :suba suba :subexcess subexcess :submissing submissing}))
+             ret (:ret retsel), sel (vec (:sel retsel)), b->k (:b->k retsel)
              new-or-code (core/and defaults (core/or defaults-as select all))
              bk #(if (core/symbol? %)
                    (core/let [bk (b->k %)]
@@ -780,7 +812,7 @@
                           :cljs (throw (new js/Error (core/str "symbol " % " in :or does not refer to a binding")))))
                      bk)
                    %)
-             dm (core/when defaults (dissoc (zipmap (map bk (keys gdefaults)) (vals gdefaults)) nil))
+             dm (core/when defaults (zipmap (map bk (keys gdefaults)) (vals gdefaults)))
              _ (core/and new-or-code (core/not= (count (select-keys dm sel)) (count defaults))
                  #?(:clj  (throw (new IllegalArgumentException (core/str "keys "
                                                                  (apply disj (set (keys dm)) sel)
@@ -788,13 +820,23 @@
                     :cljs (throw (new js/Error (core/str "keys "
                                                  (apply disj (set (keys dm)) sel)
                                                  " appear only in :or")))))
+             dm (if (empty? dm) nil dm)
              ret (if select
-                   (conj ret select `(when-let [mm# (merge (some-vals ~dm) ~gmap (some-vals ~(:subs retsel)))]
+                   (conj ret select `(when-let [mm# (merge ~dm ~gmap (some-vals ~(:subs retsel)))]
                                        (select-keys mm# ~sel)))
                    ret)
              ret (if all
-                   (conj ret all `(merge (some-vals ~dm) ~gmap (some-vals ~(:suba retsel))))
+                   (conj ret all `(merge ~dm ~gmap (some-vals ~(:suba retsel))))
                    ret)
+             
+             ret (if excess
+                   (conj ret excess `(merge (not-empty (apply dissoc ~gmap ~sel)) (some-vals ~(:subexcess retsel))))
+                   ret)
+
+             ret (if missing
+                   (conj ret missing `(merge ~missing (some-vals ~(:submissing retsel))))
+                   ret)
+             
              ret (if defaults-as (conj ret defaults-as dm) ret)]
     ret))
 
