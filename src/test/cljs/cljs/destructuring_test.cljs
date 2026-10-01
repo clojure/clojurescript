@@ -424,6 +424,140 @@
         (is (= 1 (let [{:keys [a & 'b]} {:a 1}] a)))
         (is (= 1 (let [{:keys! [a & 'b "c"]} {:a 1, 'b 2, "c" 3}] a)))))))
 
+(deftest excess
+  (let [sample-map {:a 1, :b 2, :c  {:aa 10},
+                    'd 4  'e 5  'f  {'dd 40 'ee 50},
+                    "g" 6 "h" 7 "i" {"gg" 60 "hh" 70}}]
+    (testing "happy path"
+      (let [{:keys [a] :excess exa} (select-keys sample-map [:a :b :c])
+            {:keys [a b c] :excess exnil} (select-keys sample-map [:a :b :c])
+            {{:excess exnest} :c} sample-map
+            {:keys [a c] :excess exkws} (select-keys sample-map [:a :b :c])
+            {:syms [d f] :excess exsyms} (select-keys sample-map '[d e f])
+            {:strs [g i] :excess exstrs} (select-keys sample-map ["g" "h" "i"])]
+        (is (= {:b 2 :c {:aa 10}} exa))
+        (is (= {:aa 10} exnest))
+        (is (= {:b 2} exkws))
+        (is (= '{e 5} exsyms))
+        (is (= {"h" 7} exstrs))
+
+        (testing ":excess predicative use"
+          (is (nil? exnil))
+          (is (nil? (let [{:excess ex} {}] ex)))
+          (is (nil? (let [{:keys [a] :excess ex} nil] ex)))
+
+          (let [{:keys [a] :excess ex-some} (select-keys sample-map [:a :b :c])
+                {:keys [a b c] :excess ex-none} (assoc (select-keys sample-map [:a :b :c]) :b nil)]
+            (is (some-vals ex-some))
+            (is (not (some-vals ex-none)))))))
+
+    (testing ":excess retains nil values"
+      (let [{:keys [a] :excess ex-nil1} (assoc (select-keys sample-map [:a :b :c]) :b nil)
+            {{:keys [aa] :excess ex-nil2} :c} (assoc-in sample-map [:c :bb] nil)]
+        (is (= {:b nil :c {:aa 10}} ex-nil1))
+        (is (= {:bb nil} ex-nil2))))
+
+    (testing ":excess and :or to ensure that defaults do not show up"
+      (let [{:keys [a z] :or {z 99} :excess exor} (select-keys sample-map [:a :b :c])]
+        (is (= {:b 2 :c {:aa 10}} exor))))
+
+    (testing "nested :excess, also with &"
+      (let [{:keys [a] {:keys [aa] :excess exc} :c} sample-map
+            {:keys! [a & :b :c]
+             :syms! [& 'd 'e 'f]
+             :strs! [&  "g" "h" "i"]
+             {:keys [zz] :or {:zz 999} :excess exinner1} :c
+             {:syms [yy] :or {'yy 999} :excess exinner2} 'f
+             {:strs [xx] :or {"xx" 999} :excess exinner3} "i"
+             :excess exouter} sample-map]
+        (is (nil? exc))
+        (is (= {:aa 10} exinner1))
+        (is (= {'dd 40 'ee 50} exinner2))
+        (is (= {"gg" 60 "hh" 70} exinner3))
+        (is (= '{:c {:aa 10}, f {dd 40, ee 50}, "i" {"gg" 60, "hh" 70}} exouter))))
+
+    (testing ":excess with namespace-qualification"
+      (let [nsmap {:foo/x 1000, :foo/y 2000, ::z 3000}
+            {:foo/keys [x] :excess exfoo} nsmap
+            {::keys [z] :excess exauto} nsmap
+            {:foo/keys [x] ::keys [z] :excess exmix} nsmap
+            {:foo/keys [x y] ::keys [z] :excess exall} nsmap]
+        (is (= {:foo/y 2000 ::z 3000} exfoo))
+        (is (= {:foo/x 1000 :foo/y 2000} exauto))
+        (is (= {:foo/y 2000} exmix))
+        (is (nil? exall))))))
+
+(deftest missing-directive
+  (let [keys-map {:a 1 :b 2 :nest {:aa 10}}
+        {:keys! [a b], :missing mkeys-nil} keys-map
+        {:keys! [a b c], :missing mkeys-c} keys-map
+        {:keys! [a b & :c], :missing mkeys-c&} keys-map
+      
+        syms-map '{a 1 b 2 nest {aa 10}}
+        {:syms! [a b], :missing msyms-nil} syms-map
+        {:syms! [a b c], :missing msyms-c} syms-map
+        {:syms! [a b & 'c], :missing msyms-c&} syms-map
+
+        strs-map {"a" 1 "b" 2 "nest" {"aa" 10}}
+        {:strs! [a b], :missing mstrs-nil} strs-map
+        {:strs! [a b c], :missing mstrs-c} strs-map
+        {:strs! [a b & "c"], :missing mstrs-c&} strs-map
+
+        q-map {:foo/a 1 :b 2 :foo/c 3 ::d 4}
+        {:keys! [foo/a :foo/c] :missing mq-nil} q-map
+        {:keys! [b & :foo/d] :missing mq-d} q-map
+        {:keys! [foo/a & :foo/d] :missing mq-d&} q-map
+        {:foo/keys! [a c] :missing q-nil} q-map
+        {:foo/keys! [a & :foo/d] :missing q-d} q-map
+        {:foo/keys! [a & :foo/d] :missing q-d&} q-map
+        {::keys! [d] :missing aq-nil} q-map]
+
+    (testing "1-level :missing keys for keys/qkeys/syms/strs"
+      (is (nil? mkeys-nil))
+      (is (= mkeys-c {:c nil}))
+      (is (= mkeys-c& {:c nil}))
+
+      (is (nil? msyms-nil))
+      (is (= msyms-c '{c nil}))
+      (is (= msyms-c& '{c nil}))
+
+      (is (nil? mstrs-nil))
+      (is (= mstrs-c {"c" nil}))
+      (is (= mstrs-c& {"c" nil}))
+      
+      (is (nil? mq-nil))
+      (is (= mq-d #:foo{:d nil}))
+      (is (= mq-d& #:foo{:d nil}))
+      (is (nil? q-nil))
+      (is (= q-d #:foo{:d nil}))
+      (is (= q-d& #:foo{:d nil}))
+      (is (nil? aq-nil)))
+
+    (testing "required nested map that also has required keys, covering the following cases:
+               - :nest is missing
+               - :nest is nil
+               - :nest is a map missing :x and/or :y
+               - :nest is a map having everything that's required"
+      (let [sample-nest {:a 0 :b 0}]
+        (are [input-map expected] (= expected
+                                     (let [{:keys! [a b & :nest]
+                                            {:keys! [x y]} :nest
+                                            :missing mkeys-missing}
+                                           input-map]
+                                       mkeys-missing))
+
+          sample-nest {:nest {:x nil, :y nil}}
+          
+          (assoc sample-nest :nest nil) {:nest {:x nil, :y nil}}
+          
+          (assoc sample-nest :nest {:x 1}) {:nest {:y nil}}
+
+          (assoc sample-nest :nest {:x 1 :y 2}) nil)))
+
+    (testing "that a nested map required keys is captured with the outer :missing"
+      (let [{:keys! [a b], {:keys! [bb]} :nest :missing mkeys-outer} keys-map]
+        (is (= mkeys-outer {:nest {:bb nil}}))))))
+
 (comment
 
   (cljs.test/run-tests)
