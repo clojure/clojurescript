@@ -46,10 +46,11 @@
 (s/def ::defaults ::local-name)
 (s/def ::select ::local-name)
 (s/def ::excess ::local-name)
+(s/def ::missing ::local-name)
 (s/def ::all ::local-name)
 
 (s/def ::map-special-binding
-  (s/keys :opt-un [::as ::or ::keys ::syms ::strs ::keys! ::syms! ::strs! ::select ::excess ::defaults ::all]))
+  (s/keys :opt-un [::as ::or ::keys ::syms ::strs ::keys! ::syms! ::strs! ::select ::excess ::missing ::defaults ::all]))
 
 (s/def ::map-binding (s/tuple ::binding-form any?))
 
@@ -61,7 +62,7 @@
 (s/def ::map-bindings
   (s/every (s/or :map-binding ::map-binding
                  :qualified-keys-or-syms ::ns-keys
-                 :special-binding (s/tuple #{:as :or :keys :syms :strs :keys! :syms! :strs! :select :excess :defaults :all} any?))
+                 :special-binding (s/tuple #{:as :or :keys :syms :strs :keys! :syms! :strs! :select :excess :missing :defaults :all} any?))
     :kind map?))
 
 (s/def ::map-binding-form (s/merge ::map-bindings ::map-special-binding))
