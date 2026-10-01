@@ -759,7 +759,7 @@
                                           #?(:clj  (throw (new IllegalArgumentException (core/str "& can only appear once in " dir)))
                                              :cljs (throw (new js/Error (core/str "& can only appear once in " dir)))))
                                         (core/let [_
-                                                   (core/when (core/and (not preamp?) (core/symbol? bb))
+                                                   (core/when (core/and (core/not preamp?) (core/symbol? bb))
                                                      #?(:clj (throw
                                                                (new IllegalArgumentException
                                                                  (core/str "'" bb
