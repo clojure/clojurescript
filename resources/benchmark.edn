@@ -1,4 +1,4 @@
-{;:optimizations  :advanced
+{;:optimizations      :advanced
  :optimizations      :simple
  :static-fns         true
  :optimize-constants true
@@ -8,5 +8,5 @@
  :output-wrapper     true
  :compiler-stats     true
  :verbose            true
- :output-dir         "builds/out-adv-bench"
- :output-to          "builds/out-adv-bench/core-advanced-benchmark.js"}
+ :output-dir         "builds/out-simp-bench"
+ :output-to          "builds/out-simp-bench/core-simp-benchmark.js"}
