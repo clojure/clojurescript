@@ -6,7 +6,10 @@
 
 (def println print)
 
-(set! *print-fn* js/print)
+(set! *print-fn*
+  (if (exists? js/print)
+    js/print
+    js/console.log))
 
 (simple-benchmark [x 1] (identity x) 1000000)
 

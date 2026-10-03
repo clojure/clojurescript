@@ -1,0 +1,12 @@
+{;:optimizations  :advanced
+ :optimizations      :simple
+ :static-fns         true
+ :optimize-constants true
+ :pretty-print       true
+ :main               cljs.benchmark-runner
+ :browser-repl       false
+ :output-wrapper     true
+ :compiler-stats     true
+ :verbose            true
+ :output-dir         "builds/out-adv-bench"
+ :output-to          "builds/out-adv-bench/core-advanced-benchmark.js"}
