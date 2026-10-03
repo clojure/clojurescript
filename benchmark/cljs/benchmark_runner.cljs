@@ -6,7 +6,10 @@
 
 (def println print)
 
-(set! *print-fn* js/print)
+(set! *print-fn*
+  (if (exists? js/print)
+    js/print
+    js/console.log))
 
 (simple-benchmark [x 1] (identity x) 1000000)
 
@@ -172,6 +175,16 @@
 (simple-benchmark [coll (array-map :foo :bar)] (assoc coll :baz :woz) 1000000)
 (simple-benchmark [coll (array-map :foo :bar :baz :woz)] (-lookup coll :baz) 1000000)
 (simple-benchmark [coll (array-map :foo :bar :baz :woz :lol :rofl)] (-lookup coll :lol) 1000000)
+(simple-benchmark
+  [coll (array-map :foo 1 :bar 2 :baz 3 :woz  4 :lol 5 :rofl 6 :oflr 7 :flro 8
+          :foo1 9 :bar1 10 :baz1 11 :woz1 12 :lol1 13 :rofl1 14 :oflr1 15 :flro1 16
+          :foo2 17 :bar2 18 :baz2 19 :woz2 20 :lol2 21 :rofl2 22 :oflr2 23 :flro2 24)]
+  (-lookup coll :flro2) 1000000)
+(simple-benchmark
+  [coll (array-map "foo" 1 "bar" 2 "baz" 3 "woz" 4 "lol" 5 "rofl" 6 "oflr" 7 "flro" 8
+          "foo1" 9 "bar1" 10 "baz1" 11 "woz1" 12 "lol1" 13 "rofl1" 14 "oflr1" 15 "flro1" 16
+          "foo2" 17 "bar2" 18 "baz2" 19 "woz2" 20 "lol2" 21 "rofl2" 22 "oflr2" 23 "flro2" 24)]
+  (-lookup coll :flro2) 1000000)
 (println)
 
 (println ";;; array-map w/ symbols")
