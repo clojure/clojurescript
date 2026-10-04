@@ -2185,9 +2185,11 @@ reduces them without incurring seq initialization"
 (defn meta
   "Returns the metadata of obj, returns nil if there is no metadata."
   [o]
-  (when (and (not (nil? o))
-             (satisfies? IMeta o))
-    (-meta o)))
+  (when (some? o)
+    (if (instance? IMeta o)
+      (.-_meta o)
+      (when (satisfies? IMeta o)
+        (-meta o)))))
 
 (defn peek
   "For a list or queue, same as first, for a vector, same as, but much
