@@ -869,7 +869,7 @@
               (-> names first val)
               (core/list `some-vals names)))))))
 
-(defmacro selector
+(core/defmacro selector
   "Builds a selecting-fn from m, a map destructuring form that must
   include one or more of the :select, :all, :missing, and :excess
   directives. The return function takes a collection, destructures it
@@ -889,7 +889,7 @@
   Throws an exception if the argument is not a map."
   {:added "1.13"}
   [m]
-  (when (not (map? m))
+  (core/when-not (map? m)
     #?(:clj  (throw (IllegalArgumentException. "expected a map"))
        :cljs (throw (js/Error. "expected a map"))))
   (selector-impl m))
