@@ -864,9 +864,9 @@
          :cljs (throw (js/Error. "form must contain at least one of :select :excess :missing :all")))
       `(fn ~(gensym "selector")
          [map#]
-         (let [~(merge m names) map#]
+         (core/let [~(merge m names) map#]
            ~(if (= 1 (count names))
-              (-> names first val)
+              (core/-> names first val)
               (core/list `some-vals names)))))))
 
 (core/defmacro selector
