@@ -2050,7 +2050,7 @@
                (ex1 sample-map)))
 
         (testing "checked keys without :missing should throw"
-          (is (thrown? Exception (ex1 (dissoc sample-map :d)))))
+          (is (thrown? js/Error (ex1 (dissoc sample-map :d)))))
 
         (testing ":select with :or"
           (let [ex1 (selector {:keys [a b & :c :z]
