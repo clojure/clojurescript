@@ -855,7 +855,7 @@
       bindings
       (reduce process-entry [] bents))))
 
-(defn- selector-impl [m]
+(core/defn- selector-impl [m]
   (core/let [dirs [:select :excess :missing :all]
              names (zipmap (filter m dirs) (repeatedly gensym))]
     (if (empty? names)
