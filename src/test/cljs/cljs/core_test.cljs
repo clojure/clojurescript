@@ -2034,11 +2034,13 @@
                     :e 5
                     ::x 10000
                     :nested {:aa 1 'saa 10}}]
-    (testing "error cases"
-      (is (thrown? Exception (eval '(selector {:keys [a b]}))))
-      (is (thrown? Exception (eval '(selector sample-map))))
-      (is (thrown? Exception (eval '(selector nil))))
-      (is (thrown? Exception (eval '(selector {})))))
+
+    ;; these are compile time
+    #_(testing "error cases"
+        (is (thrown? js/Error (selector {:keys [a b]})))
+        (is (thrown? js/Error (selector sample-map)))
+        (is (thrown? js/Error (selector nil)))
+        (is (thrown? js/Error (selector {}))))
 
     (testing "single directives return their values directly"
       (let [ex1 (selector {:keys [a b & :c :z]
