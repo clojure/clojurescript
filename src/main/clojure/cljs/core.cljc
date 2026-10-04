@@ -855,6 +855,45 @@
       bindings
       (reduce process-entry [] bents))))
 
+(defn- selector-impl [m]
+  (core/let [dirs [:select :excess :missing :all]
+             names (zipmap (filter m dirs) (repeatedly gensym))]
+    (if (empty? names)
+      #?(:clj  (throw (IllegalArgumentException.
+                       "form must contain at least one of :select :excess :missing :all"))
+         :cljs (throw (js/Error. "form must contain at least one of :select :excess :missing :all")))
+      `(fn ~(gensym "selector")
+         [map#]
+         (let [~(merge m names) map#]
+           ~(if (= 1 (count names))
+              (-> names first val)
+              (core/list `some-vals names)))))))
+
+(defmacro selector
+  "Builds a selecting-fn from m, a map destructuring form that must
+  include one or more of the :select, :all, :missing, and :excess
+  directives. The return function takes a collection, destructures it
+  per m, and returns a map of the result(s).
+
+  If m has exactly one directive, the result is the value that
+  directive would yield. If m has more than one directive, then it
+  returns a map of directives to values.
+
+  As in destructuring, :missing controls whether missing required keys
+  throw or are collected.
+
+  While a map destructuring form may and sometimes must include
+  bindings, selector doesn't produce bindings, thus ignoring the
+  associated directive names.
+
+  Throws an exception if the argument is not a map."
+  {:added "1.13"}
+  [m]
+  (when (not (map? m))
+    #?(:clj  (throw (IllegalArgumentException. "expected a map"))
+       :cljs (throw (js/Error. "expected a map"))))
+  (selector-impl m))
+
 (core/defmacro ^:private return-first
   [& body]
   `(let [ret# ~(first body)]
