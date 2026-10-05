@@ -2136,3 +2136,63 @@
                                :select _})]
         (is (= {::x 10000 :nested {:aa 1 'saa 10}}
                (exnest_ sample-map)))))))
+
+(deftest test-merge-deep
+  ;; 0 arity
+  (is (nil? (merge-deep)))
+
+  ;; 1 arity
+  (is (nil? (merge-deep nil)))
+  (is (= {:a 1} (merge-deep {:a 1})))
+
+  ;; 2 arity
+  (are [expected x y] (= expected (merge-deep x y))
+    nil nil nil
+    {} {} nil
+    {} nil {}
+    ;; latter value wins at same key if not both maps
+    {:a 1} {:a 1} nil ;; non-map + missing
+    {:a 1} nil {:a 1} ;; missing + non-map
+    {:a nil} {:a 1} {:a nil} ;; non-map + nil
+    {:a 1} {:a nil} {:a 1} ;; nil + non-map
+    {:a 2} {:a 1} {:a 2} ;; non-map + non-map
+    {:a {:x 1}} nil {:a {:x 1}} ;; missing + map
+    {:a {:x 1}} {:a {:x 1}} nil ;; map + missing
+    {:a {:x 1}} {:a nil} {:a {:x 1}} ;; nil + map
+    {:a nil} {:a {:x 1}} {:a nil} ;; map + nil
+    {:a {:x 2}} {:a {:x 1}} {:a {:x 2}} ;; map + map
+    ;; more nesting
+    {:a {:b {:c 2}}} {:a {:b {:c 1}}} {:a {:b {:c 2}}}
+    ;; vector is associative, but not a map - first arg dominates
+    [:c :d] [:a :b] {0 :c 1 :d}
+    {0 :a 1 :b} {0 :c 1 :d} [:a :b])
+
+  ;; 3 arity
+  (are [expected x y z] (= expected (merge-deep x y z))
+    nil nil nil nil
+    {} {} nil nil
+    ;; missing
+    {:a 3} nil {:a 2} {:a 3}
+    {:a 3} {:a 1} nil {:a 3}
+    {:a 2} {:a 1} {:a 2} nil
+    ;; nil
+    {:a 3} {:a nil} {:a 2} {:a 3}
+    {:a nil} {:a 1} {:a 2} {:a nil}
+    ;; non-maps
+    {:a 3} {:a 1} {:a 2} {:a 3}
+    ;; mix - last wins
+    {:a nil} {:a 1} {:a {:x 1}} {:a nil}
+    ;; maps
+    {:a {:x 3}} {:a {:x 1}} {:a {:x 2}} {:a {:x 3}}))
+
+(deftest test-merge-deep-with
+  (are [expected x y] (= expected (merge-deep-with vector x y))
+    {:a nil} nil {:a nil}
+    {:a 1} nil {:a 1}
+    {:a [1 nil]} {:a 1} {:a nil}
+    {:a [1 2]} {:a 1} {:a 2})
+  (let [vectorizer (fn [x y] (if (vector? x) (conj x y) [x y]))]
+    (are [expected x y z] (= expected (merge-deep-with vectorizer x y z))
+      {:a [1 2 3]} {:a 1} {:a 2} {:a 3}
+      {:a [1 2]} {:a 1} {:a 2} nil)))
+
