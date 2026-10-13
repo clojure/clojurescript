@@ -491,8 +491,23 @@
   (-closure-lib? [this] (:closure-lib this))
   (-url [this] url)
   (-url [this opts] url)
-  (-relative-path [this] nil)
-  (-relative-path [this opts] nil)
+  ;; previously these returned nil, but if the record has
+  ;; `:file/:file-min` that means it was derived from the simpler map
+  ;; representation. In this case, the behavior of JavaScriptFile
+  ;; should remain identical to the plain map case. Clojure 1.13.0
+  ;; alphas include a change that returns the record i.e. (merge nil
+  ;; Record) -> Record. This revealed the assymetry that used to exist
+  ;; here.
+  (-relative-path [this]
+    (deps/-relative-path this nil))
+  (-relative-path [this opts]
+    (let [file (if-let [file-min (and (#{:advanced :simple} (:optimizations opts))
+                                      (:file-min this))]
+                 file-min
+                 (:file this))
+          as-file (io/as-file file)]
+      (when (and as-file (not (.isAbsolute as-file)))
+        file)))
   (-provides [this] provides)
   (-requires [this] requires)
   (-source [this] (deps/-source this nil))
