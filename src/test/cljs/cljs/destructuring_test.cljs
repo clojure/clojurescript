@@ -442,9 +442,7 @@
     (testing "all turns nothing into something"
       (is (= {:a 42} (let [{:keys [a] :or {a 42} :all m} nil] m)))
       (is (= {:a 42} (let [{:keys [a] :or {a 42} :all m} {}] m)))
-      (is (= {:n {:a 42}} (let [{{a :a :or {a 42}} :n :all m} {:n nil}] m))))
-    #_(testing ":or defaults must correspond to binding with :all"
-      (is (thrown? Exception (eval '(let [{:keys [a] :or {a 1 z 2} :all m} {}] m))))))
+      (is (= {:n {:a 42}} (let [{{a :a :or {a 42}} :n :all m} {:n nil}] m)))))
   (testing ":or defaults applied in :all"
     (is (= {:a 1}       (let [{:keys [a] :or {a 42} :all m} {:a 1}] m)))
     (is (= {:n {:a 42}} (let [{{a :a :or {a 42}} :n :all m} nil] m)))
@@ -460,9 +458,7 @@
     (is (= {:z 42 :a 1 :b 2}
            (let [{:keys [a b & :c :z] :or {:z 42} :all m} {:a 1 :b 2}] m)))
     (is (= {:z 100 :a 1 :b 2}
-           (let [{:keys [a b & :c :z] :or {:z 42} :all m} {:a 1 :b 2 :z 100}] m)))
-    #_(testing ":or defaults must correspond to binding with :all plus &"
-      (is (thrown? Exception (eval '(let [{:keys [a b & :c] :or {c 42} :all m} {:a 1 :b 2}] m))))))
+           (let [{:keys [a b & :c :z] :or {:z 42} :all m} {:a 1 :b 2 :z 100}] m))))
   (testing "combinations"
     (let [sample-map {:a 1, :b 2, :c {:aa 10},
                       'd 4, 'e 5, 'f {'dd 40},

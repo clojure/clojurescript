@@ -452,7 +452,6 @@
 (deftest syms-bang
   (testing "that right of & is unbound (compile-time errors)"
     (is (undeclared-warning? '(let [{:syms! [a & 'b]} (quote {a 1 b 2})] b) 'b))
-    #_(is (undeclared-warning? '(let [{a a {aa a :as m :syms [b c & 'e]} :b} (quote {a 1 b 2})] e) 'e))
     (is (undeclared-warning? '(let [{:syms! [foo/a & 'foo/c]} (quote {a 1 b 2})] c) 'c))
     (is (undeclared-warning? '(let [{:foo/syms! [foo/aa & 'foo/cc]} (quote {foo/aa 1 bb 2 foo/cc 3})] cc) 'cc))))
 
@@ -461,14 +460,11 @@
     (is (undeclared-warning? '(let [{:strs! [a & "b"]} {"a" 1 "b" 2}] b) 'b))
     (is (undeclared-warning? '(let [{a "a" {aa "a" :as m :keys [b c & "e"]} "b"} {"a" 1 "b" 2}] e) 'e))))
 
-(deftest select-or-defaults
-  (testing ":defaults"
-    (is (thrown? Exception
-          (compile-simple-form
-            '(let [{:defaults d :or {:a 1}} {}] d)))))
-  (testing "known compile-time errors"
-    (is (thrown? Exception (compile-simple-form '(let [{:keys [a] :defaults d :or {:a 1, a 1}} {}] d))))
-    (is (thrown? Exception (compile-simple-form '(let [{:defaults d} {}] d))))))
+(deftest all-directive
+  (testing ":or defaults must correspond to binding with :all"
+    (is (thrown? Exception (compile-simple-form '(let [{:keys [a] :or {a 1 z 2} :all m} {}] m)))))
+  (testing ":or defaults must correspond to binding with :all plus &"
+    (is (thrown? Exception (compile-simple-form '(let [{:keys [a b & :c] :or {c 42} :all m} {:a 1 :b 2}] m))))))
 
 ;; CLJS-1225
 
