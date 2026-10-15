@@ -9301,16 +9301,33 @@ reduces them without incurring seq initialization"
   the first.  If a key occurs in more than one map, the mapping(s)
   from the latter (left-to-right) will be combined with the mapping in
   the result by calling (f val-in-result val-in-latter)."
-  [f & maps]
-  (when (some identity maps)
-    (let [merge-entry (fn [m e]
-                        (let [k (key e) v (val e)]
-                          (if (contains? m k)
-                            (assoc m k (f (get m k) v))
-                            (assoc m k v))))
-          merge2 (fn [m1 m2]
-                   (reduce merge-entry (or m1 {}) (seq m2)))]
-      (reduce merge2 maps))))
+  {:added "1.0"
+   :static true}
+  ([f] nil)
+  ([f x] x)
+  ([f x y]
+     (if (and x y)
+       (let [merge-kv
+             (fn this [m k v]
+               (let [mv (get m k this)]
+                 (if (identical? mv this)
+                   (assoc m k v)
+                   (assoc m k (f mv v)))))
+             merge-kv!
+             (fn this [m k v]
+               (let [mv (-lookup m k this)]
+                 (if (identical? mv this)
+                   (assoc! m k v)
+                   (assoc! m k (f mv v)))))]
+         (if (implements? IKVReduce y)
+           (if (implements? IEditableCollection x)
+             (persistent! (-kv-reduce y merge-kv! (transient x)))
+             (-kv-reduce y merge-kv x))
+           (reduce (fn [m e] (merge-kv m (key e) (val e))) x y)))
+       (or x y)))
+  ([f x y & maps]
+     (let [merge2 (fn [x y] (merge-with f x y))]
+       (reduce merge2 (merge2 x y) maps))))
 
 (defn select-keys
   "Returns a map containing only those entries in map whose key is in keys"
@@ -9325,6 +9342,34 @@ reduces them without incurring seq initialization"
             ret)
           (next keys)))
       (-with-meta (persistent! ret) (meta map)))))
+
+(defn merge-deep
+  "Returns a map that consists of the rest of the maps conj-ed onto
+  the first. For each pairwise merge, when a key occurs in both maps,
+  if both values are maps, then recursively merge-deep, else use the
+  latter (left-to-right) value."
+  {:added "1.13"}
+  [& maps]
+  (apply merge-with
+    (fn [x y]
+      (if (and (map? x) (map? y))
+        (merge-deep x y)
+        y))
+    maps))
+
+(defn merge-deep-with
+  "Returns a map that consists of the rest of the maps conj-ed onto
+  the first. For each pairwise merge, when a key occurs in both maps,
+  if both values are maps, then recursively merge-deep-with, else use
+  the result of (f val-in-prior val-in-latter)."
+  {:added "1.13"}
+  [f & maps]
+  (apply merge-with
+    (fn [x y]
+      (if (and (map? x) (map? y))
+        (merge-deep-with f x y)
+        (f x y)))
+    maps))
 
 ;;; PersistentHashSet
 
