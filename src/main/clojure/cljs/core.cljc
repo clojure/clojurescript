@@ -30,7 +30,7 @@
                             unsigned-bit-shift-right
 
                             bit-and bit-and-not bit-clear bit-flip bit-not bit-or bit-set
-                            bit-test bit-shift-left bit-shft-right bit-xor defmacro
+                            bit-test bit-shift-left bit-shift-right bit-xor defmacro
 
                             cond-> cond->> as-> some-> some->>
 
