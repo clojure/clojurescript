@@ -38,7 +38,7 @@
 
                             if-some when-some test ns-publics ns-imports ns-interns
                             ns-unmap var vswap! macroexpand-1 macroexpand
-                            some? resolve
+                            some? resolve selector
                             #?@(:cljs [alias coercive-not coercive-not= coercive-= coercive-boolean
                                        truth_ js-arguments js-delete js-in js-debugger exists? divide js-mod
                                        unsafe-bit-and bit-shift-right-zero-fill mask bitpos caching-hash
