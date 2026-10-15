@@ -669,10 +669,6 @@
   (core/let [gmap (gensym "map__")
              gtemp (gensym "temp__")
              defaults (:or b)
-             defaults-as (:defaults b)
-             _ (core/when (core/and defaults-as (core/not defaults))
-                 #?(:clj  (throw (new IllegalArgumentException "Can't specify :defaults without :or"))
-                    :cljs (throw (new js/Error "Can't specify :defaults without :or"))))
              b (dissoc b :defaults)
              gdefaults (core/when defaults (zipmap (keys defaults) (repeatedly #(gensym "default__"))))
              select (:select b)
@@ -804,7 +800,7 @@
                        (recur (push1 ret bb bk false) (conj sel bk) (next bes) b->k subs suba subexcess submissing))))
                  {:ret ret, :sel sel, :b->k b->k :subs subs :suba suba :subexcess subexcess :submissing submissing}))
              ret (:ret retsel), sel (vec (:sel retsel)), b->k (:b->k retsel)
-             new-or-code (core/and defaults (core/or defaults-as select all))
+             new-or-code (core/and defaults (core/or select all))
              bk #(if (core/symbol? %)
                    (core/let [bk (b->k %)]
                      (core/when (core/and new-or-code (core/not bk))
@@ -835,9 +831,7 @@
 
              ret (if missing
                    (conj ret missing `(merge ~missing (some-vals ~(:submissing retsel))))
-                   ret)
-             
-             ret (if defaults-as (conj ret defaults-as dm) ret)]
+                   ret)]
     ret))
 
 (core/defn destructure [bindings]
