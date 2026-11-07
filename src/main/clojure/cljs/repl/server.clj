@@ -14,7 +14,7 @@
            java.io.InputStreamReader
            java.io.ByteArrayOutputStream
            java.util.zip.GZIPOutputStream
-           java.net.ServerSocket
+           [java.net ServerSocket InetAddress]
            [java.util LinkedList]))
 
 (def ^:dynamic state nil)
@@ -223,7 +223,7 @@
 (defn start
   "Start the server on the specified port."
   [opts]
-  (let [ss (ServerSocket. (:port opts))]
+  (let [ss (ServerSocket. (:port opts) 0 (InetAddress/getByName (:host opts)))]
     (.start
       (Thread.
         ((ns-resolve 'clojure.core 'binding-conveyor-fn)
