@@ -566,6 +566,64 @@
         (is (= {:foo/y 2000} exmix))
         (is (nil? exall))))))
 
+(deftest req!-directive
+  (let [kw-map {:long-a 1 :b 2 :nested {:c 3}}
+        sym-map '{long-a 1 b 2 nested {c 3}}
+        str-map {"long-a" 1 "b" 2 "nested" {"c" 3}}]
+    (testing "name/key binding form in :req!"
+      (is (= 1 (let [{:req! {a :long-a}} kw-map] a)))
+      (is (= 1 (let [{:req! {a 'long-a}} sym-map] a)))
+      (is (= 1 (let [{:req! {a "long-a"}} str-map] a)))
+
+      (is (thrown? js/Error (let [{:req! {a :long-a}} {}] a)))
+      (is (thrown? js/Error (let [{:req! {a 'long-a}} {}] a)))
+      (is (thrown? js/Error (let [{:req! {a "long-a"}} {}] a))))
+
+    (testing "destructure-form/key form in :req!"
+      (is (= 3 (let [{:req! {{:keys! [c]} :nested}} kw-map] c)))
+      (is (= 3 (let [{:req! {{:syms! [c]} 'nested}} sym-map] c)))
+      (is (= 3 (let [{:req! {{:strs! [c]} "nested"}} str-map] c)))
+
+      (is (thrown? js/Error (let [{:req! {{:keys! [c]} :nested}} {}] c)))
+      (is (thrown? js/Error (let [{:req! {{:syms! [c]} 'nested}} {}] c)))
+      (is (thrown? js/Error (let [{:req! {{:strs! [c]} "nested"}} {}] c))))
+
+    (testing "mixing :req! with checked and optional keys "
+      (is (= [1 2 nil] (let [{:keys! [b], :keys [d], :req! {a :long-a}} kw-map] [a b d])))
+      (is (= [1 2 nil] (let [{:syms! [b], :syms [d], :req! {a 'long-a}} sym-map] [a b d])))
+      (is (= [1 2 nil] (let [{:strs! [b], :strs [d], :req! {a "long-a"}} str-map] [a b d]))))
+
+    (testing ":req! with :or"
+      (is (= [1 2 42] (let [{:keys! [b], :keys [d], :req! {a :long-a}, :or {d 42}} kw-map] [a b d])))
+      (is (= [1 2 42] (let [{:syms! [b], :syms [d], :req! {a 'long-a}, :or {d 42}} sym-map] [a b d])))
+      (is (= [1 2 42] (let [{:strs! [b], :strs [d], :req! {a "long-a"}, :or {d 42}} str-map] [a b d])))
+      #_(is (thrown? Exception (eval '(let [{:req! {b :b}, :or {b 42}} {}] b)))))
+
+    (testing ":req! with :missing collects"
+      (is (= {:long-a nil} (let [{:req! {a :long-a}, :missing miss} {}] miss)))
+      (is (= '{long-a nil} (let [{:req! {a 'long-a}, :missing miss} {}] miss)))
+      (is (= {"long-a" nil} (let [{:req! {a "long-a"}, :missing miss} {}] miss)))
+
+      (is (= {:nested {:c nil}} (let [{:req! {{:keys! [c]} :nested}, :missing miss} {}] miss)))
+      (is (= '{nested {c nil}} (let [{:req! {{:syms! [c]} 'nested}, :missing miss} {}] miss)))
+      (is (= {"nested" {"c" nil}} (let [{:req! {{:strs! [c]} "nested"}, :missing miss} {}] miss))))
+
+    (testing ":req! with :select"
+      (is (= {:long-a 1, :b 2, :d 42}
+             (let [{:keys! [b], :keys [d], :req! {a :long-a}, :or {d 42}, :select sel} kw-map] sel)))
+      (is (= '{b 2, long-a 1, d 42}
+             (let [{:syms! [b], :syms [d], :req! {a 'long-a}, :or {d 42}, :select sel} sym-map] sel)))
+      (is (= {"d" 42, "long-a" 1, "b" 2}
+             (let [{:strs! [b], :strs [d], :req! {a "long-a"}, :or {d 42}, :select sel} str-map] sel))))
+
+    (testing ":req! with :excess"
+      (is (= {:nested {:c 3}}
+             (let [{:keys! [b], :keys [d], :req! {a :long-a}, :or {d 42}, :excess exc} kw-map] exc)))
+      (is (= '{nested {c 3}}
+             (let [{:syms! [b], :syms [d], :req! {a 'long-a}, :or {d 42}, :excess exc} sym-map] exc)))
+      (is (= {"nested" {"c" 3}}
+             (let [{:strs! [b], :strs [d], :req! {a "long-a"}, :or {d 42}, :excess exc} str-map] exc))))))
+
 (deftest missing-directive
   (let [keys-map {:a 1 :b 2 :nest {:aa 10}}
         {:keys! [a b], :missing mkeys-nil} keys-map
