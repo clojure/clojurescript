@@ -744,7 +744,8 @@
                    (if (core/keyword? bb)
                      (if (= :req! bb)
                        (core/let [bes (into (next bes)
-                                        (map #(core/vector
+                                        (map #(#?(:clj  clojure.lang.MapEntry/create
+                                                  :cljs cljs.core.MapEntry/create)
                                                 (vary-meta (key %) assoc ::impl-detail-42 true)
                                                 (val %)))
                                         bk)]

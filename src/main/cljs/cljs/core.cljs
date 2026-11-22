@@ -6845,6 +6845,10 @@ reduces them without incurring seq initialization"
   (-invoke [node k not-found]
     (-nth node k not-found)))
 
+(set! (.-create MapEntry)
+  (fn [k v]
+    (MapEntry. k v nil)))
+
 (defn map-entry?
   "Returns true if x satisfies IMapEntry"
   [x]
